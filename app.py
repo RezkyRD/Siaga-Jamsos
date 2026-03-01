@@ -22,6 +22,20 @@ with st.sidebar:
         st.rerun()
 
 # ===============================
+# AUTO GENERATE DATA JIKA BELUM ADA
+# ===============================
+import os
+from scraper import run_scraper
+from filter_keyword import run_filter
+from update_priority import run_priority
+
+if not os.path.exists("raw_news.csv") or not os.path.exists("filtered_news.csv"):
+    with st.spinner("Memuat data awal... Mohon tunggu"):
+        run_scraper()
+        run_filter()
+        run_priority()
+
+# ===============================
 # LOAD DATA
 # ===============================
 raw = pd.read_csv("raw_news.csv")
@@ -154,27 +168,59 @@ df_display["Link"] = df_display["Link"].apply(
 )
 
 # ===============================
-# TAMPILKAN TABEL
+# PAGINATION FIXED
 # ===============================
-st.markdown("""
-<style>
-table {
-    width: 100%;
-    text-align: center;
-}
-th {
-    text-align: center !important;
-}
-td {
-    text-align: center !important;
-}
-</style>
-""", unsafe_allow_html=True)
+items_per_page = 5
+total_rows = len(df_display)
+total_pages = max(1, (total_rows - 1) // items_per_page + 1)
 
+# Simpan halaman
+if "page" not in st.session_state:
+    st.session_state.page = 1
+
+# Reset ke halaman 1 jika filter berubah
+if st.session_state.page > total_pages:
+    st.session_state.page = 1
+
+start_idx = (st.session_state.page - 1) * items_per_page
+end_idx = start_idx + items_per_page
+
+df_page = df_display.iloc[start_idx:end_idx]
+
+# ===============================
+# TAMPILKAN TABEL (PAKAI df_page !!!)
+# ===============================
 st.write(
-    df_display[["Judul", "Tanggal", "Prioritas", "Link"]].to_html(escape=False),
+    df_page[["Judul", "Tanggal", "Prioritas", "Link"]].to_html(escape=False),
     unsafe_allow_html=True
 )
+
+st.markdown(f"""
+<div style='text-align:center; margin-top:10px;'>
+Menampilkan {start_idx+1} - {min(end_idx, total_rows)} dari {total_rows} berita
+</div>
+""", unsafe_allow_html=True)
+
+# ===============================
+# TOMBOL DI BAWAH TABEL
+# ===============================
+col1, col2, col3 = st.columns([1,2,1])
+
+with col1:
+    if st.button("⬅ Back", disabled=(st.session_state.page <= 1)):
+        st.session_state.page -= 1
+        st.rerun()
+
+with col3:
+    if st.button("Next ➡", disabled=(st.session_state.page >= total_pages)):
+        st.session_state.page += 1
+        st.rerun()
+
+with col2:
+    st.markdown(
+        f"<div style='text-align:center;'>Halaman {st.session_state.page} dari {total_pages}</div>",
+        unsafe_allow_html=True
+    )
 
 # ===============================
 # ANALISIS NARATIF

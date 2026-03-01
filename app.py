@@ -46,9 +46,12 @@ filtered = pd.read_csv("filtered_news.csv")
 # ===============================
 st.subheader("📅 Pilih Rentang Tanggal")
 
-# Pastikan kolom tanggal dalam format datetime
-raw["Tanggal_Ambil"] = pd.to_datetime(raw["Tanggal_Ambil"])
-filtered["Tanggal_Ambil"] = pd.to_datetime(filtered["Tanggal_Ambil"])
+raw["Tanggal_Ambil"] = pd.to_datetime(raw["Tanggal_Ambil"], utc=True)
+filtered["Tanggal_Ambil"] = pd.to_datetime(filtered["Tanggal_Ambil"], utc=True)
+
+# Konversi ke WIB
+raw["Tanggal_Ambil"] = raw["Tanggal_Ambil"].dt.tz_convert("Asia/Jakarta")
+filtered["Tanggal_Ambil"] = filtered["Tanggal_Ambil"].dt.tz_convert("Asia/Jakarta")
 
 min_date = raw["Tanggal_Ambil"].min()
 max_date = raw["Tanggal_Ambil"].max()

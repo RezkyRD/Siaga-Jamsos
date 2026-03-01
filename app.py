@@ -5,6 +5,23 @@ import matplotlib.pyplot as plt
 st.title("Early Warning System - Isu Ketenagakerjaan")
 
 # ===============================
+# 🔄 TOMBOL UPDATE DATA (TARUH DI SINI)
+# ===============================
+with st.sidebar:
+    if st.button("🔄 Update Data"):
+        with st.spinner("Memproses update..."):
+            from scraper import run_scraper
+            from filter_keyword import run_filter
+            from update_priority import run_priority
+
+            run_scraper()
+            run_filter()
+            run_priority()
+
+        st.success("Update selesai!")
+        st.rerun()
+
+# ===============================
 # LOAD DATA
 # ===============================
 raw = pd.read_csv("raw_news.csv")

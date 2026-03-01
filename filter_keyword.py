@@ -1,30 +1,17 @@
 import pandas as pd
 
-KEYWORDS = [
-    "phk",
-    "bpjs",
-    "demo",
-    "mogok",
-    "upah",
-    "jaminan sosial"
-]
+keywords = ["PHK", "demo buruh", "BPJS", "JKP", "mogok", "konflik", "JHT", "JKK", "JKM", "JP", "buruh", "UMR", "Ketenagakerjaan"]
 
 df = pd.read_csv("raw_news.csv")
 
-total_raw = len(df)
-
 def contains_keyword(text):
-    text = str(text).lower()
-    for k in KEYWORDS:
-        if k in text:
-            return True
-    return False
+    if pd.isna(text):
+        return False
+    return any(k.lower() in text.lower() for k in keywords)
 
-df_filtered = df[df["title"].apply(contains_keyword)]
-
-total_filtered = len(df_filtered)
+df_filtered = df[df["Judul"].apply(contains_keyword)]
 
 df_filtered.to_csv("filtered_news.csv", index=False)
 
-print("Total berita raw:", total_raw)
-print("Total lolos keyword:", total_filtered)
+print("Total RAW:", len(df))
+print("Total Lolos Keyword:", len(df_filtered))

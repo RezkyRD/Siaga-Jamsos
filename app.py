@@ -115,42 +115,16 @@ if not os.path.exists("raw_news.csv") or not os.path.exists("filtered_news.csv")
 # ===============================
 raw = pd.read_csv("raw_news.csv")
 filtered = pd.read_csv("filtered_news.csv")
+# gunakan tanggal publish jika ada
+def ensure_publish_date(df):
+    if "Tanggal_Publish" in df.columns:
+        df["Tanggal_Hari"] = pd.to_datetime(df["Tanggal_Publish"], errors="coerce").dt.date
+    else:
+        df["Tanggal_Hari"] = pd.to_datetime(df["Tanggal"], errors="coerce").dt.date
+    return df
 
-# ===============================
-# PARSE DATETIME (SMART TZ) - STABIL DI STREAMLIT CLOUD
-# ===============================
-def parse_to_wib(series: pd.Series) -> pd.Series:
-    """
-    - Kalau timestamp sudah tz-aware -> convert ke Asia/Jakarta
-    - Kalau tz-naive -> anggap WIB (Asia/Jakarta)
-    """
-    s = pd.to_datetime(series, errors="coerce")  # JANGAN pakai utc=True dulu
-
-    # Pisahkan tz-aware vs tz-naive
-    # tz-aware: dtype datetime64[ns, tz]
-    if hasattr(s.dt, "tz"):  # aman untuk datetime series
-        try:
-            # Jika tz-aware
-            if s.dt.tz is not None:
-                return s.dt.tz_convert("Asia/Jakarta")
-        except Exception:
-            pass
-
-    # Jika tz-naive, localize sebagai WIB
-    return s.dt.tz_localize("Asia/Jakarta", ambiguous="NaT", nonexistent="NaT")
-
-raw["Tanggal_Ambil"] = parse_to_wib(raw["Tanggal_Ambil"])
-filtered["Tanggal_Ambil"] = parse_to_wib(filtered["Tanggal_Ambil"])
-
-raw = raw.dropna(subset=["Tanggal_Ambil"]).copy()
-filtered = filtered.dropna(subset=["Tanggal_Ambil"]).copy()
-
-# Kolom tanggal murni untuk filter
-raw["Tanggal_Hari"] = raw["Tanggal_Ambil"].dt.date
-filtered["Tanggal_Hari"] = filtered["Tanggal_Ambil"].dt.date
-
-min_date = raw["Tanggal_Hari"].min()
-max_date = raw["Tanggal_Hari"].max()
+raw = ensure_publish_date(raw)
+filtered = ensure_publish_date(filtered)
 
 # ===============================
 # FILTER PANEL (GLOBAL, DIPAKAI 2 TAB)

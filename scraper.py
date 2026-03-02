@@ -31,23 +31,29 @@ def run_scraper():
 
         for entry in feed.entries:
 
-            published = entry.get("published_parsed")
+            # ===== PARSE WAKTU PUBLISH =====
+            published_str = entry.get("published") or entry.get("updated") or ""
+            ts = pd.to_datetime(published_str, errors="coerce", utc=True)
 
-            if published:
-                tanggal_rss = datetime(*published[:6]).date()
+            if pd.notna(ts):
+                publish_wib = ts.tz_convert("Asia/Jakarta")
+                tanggal_publish = publish_wib.date()
             else:
-                tanggal_rss = today
+                publish_wib = pd.NaT
+                tanggal_publish = pd.NaT
 
+            # ===== CLEAN TEXT =====
             judul = clean_html(entry.get("title", ""))
             ringkasan = clean_html(entry.get("summary", ""))
 
             all_news.append({
                 "Media": media,
                 "Judul": judul,
-                "Tanggal": entry.get("published", ""),
+                "Tanggal": published_str,
                 "Link": entry.get("link", ""),
                 "Ringkasan": ringkasan,
-                "Tanggal_Ambil": tanggal_rss
+                "Waktu_Publish_WIB": publish_wib,
+                "Tanggal_Publish": tanggal_publish
             })
 
     df = pd.DataFrame(all_news)

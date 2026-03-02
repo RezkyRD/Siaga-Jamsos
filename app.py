@@ -12,7 +12,7 @@ st.markdown("""
 <style>
 
 /* padding supaya header tidak kepotong */
-.block-container {padding-top: 1.6rem; padding-bottom: 2rem;}
+.block-container {padding-top: 3.4rem; padding-bottom: 2rem;}
 
 /* Sidebar background */
 [data-testid="stSidebar"] {background: #0B2C5F;}

@@ -44,41 +44,47 @@ filtered = pd.read_csv("filtered_news.csv")
 # ===============================
 # DATE RANGE PICKER
 # ===============================
+# ===============================
+# DATE RANGE PICKER (FIX TZ)
+# ===============================
 st.subheader("📅 Pilih Rentang Tanggal")
 
-raw["Tanggal_Ambil"] = pd.to_datetime(raw["Tanggal_Ambil"], utc=True)
-filtered["Tanggal_Ambil"] = pd.to_datetime(filtered["Tanggal_Ambil"], utc=True)
+raw["Tanggal_Ambil"] = pd.to_datetime(raw["Tanggal_Ambil"], errors="coerce", utc=True)
+filtered["Tanggal_Ambil"] = pd.to_datetime(filtered["Tanggal_Ambil"], errors="coerce", utc=True)
 
-# Konversi ke WIB
+# Konversi ke WIB (tz-aware)
 raw["Tanggal_Ambil"] = raw["Tanggal_Ambil"].dt.tz_convert("Asia/Jakarta")
 filtered["Tanggal_Ambil"] = filtered["Tanggal_Ambil"].dt.tz_convert("Asia/Jakarta")
 
-min_date = raw["Tanggal_Ambil"].min()
-max_date = raw["Tanggal_Ambil"].max()
+# st.date_input butuh DATE, bukan Timestamp tz-aware
+min_date = raw["Tanggal_Ambil"].min().date()
+max_date = raw["Tanggal_Ambil"].max().date()
 
 date_range = st.date_input(
     "Pilih Tanggal",
-    [min_date, max_date]
+    value=(min_date, max_date)   # tuple date
 )
 
 # Jika user pilih range lengkap
-if len(date_range) == 2:
-    start_date = pd.to_datetime(date_range[0])
-    end_date = pd.to_datetime(date_range[1])
+if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
+    start_date, end_date = date_range  # ini type: datetime.date
+
+    # Buat boundary tz-aware Asia/Jakarta (inklusif full day)
+    start_ts = pd.Timestamp(start_date, tz="Asia/Jakarta")
+    end_ts = pd.Timestamp(end_date, tz="Asia/Jakarta") + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
 
     raw_filtered = raw[
-        (raw["Tanggal_Ambil"] >= start_date) &
-        (raw["Tanggal_Ambil"] <= end_date)
-    ]
+        (raw["Tanggal_Ambil"] >= start_ts) &
+        (raw["Tanggal_Ambil"] <= end_ts)
+    ].copy()
 
     filtered_display = filtered[
-        (filtered["Tanggal_Ambil"] >= start_date) &
-        (filtered["Tanggal_Ambil"] <= end_date)
-    ]
-
+        (filtered["Tanggal_Ambil"] >= start_ts) &
+        (filtered["Tanggal_Ambil"] <= end_ts)
+    ].copy()
 else:
-    raw_filtered = raw
-    filtered_display = filtered
+    raw_filtered = raw.copy()
+    filtered_display = filtered.copy()
 
 # ===============================
 # METRIC

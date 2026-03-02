@@ -115,16 +115,43 @@ if not os.path.exists("raw_news.csv") or not os.path.exists("filtered_news.csv")
 # ===============================
 raw = pd.read_csv("raw_news.csv")
 filtered = pd.read_csv("filtered_news.csv")
-# gunakan tanggal publish jika ada
-def ensure_publish_date(df):
+# ===============================
+# FIX TANGGAL (ANTI ERROR .dt)
+# ===============================
+def ensure_publish_date(df: pd.DataFrame) -> pd.DataFrame:
+    # prioritas kolom tanggal (dari scraper baru)
     if "Tanggal_Publish" in df.columns:
-        df["Tanggal_Hari"] = pd.to_datetime(df["Tanggal_Publish"], errors="coerce").dt.date
+        s = pd.to_datetime(df["Tanggal_Publish"], errors="coerce")
+
+    elif "Waktu_Publish_WIB" in df.columns:
+        s = pd.to_datetime(df["Waktu_Publish_WIB"], errors="coerce")
+
+    elif "Tanggal" in df.columns:
+        # parse UTC, lalu coba convert ke WIB (kalau tz-aware)
+        s = pd.to_datetime(df["Tanggal"], errors="coerce", utc=True)
+        try:
+            s = s.dt.tz_convert("Asia/Jakarta")
+        except Exception:
+            pass
+
+    elif "Tanggal_Ambil" in df.columns:
+        s = pd.to_datetime(df["Tanggal_Ambil"], errors="coerce")
+
     else:
-        df["Tanggal_Hari"] = pd.to_datetime(df["Tanggal"], errors="coerce").dt.date
+        raise ValueError("CSV tidak punya kolom tanggal yang dikenali.")
+
+    # pastikan datetime series
+    s = pd.to_datetime(s, errors="coerce")
+
+    df["Tanggal_Hari"] = s.dt.date
+    df = df.dropna(subset=["Tanggal_Hari"]).copy()
     return df
 
 raw = ensure_publish_date(raw)
 filtered = ensure_publish_date(filtered)
+
+min_date = raw["Tanggal_Hari"].min()
+max_date = raw["Tanggal_Hari"].max()
 
 # ===============================
 # FILTER PANEL (GLOBAL, DIPAKAI 2 TAB)
@@ -141,9 +168,6 @@ with st.sidebar:
 # APPLY DATE FILTER (ANTI GESER TIMEZONE)
 # ===============================
 # Gunakan tanggal murni agar tidak bergeser hari
-
-raw["Tanggal_Hari"] = raw["Tanggal_Ambil"].dt.date
-filtered["Tanggal_Hari"] = filtered["Tanggal_Ambil"].dt.date
 
 if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
     start_date, end_date = date_range
@@ -287,7 +311,9 @@ with tab_data:
     priority_order = {"PRIORITAS TINGGI": 1, "PRIORITAS SEDANG": 2, "PRIORITAS RENDAH": 3}
     df_display = filtered_for_table.copy()
     df_display["Urutan"] = df_display["Prioritas"].map(priority_order)
-    df_display = df_display.sort_values(["Urutan", "Tanggal_Ambil"], ascending=[True, False]).drop(columns=["Urutan"])
+
+    sort_col = "Waktu_Publish_WIB" if "Waktu_Publish_WIB" in df_display.columns else "Tanggal_Hari"
+    df_display = df_display.sort_values(["Urutan", sort_col], ascending=[True, False]).drop(columns=["Urutan"])
 
     # badge html
     def badge(prioritas):

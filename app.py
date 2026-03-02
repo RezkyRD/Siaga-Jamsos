@@ -128,8 +128,12 @@ filtered = filtered.dropna(subset=["Tanggal_Ambil"]).copy()
 raw["Tanggal_Ambil"] = raw["Tanggal_Ambil"].dt.tz_convert("Asia/Jakarta")
 filtered["Tanggal_Ambil"] = filtered["Tanggal_Ambil"].dt.tz_convert("Asia/Jakarta")
 
-min_date = raw["Tanggal_Ambil"].min().date()
-max_date = raw["Tanggal_Ambil"].max().date()
+# ✅ Kunci: gunakan tanggal murni untuk filter (anti geser timezone)
+raw["Tanggal_Hari"] = raw["Tanggal_Ambil"].dt.date
+filtered["Tanggal_Hari"] = filtered["Tanggal_Ambil"].dt.date
+
+min_date = raw["Tanggal_Hari"].min()
+max_date = raw["Tanggal_Hari"].max()
 
 # ===============================
 # FILTER PANEL (GLOBAL, DIPAKAI 2 TAB)
@@ -142,17 +146,28 @@ with st.sidebar:
         ["SEMUA", "PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
     )
 
-# Apply date filter
+# ===============================
+# APPLY DATE FILTER (ANTI GESER TIMEZONE)
+# ===============================
+# Gunakan tanggal murni agar tidak bergeser hari
+
+raw["Tanggal_Hari"] = raw["Tanggal_Ambil"].dt.date
+filtered["Tanggal_Hari"] = filtered["Tanggal_Ambil"].dt.date
+
 if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
     start_date, end_date = date_range
-    start_ts = pd.Timestamp(start_date, tz="Asia/Jakarta")
-    end_ts = pd.Timestamp(end_date, tz="Asia/Jakarta") + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
 else:
-    start_ts = pd.Timestamp(min_date, tz="Asia/Jakarta")
-    end_ts = pd.Timestamp(max_date, tz="Asia/Jakarta") + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
+    start_date, end_date = min_date, max_date
 
-raw_filtered = raw[(raw["Tanggal_Ambil"] >= start_ts) & (raw["Tanggal_Ambil"] <= end_ts)].copy()
-filtered_display = filtered[(filtered["Tanggal_Ambil"] >= start_ts) & (filtered["Tanggal_Ambil"] <= end_ts)].copy()
+raw_filtered = raw[
+    (raw["Tanggal_Hari"] >= start_date) &
+    (raw["Tanggal_Hari"] <= end_date)
+].copy()
+
+filtered_display = filtered[
+    (filtered["Tanggal_Hari"] >= start_date) &
+    (filtered["Tanggal_Hari"] <= end_date)
+].copy()
 
 # Apply priority filter (only for display/data table)
 filtered_for_table = filtered_display.copy()

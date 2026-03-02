@@ -65,4 +65,4 @@ def run_scraper():
     print("Scraping selesai. Data ditambahkan ke raw_news.csv")
 
 if __name__ == "__main__":
-        run_scraper()
+    run_scraper()

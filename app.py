@@ -3,6 +3,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
+from scraper import run_scraper
+from filter_keyword import run_filter
+from update_priority import run_priority
+
 # ===============================
 # PAGE CONFIG + THEME
 # ===============================
@@ -86,10 +90,6 @@ with st.sidebar:
     st.markdown("### Kontrol Data")
     if st.button("🔄 Update Data"):
         with st.spinner("Memproses update..."):
-            from scraper import run_scraper
-            from filter_keyword import run_filter
-            from update_priority import run_priority
-
             run_scraper()
             run_filter()
             run_priority()

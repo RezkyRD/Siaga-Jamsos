@@ -2,8 +2,19 @@ import feedparser
 import pandas as pd
 from datetime import datetime
 import os
+import re
+
+
+def clean_html(text):
+    if not text:
+        return ""
+    text = re.sub('<.*?>', '', text)
+    text = text.replace("\n", " ").strip()
+    return text
+
 
 def run_scraper():
+
     rss_sources = {
         "CNN": "https://www.cnnindonesia.com/nasional/rss",
         "Tribunnews": "https://www.tribunnews.com/rss",
@@ -19,6 +30,7 @@ def run_scraper():
         feed = feedparser.parse(url)
 
         for entry in feed.entries:
+
             published = entry.get("published_parsed")
 
             if published:
@@ -26,12 +38,15 @@ def run_scraper():
             else:
                 tanggal_rss = today
 
+            judul = clean_html(entry.get("title", ""))
+            ringkasan = clean_html(entry.get("summary", ""))
+
             all_news.append({
                 "Media": media,
-                "Judul": entry.get("title", ""),
+                "Judul": judul,
                 "Tanggal": entry.get("published", ""),
                 "Link": entry.get("link", ""),
-                "Ringkasan": entry.get("summary", ""),
+                "Ringkasan": ringkasan,
                 "Tanggal_Ambil": tanggal_rss
             })
 
@@ -47,6 +62,7 @@ def run_scraper():
 
     combined.to_csv(file_name, index=False)
     print("Scraping selesai. Data ditambahkan ke raw_news.csv")
+
 
 if __name__ == "__main__":
     run_scraper()

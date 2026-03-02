@@ -1,92 +1,98 @@
 import pandas as pd
+import re
 
 def run_priority():
 
     print("Update prioritas dimulai...")
 
-# ==============================
-# LOAD DATA
-# ==============================
     df = pd.read_csv("filtered_news.csv")
 
-# ==============================
-# KEYWORD SCORE MAP
-# ==============================
-    score_map = {
+    # ==============================
+    # KEYWORD SCORE MAP (regex lebih fleksibel)
+    # ==============================
+    score_map = [
         # PRIORITAS TINGGI
-        "phk massal": 5,
-        "gelombang phk": 5,
-        "ribuan buruh": 5,
-        "pabrik tutup": 5,
-        "bangkrut": 5,
-        "kerusuhan": 5,
-        "bentrok": 4,
-        "ricuh": 4,
-        "blokade": 4,
-        "aksi besar": 4,
-        "ancam tutup": 4,
+        (r"phk.*massal|massal.*phk", 5),
+        (r"gelombang phk|phk gelombang", 5),
+        (r"ribuan (buruh|pekerja)", 5),
+        (r"pabrik tutup|tutup permanen|bangkrut", 5),
+        (r"kerusuhan|bentrok|ricuh", 4),
+        (r"blokade|aksi besar|ancam tutup", 4),
+        (r"dirumahkan|layoff", 4),
 
         # PRIORITAS SEDANG
-        "mogok kerja": 3,
-        "mogok": 3,
-        "aksi buruh": 3,
-        "unjuk rasa": 3,
-        "demo": 3,
-        "tuntutan upah": 3,
-        "perselisihan": 2,
-        "kontrak kerja": 2,
-        "serikat pekerja": 2,
-        "upah minimum": 2,
-        "upah tidak dibayar": 2,
-        "penutupan sementara": 2,
+        (r"mogok kerja|mogok", 3),
+        (r"aksi buruh|unjuk rasa|demo", 3),
+        (r"tuntutan upah", 3),
+        (r"perselisihan|konflik buruh", 2),
+        (r"upah tidak dibayar", 2),
+        (r"serikat pekerja", 2),
+        (r"penutupan sementara", 2),
 
         # PRIORITAS RENDAH
-        "phk": 1,
-        "upah": 1,
-        "tenaga kerja": 1,
-        "ketenagakerjaan": 1
-    }
+        (r"\bphk\b", 1),
+        (r"upah|tenaga kerja|ketenagakerjaan", 1),
+    ]
 
-# ==============================
-# FUNCTION HITUNG SKOR
-# ==============================
-    def calculate_score(judul):
-        judul = str(judul).lower()
+    # ==============================
+    # FUNCTION HITUNG SKOR
+    # ==============================
+    def calculate_score(text):
+
+        text = str(text).lower()
         score = 0
 
-        for kata, nilai in score_map.items():
-            if kata in judul:
+        for pattern, nilai in score_map:
+            if re.search(pattern, text):
                 score += nilai
 
         return score
 
+    # ==============================
+    # GABUNGKAN JUDUL + RINGKASAN JIKA ADA
+    # ==============================
+    text_series = df["Judul"].fillna("")
 
-# ==============================
-# FUNCTION KLASIFIKASI
-# ==============================
+    if "Ringkasan" in df.columns:
+        text_series = text_series + " " + df["Ringkasan"].fillna("")
+
+    # ==============================
+    # APPLY ANALISIS
+    # ==============================
+    df["Score"] = text_series.apply(calculate_score)
+
     def classify_priority(score):
-        if score >= 5:
+        if score >= 6:
             return "PRIORITAS TINGGI"
         elif score >= 3:
             return "PRIORITAS SEDANG"
         else:
             return "PRIORITAS RENDAH"
 
-
-# ==============================
-# APPLY ANALISIS
-# ==============================
-    df["Score"] = df["Judul"].apply(calculate_score)
     df["Prioritas"] = df["Score"].apply(classify_priority)
 
-# ==============================
-# SAVE UPDATE
-# ==============================
+    # ==============================
+    # STATUS NASIONAL (EWS)
+    # ==============================
+    tinggi = (df["Prioritas"] == "PRIORITAS TINGGI").sum()
+
+    if tinggi >= 5:
+        status = "MERAH"
+    elif tinggi >= 1:
+        status = "KUNING"
+    else:
+        status = "HIJAU"
+
+    df["Status_EWS"] = status
+
+    # ==============================
+    # SAVE UPDATE
+    # ==============================
     df.to_csv("filtered_news.csv", index=False)
 
     print("Prioritas berhasil diperbarui.")
+    print("Status nasional:", status)
 
 
-# Supaya tetap bisa dijalankan manual
 if __name__ == "__main__":
     run_priority()

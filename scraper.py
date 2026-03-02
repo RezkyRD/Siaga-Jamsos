@@ -1,6 +1,7 @@
 import feedparser
 import pandas as pd
 from datetime import datetime
+import pytz
 import os
 
 def run_scraper():
@@ -15,20 +16,30 @@ def run_scraper():
 
     all_news = []
 
-    today = datetime.today().date()
+    wib = pytz.timezone("Asia/Jakarta")
+    today = datetime.now(wib).date()
 
     for media, url in rss_sources.items():
         feed = feedparser.parse(url)
 
         for entry in feed.entries:
-            all_news.append({
-                "Media": media,
-                "Judul": entry.title,
-                "Tanggal": entry.get("published", ""),
-                "Link": entry.link,
-                "Ringkasan": entry.get("summary", ""),
-                "Tanggal_Ambil": today
-            })
+
+    # 👇 AMBIL TANGGAL DARI RSS
+    tanggal_rss = entry.get("published_parsed")
+
+    if tanggal_rss:
+        tanggal_rss = datetime(*tanggal_rss[:6]).date()
+    else:
+        tanggal_rss = today
+
+    all_news.append({
+        "Media": media,
+        "Judul": entry.title,
+        "Tanggal": entry.get("published", ""),
+        "Link": entry.link,
+        "Ringkasan": entry.get("summary", ""),
+        "Tanggal_Ambil": tanggal_rss
+    })
 
     df = pd.DataFrame(all_news)
 

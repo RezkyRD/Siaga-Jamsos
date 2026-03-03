@@ -76,13 +76,13 @@ tbody tr:hover {background:#F9FAFB;}
 """, unsafe_allow_html=True)
 
 st.markdown("""
-<div style="margin-top:6px; margin-bottom:10px;">
-  <div style="font-size:28px; font-weight:800; color:#101828; line-height:1.2;">
+<div style="margin-bottom:20px;">
+  <h1 style="color: var(--text-color); margin-bottom:0;">
     Early Warning System
-  </div>
-  <div style="color:#475467; margin-top:4px;">
+  </h1>
+  <p style="color: var(--text-color); opacity:0.75; font-size:18px; margin-top:4px;">
     Monitoring Isu Ketenagakerjaan
-  </div>
+  </p>
 </div>
 """, unsafe_allow_html=True)
 st.divider()

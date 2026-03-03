@@ -272,47 +272,46 @@ with tab_dash:
     
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
 
-    # Chart + Narrative in 2 columns
     left, right = st.columns([1.1, 0.9], gap="large")
 
-    with left:
-        st.subheader("Distribusi Prioritas")
-        priority_counts = filtered_display["Prioritas"].value_counts()
-        if not priority_counts.empty:
-            order = ["PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
-            priority_counts = priority_counts.reindex(order).fillna(0).astype(int)
+with left:
+    st.subheader("Distribusi Prioritas")
+    priority_counts = filtered_display["Prioritas"].value_counts()
+    if not priority_counts.empty:
+        order = ["PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
+        priority_counts = priority_counts.reindex(order).fillna(0).astype(int)
 
-            fig, ax = plt.subplots(figsize=(7.5, 2.6), dpi=120)
-            priority_counts.plot(kind="barh", ax=ax)
+        fig, ax = plt.subplots(figsize=(7.5, 2.6), dpi=120)
+        priority_counts.plot(kind="barh", ax=ax)
 
-            ax.set_xlabel("Jumlah Berita")
-            ax.set_ylabel("")
-            ax.set_title("")
-            fig.subplots_adjust(top=0.92, left=0.35, right=0.98, bottom=0.25)
+        ax.set_xlabel("Jumlah Berita")
+        ax.set_ylabel("")
+        ax.set_title("")
+        fig.subplots_adjust(top=0.92, left=0.35, right=0.98, bottom=0.25)
 
-            st.pyplot(fig, width="stretch")
-        else:
-            st.warning("Belum ada data.")
+        st.pyplot(fig, width="stretch")
+    else:
+        st.warning("Belum ada data.")
 
-    with right:
-        st.subheader("🧠 Analisis Situasi")
-        total = len(filtered_display)
+with right:
+    st.subheader("🧠 Analisis Situasi")
+    total = len(filtered_display)
 
     if tinggi > 3:
+        status_txt = "🔴 RISIKO TINGGI"
         kondisi = "menunjukkan eskalasi signifikan"
         rekomendasi = "Perlu mitigasi cepat dan koordinasi lintas unit."
-        tag = "🔴 RISIKO TINGGI"
     elif tinggi > 0:
+        status_txt = "🟡 WASPADA"
         kondisi = "menunjukkan potensi peningkatan risiko"
         rekomendasi = "Perlu pemantauan intensif dan klarifikasi lapangan."
-        tag = "🟡 WASPADA"
     else:
+        status_txt = "🟢 STABIL"
         kondisi = "relatif stabil tanpa indikasi eskalasi besar"
         rekomendasi = "Pemantauan rutin sebagai langkah preventif."
-        tag = "🟢 STABIL"
 
     st.markdown(f"""
-**Status:** {tag}
+**Status:** {status_txt}
 
 Total berita terfilter: **{total:,}**  
 Prioritas tinggi: **{tinggi:,}**  

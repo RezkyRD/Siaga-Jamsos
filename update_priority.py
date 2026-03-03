@@ -8,7 +8,7 @@ from gsheet_utils import read_sheet, clear_and_write
 def run_priority():
     print("Update prioritas dimulai...")
 
-    SHEET_KEY = st.secrets["1usVNpV9PWDQzh9p_ix0hHY4lvlG02mKcEZAyiimooMs"]
+    SHEET_KEY = st.secrets["SHEET_KEY"]
 
     # ==============================
     # BACA DATA DARI GOOGLE SHEET (FILTERED)

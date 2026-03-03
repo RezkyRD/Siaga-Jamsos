@@ -16,7 +16,7 @@ def clean_html(text):
 
 
 def run_scraper():
-    SHEET_KEY = "1usVNpV9PWDQzh9p_ix0hHY4lvlG02mKcEZAyiimooMs"
+    SHEET_KEY = st.secrets["SHEET_KEY"]
 
     rss_sources = {
         "CNN": "https://www.cnnindonesia.com/nasional/rss",

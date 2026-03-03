@@ -25,6 +25,7 @@ def run_scraper(sheet_key=None, *args, **kwargs):
         "CNBCIndonesia": "https://www.cnbcindonesia.com/rss",
         "SindoNews": "https://nasional.sindonews.com/rss",
         "Hariankepri": "https://www.hariankepri.com/feed/",
+        "GoogleNews-Ketenagakerjaan": "https://news.google.com/rss/search?q=PHK+OR+buruh+OR+ketenagakerjaan+OR+upah+OR+UMK+OR+UMP+OR+JKP+OR+%22BPJS+Ketenagakerjaan%22+OR+%22demo+buruh%22+OR+%22mogok+kerja%22+OR+outsourcing+OR+pesangon+OR+%22tutup+pabrik%22&hl=id&gl=ID&ceid=ID:id",
     }
 
     now_utc = pd.Timestamp.now(tz="UTC")

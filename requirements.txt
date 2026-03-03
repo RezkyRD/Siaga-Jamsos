@@ -4,3 +4,5 @@ matplotlib
 feedparser
 requests
 beautifulsoup4
+gspread
+oauth2client

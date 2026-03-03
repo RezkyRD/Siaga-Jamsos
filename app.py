@@ -295,7 +295,6 @@ with tab_dash:
             st.warning("Belum ada data.")
 
     with right:
-        with right:
         st.subheader("🧠 Analisis Situasi")
         total = len(filtered_display)
 

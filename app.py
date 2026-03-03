@@ -296,8 +296,8 @@ with tab_dash:
 
     with right:
         with right:
-    st.subheader("🧠 Analisis Situasi")
-    total = len(filtered_display)
+        st.subheader("🧠 Analisis Situasi")
+        total = len(filtered_display)
 
     if tinggi > 3:
         kondisi = "menunjukkan eskalasi signifikan"

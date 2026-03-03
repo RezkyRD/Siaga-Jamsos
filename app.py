@@ -71,7 +71,24 @@ st.markdown("""
 
 thead tr th {background:#F2F4F7 !important; color:#344054 !important; font-size: 12px;}
 tbody tr:hover {background:#F9FAFB;}
+/* Hilangkan highlight putih saat tap di HP */
+table {
+    -webkit-tap-highlight-color: transparent;
+}
 
+tbody tr:active {
+    background-color: transparent !important;
+}
+
+tbody tr:focus {
+    background-color: transparent !important;
+}
+
+tbody tr {
+    transition: none !important;
+}
+
+/* ===== AKHIR TAMBAHAN ===== */
 </style>
 """, unsafe_allow_html=True)
 

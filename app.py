@@ -295,36 +295,34 @@ with tab_dash:
             st.warning("Belum ada data.")
 
     with right:
-        st.subheader("🧠 Analisis Situasi")
-        total = len(filtered_display)
+        with right:
+    st.subheader("🧠 Analisis Situasi")
+    total = len(filtered_display)
 
     if tinggi > 3:
         kondisi = "menunjukkan eskalasi signifikan"
         rekomendasi = "Perlu mitigasi cepat dan koordinasi lintas unit."
-        tag = "<span class='badge badge-high'>RISIKO TINGGI</span>"
+        tag = "🔴 RISIKO TINGGI"
     elif tinggi > 0:
         kondisi = "menunjukkan potensi peningkatan risiko"
         rekomendasi = "Perlu pemantauan intensif dan klarifikasi lapangan."
-        tag = "<span class='badge badge-mid'>WASPADA</span>"
+        tag = "🟡 WASPADA"
     else:
         kondisi = "relatif stabil tanpa indikasi eskalasi besar"
         rekomendasi = "Pemantauan rutin sebagai langkah preventif."
-        tag = "<span class='badge badge-low'>STABIL</span>"
+        tag = "🟢 STABIL"
 
     st.markdown(f"""
-    <div class="kpi-card">
-      <div class="kpi-title">Ringkasan</div>
-      <div style="margin:6px 0 10px 0;">{tag}</div>
-      <div style="color:#344054; line-height:1.55;">
-        Total berita terfilter: <b>{total:,}</b><br>
-        Prioritas tinggi: <b>{tinggi:,}</b><br>
-        Prioritas sedang: <b>{sedang:,}</b><br>
-        Prioritas rendah: <b>{rendah:,}</b><br><br>
-        Kondisi saat ini <b>{kondisi}</b>.<br>
-        {rekomendasi}
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+**Status:** {tag}
+
+Total berita terfilter: **{total:,}**  
+Prioritas tinggi: **{tinggi:,}**  
+Prioritas sedang: **{sedang:,}**  
+Prioritas rendah: **{rendah:,}**
+
+Kondisi saat ini **{kondisi}**.  
+{rekomendasi}
+""")
 
 # ===============================
 # TAB: DATA BERITA

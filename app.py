@@ -290,6 +290,41 @@ with left:
         fig.subplots_adjust(top=0.92, left=0.35, right=0.98, bottom=0.25)
 
         st.pyplot(fig, width="stretch")
+        # ===============================
+        # 📰 TOP 5 PRIORITAS TINGGI (CLICKABLE)
+        # ===============================
+        st.markdown("### 📰 Top 5 Berita Prioritas Tinggi (Terbaru)")
+
+        df_high = filtered_display[
+            filtered_display["Prioritas"] == "PRIORITAS TINGGI"
+        ].copy()
+
+        if not df_high.empty:
+            if "Waktu_Publish_WIB" in df_high.columns:
+                df_high = df_high.sort_values(
+                    "Waktu_Publish_WIB",
+                    ascending=False
+                )
+
+            top5 = df_high.head(5)
+
+            for _, row in top5.iterrows():
+                media = row.get("Media", "-")
+                judul = row.get("Judul", "-")
+                link = row.get("Link", "")
+                waktu = row.get("Waktu_Publish_WIB", "")
+
+                if link:
+                    st.markdown(
+                        f"- **[{judul}]({link})**  \n  _{media} • {waktu}_"
+                    )
+                else:
+                    st.markdown(
+                        f"- **{judul}**  \n  _{media} • {waktu}_"
+                    )
+        else:
+            st.info("Belum ada berita prioritas tinggi.")
+
     else:
         st.warning("Belum ada data.")
 

@@ -295,8 +295,8 @@ with tab_dash:
             st.warning("Belum ada data.")
 
     with right:
-    st.subheader("🧠 Analisis Situasi")
-    total = len(filtered_display)
+        st.subheader("🧠 Analisis Situasi")
+        total = len(filtered_display)
 
     if tinggi > 3:
         kondisi = "menunjukkan eskalasi signifikan"

@@ -230,7 +230,7 @@ with tab_dash:
     sedang = (filtered_display["Prioritas"] == "PRIORITAS SEDANG").sum()
     rendah = (filtered_display["Prioritas"] == "PRIORITAS RENDAH").sum()
 
-    c1, c2, c3, c4, c5 = st.columns([1.2, 1.2, 1, 1, 1, 1.1], gap="large")
+    c1, c2, c3, c4, c5 = st.columns([1.2, 1.2, 1, 1, 1], gap="large")
     with c1:
         st.markdown(f"""
         <div class="kpi-card">

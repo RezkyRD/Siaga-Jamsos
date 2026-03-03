@@ -6,6 +6,9 @@ import os
 from scraper import run_scraper
 from filter_keyword import run_filter
 from update_priority import run_priority
+from gsheet_utils import read_sheet
+
+SHEET_KEY = st.secrets["1usVNpV9PWDQzh9p_ix0hHY4lvlG02mKcEZAyiimooMs"]
 
 # ===============================
 # PAGE CONFIG + THEME
@@ -98,23 +101,10 @@ with st.sidebar:
         st.rerun()
 
 # ===============================
-# AUTO GENERATE DATA JIKA BELUM ADA
-# ===============================
-from scraper import run_scraper
-from filter_keyword import run_filter
-from update_priority import run_priority
-
-if not os.path.exists("raw_news.csv") or not os.path.exists("filtered_news.csv"):
-    with st.spinner("Memuat data awal..."):
-        run_scraper()
-        run_filter()
-        run_priority()
-
-# ===============================
 # LOAD DATA
 # ===============================
-raw = pd.read_csv("raw_news.csv")
-filtered = pd.read_csv("filtered_news.csv")
+raw = read_sheet(SHEET_KEY, "RAW")
+filtered = read_sheet(SHEET_KEY, "FILTERED")
 # ===============================
 # FIX TANGGAL (ANTI ERROR .dt)
 # ===============================

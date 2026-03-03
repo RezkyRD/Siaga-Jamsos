@@ -1,11 +1,23 @@
 import pandas as pd
 import re
+import streamlit as st
+
+from gsheet_utils import read_sheet, clear_and_write
+
 
 def run_priority():
-
     print("Update prioritas dimulai...")
 
-    df = pd.read_csv("filtered_news.csv")
+    SHEET_KEY = st.secrets["1usVNpV9PWDQzh9p_ix0hHY4lvlG02mKcEZAyiimooMs"]
+
+    # ==============================
+    # BACA DATA DARI GOOGLE SHEET (FILTERED)
+    # ==============================
+    df = read_sheet(SHEET_KEY, "FILTERED")
+
+    if df.empty:
+        print("Sheet FILTERED kosong.")
+        return
 
     # ==============================
     # KEYWORD SCORE MAP (regex lebih fleksibel)
@@ -34,27 +46,20 @@ def run_priority():
         (r"upah|tenaga kerja|ketenagakerjaan", 1),
     ]
 
-    # ==============================
-    # FUNCTION HITUNG SKOR
-    # ==============================
     def calculate_score(text):
-
         text = str(text).lower()
         score = 0
-
         for pattern, nilai in score_map:
             if re.search(pattern, text):
                 score += nilai
-
         return score
 
     # ==============================
-    # GABUNGKAN JUDUL + RINGKASAN JIKA ADA
+    # GABUNGKAN JUDUL + RINGKASAN
     # ==============================
-    text_series = df["Judul"].fillna("")
-
+    text_series = df.get("Judul", "").astype(str).fillna("")
     if "Ringkasan" in df.columns:
-        text_series = text_series + " " + df["Ringkasan"].fillna("")
+        text_series = text_series + " " + df["Ringkasan"].astype(str).fillna("")
 
     # ==============================
     # APPLY ANALISIS
@@ -86,9 +91,9 @@ def run_priority():
     df["Status_EWS"] = status
 
     # ==============================
-    # SAVE UPDATE
+    # SIMPAN KEMBALI KE SHEET FILTERED
     # ==============================
-    df.to_csv("filtered_news.csv", index=False)
+    clear_and_write(SHEET_KEY, "FILTERED", df)
 
     print("Prioritas berhasil diperbarui.")
     print("Status nasional:", status)

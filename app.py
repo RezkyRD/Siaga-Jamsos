@@ -202,8 +202,7 @@ filtered_display = filtered[
 # ===============================
 if not filtered_display.empty:
     combo = filtered_display.get("Judul", "").astype(str)
-    if "Ringkasan" in filtered_display.columns:
-        combo = combo + " " + filtered_display["Ringkasan"].astype(str).fillna("")
+  
     filtered_display["Topik"] = combo.apply(detect_topic)
 
 # Apply priority filter (only for display/data table)
@@ -296,8 +295,8 @@ with tab_dash:
             st.warning("Belum ada data.")
 
     with right:
-        st.subheader("🧠 Analisis Situasi")
-        total = len(filtered_display)
+    st.subheader("🧠 Analisis Situasi")
+    total = len(filtered_display)
 
     if tinggi > 3:
         kondisi = "menunjukkan eskalasi signifikan"
@@ -312,13 +311,6 @@ with tab_dash:
         rekomendasi = "Pemantauan rutin sebagai langkah preventif."
         tag = "<span class='badge badge-low'>STABIL</span>"
 
-    # Topik teratas (HARUS DI DALAM with right)
-    top_topics = (
-        filtered_display["Topik"].value_counts().head(5)
-        if "Topik" in filtered_display.columns else pd.Series(dtype=int)
-    )
-    topics_html = "<br>".join([f"• {k}: <b>{v}</b>" for k, v in top_topics.items()]) if not top_topics.empty else "—"
-
     st.markdown(f"""
     <div class="kpi-card">
       <div class="kpi-title">Ringkasan</div>
@@ -328,10 +320,6 @@ with tab_dash:
         Prioritas tinggi: <b>{tinggi:,}</b><br>
         Prioritas sedang: <b>{sedang:,}</b><br>
         Prioritas rendah: <b>{rendah:,}</b><br><br>
-
-        <b>Topik teratas:</b><br>
-        {topics_html}<br><br>
-
         Kondisi saat ini <b>{kondisi}</b>.<br>
         {rekomendasi}
       </div>

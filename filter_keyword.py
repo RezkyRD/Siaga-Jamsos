@@ -1,55 +1,48 @@
 import pandas as pd
-import streamlit as st
 
 from gsheet_utils import read_sheet, clear_and_write
 
 
-def run_filter():
-
-    SHEET_KEY = st.secrets["SHEET_KEY"]
+def run_filter(sheet_key: str | None = None):
+    if not sheet_key:
+        import streamlit as st
+        sheet_key = st.secrets["SHEET_KEY"]
 
     keywords = [
-        "PHK",
+        "phk",
         "demo buruh",
-        "BPJS",
-        "JKP",
+        "bpjs",
+        "jkp",
         "mogok",
         "konflik buruh",
-        "JHT",
-        "JKK",
-        "JKM",
-        "JP",
+        "jht",
+        "jkk",
+        "jkm",
+        "jp",
         "buruh",
-        "UMR",
-        "Ketenagakerjaan",
+        "umr",
+        "ketenagakerjaan",
     ]
 
-    # ===============================
-    # BACA DATA DARI GOOGLE SHEET (RAW)
-    # ===============================
-    df = read_sheet(SHEET_KEY, "RAW")
+    df = read_sheet(sheet_key, "RAW")
 
     if df.empty:
-        print("Sheet RAW kosong.")
-        return
+        clear_and_write(sheet_key, "FILTERED", df)  # tulis kosong tapi schema aman
+        return df
 
-    # ===============================
-    # FILTER KEYWORD
-    # ===============================
-    def contains_keyword(text):
-        if pd.isna(text):
-            return False
-        return any(k.lower() in str(text).lower() for k in keywords)
+    if "Judul" not in df.columns:
+        # kalau tidak ada judul, tidak bisa filter: tulis kosong
+        clear_and_write(sheet_key, "FILTERED", df.iloc[0:0].copy())
+        return df.iloc[0:0].copy()
+
+    def contains_keyword(text) -> bool:
+        t = str(text or "").lower()
+        return any(k in t for k in keywords)
 
     df_filtered = df[df["Judul"].apply(contains_keyword)].copy()
 
-    # ===============================
-    # SIMPAN KE SHEET FILTERED
-    # ===============================
-    clear_and_write(SHEET_KEY, "FILTERED", df_filtered)
-
-    print("Total RAW:", len(df))
-    print("Total Lolos Keyword:", len(df_filtered))
+    clear_and_write(sheet_key, "FILTERED", df_filtered)
+    return df_filtered
 
 
 if __name__ == "__main__":

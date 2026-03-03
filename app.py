@@ -149,26 +149,6 @@ min_date = raw["Tanggal_Hari"].min()
 max_date = raw["Tanggal_Hari"].max()
 
 # =====================================
-# SPIKE DETECTION FUNCTION (TARUH DI SINI)
-# =====================================
-def spike_ratio(df: pd.DataFrame, start_date, end_date) -> float:
-    if df.empty:
-        return 0.0
-
-    daily = df.groupby("Tanggal_Hari").size().sort_index()
-
-    today = end_date
-    today_count = int(daily.get(today, 0))
-
-    prev_days = pd.date_range(end=today - pd.Timedelta(days=1), periods=7).date
-    prev_counts = [int(daily.get(d, 0)) for d in prev_days]
-    avg_7 = sum(prev_counts) / 7 if prev_counts else 0
-
-    if avg_7 == 0:
-        return float(today_count)
-    return today_count / avg_7
-
-# =====================================
 # TOPIC DETECTION (TARUH DI SINI)
 # =====================================
 TOPIC_RULES = {
@@ -250,22 +230,7 @@ with tab_dash:
     sedang = (filtered_display["Prioritas"] == "PRIORITAS SEDANG").sum()
     rendah = (filtered_display["Prioritas"] == "PRIORITAS RENDAH").sum()
 
-    # ======================
-    # SPIKE DETECTION
-    # ======================
-    ratio = spike_ratio(filtered_display, start_date, end_date)
-
-    if ratio >= 2.0:
-        spike_label = "LONJAKAN TINGGI"
-        spike_badge = "<span class='badge badge-high'>SPIKE</span>"
-    elif ratio >= 1.2:
-        spike_label = "NAIK"
-        spike_badge = "<span class='badge badge-mid'>NAIK</span>"
-    else:
-        spike_label = "NORMAL"
-        spike_badge = "<span class='badge badge-low'>NORMAL</span>"
-
-    c1, c2, c3, c4, c5, c6 = st.columns([1.2, 1.2, 1, 1, 1, 1.1], gap="large")
+    c1, c2, c3, c4, c5 = st.columns([1.2, 1.2, 1, 1, 1, 1.1], gap="large")
     with c1:
         st.markdown(f"""
         <div class="kpi-card">
@@ -305,15 +270,7 @@ with tab_dash:
           <div class="kpi-value">{rendah:,}</div>
           <div class="kpi-sub"><span class="badge badge-low">LOW</span></div>
         </div>""", unsafe_allow_html=True)
-    with c6:
-        st.markdown(f"""
-    <div class="kpi-card">
-      <div class="kpi-title">Lonjakan (vs 7 hari)</div>
-      <div class="kpi-value">{ratio:.2f}x</div>
-      <div class="kpi-sub">{spike_badge} {spike_label}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
 
     # Chart + Narrative in 2 columns
@@ -388,35 +345,7 @@ with tab_data:
     st.subheader("📰 Monitoring Berita Ketenagakerjaan")
     st.caption("Gunakan filter di sidebar untuk mengatur rentang tanggal dan prioritas.")
 
-    # ===============================
-    # FILTER TAMBAHAN (TAB DATA)
-    # ===============================
-    colf1, colf2 = st.columns([1, 1.2])
-    with colf1:
-        q = st.text_input("Cari judul (contains)", "")
-    with colf2:
-        media_col = "Media" if "Media" in filtered_for_table.columns else ("Sumber" if "Sumber" in filtered_for_table.columns else None)
-        if media_col:
-            media_list = ["SEMUA"] + sorted([
-                m for m in filtered_for_table[media_col].dropna().unique().tolist()
-                if str(m).strip() != ""
-            ])
-            media_pick = st.selectbox("Filter Media", media_list)
-        else:
-            media_pick = "SEMUA"
-            st.caption("Kolom Media tidak ditemukan.")
-
     # Urutkan prioritas: tinggi dulu
     priority_order = {"PRIORITAS TINGGI": 1, "PRIORITAS SEDANG": 2, "PRIORITAS RENDAH": 3}
     df_display = filtered_for_table.copy()
-
-    # ===============================
-    # APPLY FILTER TAMBAHAN
-    # ===============================
-    if q.strip():
-        df_display = df_display[df_display["Judul"].astype(str).str.contains(q, case=False, na=False)].copy()
-
-    if media_pick != "SEMUA" and media_col:
-        df_display = df_display[df_display[media_col] == media_pick].copy()
-
     df_display["Urutan"] = df_display["Prioritas"].map(priority_order)

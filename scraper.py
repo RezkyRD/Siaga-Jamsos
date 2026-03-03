@@ -27,7 +27,7 @@ def run_scraper(sheet_key=None, *args, **kwargs):
         "Hariankepri": "https://www.hariankepri.com/feed/",
     }
 
-    now_utc = pd.Timestamp.utcnow().tz_localize("UTC")
+    now_utc = pd.Timestamp.now(tz="UTC")
     now_wib = now_utc.tz_convert("Asia/Jakarta")
 
     all_news = []

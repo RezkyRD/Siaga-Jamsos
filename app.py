@@ -188,12 +188,12 @@ tab_dash, tab_data = st.tabs(["📊 Dashboard", "📰 Data Berita"])
 # TAB: DASHBOARD
 # ===============================
 with tab_dash:
-    # KPI counts
-# pastikan kolom Prioritas ada
-if "Prioritas" not in filtered_display.columns:
-    st.error("Kolom 'Prioritas' belum ada di data FILTERED. Klik 🔄 Update Data dulu.")
-    st.stop()
+    # pastikan kolom Prioritas ada
+    if "Prioritas" not in filtered_display.columns:
+        st.error("Kolom 'Prioritas' belum ada di data FILTERED. Klik 🔄 Update Data dulu.")
+        st.stop()
 
+    # KPI counts
     tinggi = (filtered_display["Prioritas"] == "PRIORITAS TINGGI").sum()
     sedang = (filtered_display["Prioritas"] == "PRIORITAS SEDANG").sum()
     rendah = (filtered_display["Prioritas"] == "PRIORITAS RENDAH").sum()

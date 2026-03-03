@@ -345,7 +345,88 @@ with tab_data:
     st.subheader("📰 Monitoring Berita Ketenagakerjaan")
     st.caption("Gunakan filter di sidebar untuk mengatur rentang tanggal dan prioritas.")
 
+    # ambil data untuk tabel dari hasil filter sidebar (sama seperti dulu)
+    df_display = filtered_for_table.copy()
+
+    # kalau kosong, tampilkan info (biar tidak blank)
+    if df_display.empty:
+        st.info("Tidak ada berita untuk filter yang dipilih.")
+        st.stop()
+
     # Urutkan prioritas: tinggi dulu
     priority_order = {"PRIORITAS TINGGI": 1, "PRIORITAS SEDANG": 2, "PRIORITAS RENDAH": 3}
-    df_display = filtered_for_table.copy()
-    df_display["Urutan"] = df_display["Prioritas"].map(priority_order)
+    df_display["Urutan"] = df_display["Prioritas"].map(priority_order).fillna(99)
+
+    # tentukan kolom waktu untuk sort (cocok untuk app baru)
+    sort_col = None
+    for c in ["Waktu_Publish_WIB", "Tanggal_Publish", "Tanggal_Ambil", "Tanggal_Hari"]:
+        if c in df_display.columns:
+            sort_col = c
+            break
+    if sort_col is None:
+        sort_col = "Urutan"  # fallback
+
+    df_display = df_display.sort_values(["Urutan", sort_col], ascending=[True, False]).drop(columns=["Urutan"])
+
+    # badge html (sama seperti dulu)
+    def badge(prioritas):
+        if prioritas == "PRIORITAS TINGGI":
+            return "<span class='badge badge-high'>PRIORITAS TINGGI</span>"
+        elif prioritas == "PRIORITAS SEDANG":
+            return "<span class='badge badge-mid'>PRIORITAS SEDANG</span>"
+        else:
+            return "<span class='badge badge-low'>PRIORITAS RENDAH</span>"
+
+    if "Prioritas" in df_display.columns:
+        df_display["Prioritas"] = df_display["Prioritas"].astype(str).apply(badge)
+
+    # Link klik (sama seperti dulu)
+    if "Link" in df_display.columns:
+        df_display["Link"] = df_display["Link"].apply(lambda x: f'<a href="{x}" target="_blank">Buka Link</a>')
+
+    # Reset index mulai 1 (sama seperti dulu)
+    df_display = df_display.reset_index(drop=True)
+    df_display.index = df_display.index + 1
+
+    # Pagination (sama seperti dulu)
+    items_per_page = 8
+    total_rows = len(df_display)
+    total_pages = max(1, (total_rows - 1) // items_per_page + 1)
+
+    if "page" not in st.session_state:
+        st.session_state.page = 1
+    if st.session_state.page > total_pages:
+        st.session_state.page = 1
+
+    start_idx = (st.session_state.page - 1) * items_per_page
+    end_idx = start_idx + items_per_page
+    df_page = df_display.iloc[start_idx:end_idx]
+
+    # Tampilkan tabel (versi baru: fleksibel kolom tanggal)
+    preferred_cols = ["Judul", "Tanggal", "Waktu_Publish_WIB", "Tanggal_Hari", "Prioritas", "Link"]
+    show_cols = [c for c in preferred_cols if c in df_page.columns]
+    if not show_cols:
+        show_cols = df_page.columns.tolist()
+
+    st.write(df_page[show_cols].to_html(escape=False), unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div style='text-align:center; margin-top:10px; color:#475467;'>
+    Menampilkan {min(start_idx+1, total_rows)} - {min(end_idx, total_rows)} dari {total_rows} berita
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col1:
+        if st.button("⬅ Back", disabled=(st.session_state.page <= 1)):
+            st.session_state.page -= 1
+            st.rerun()
+    with col3:
+        if st.button("Next ➡", disabled=(st.session_state.page >= total_pages)):
+            st.session_state.page += 1
+            st.rerun()
+    with col2:
+        st.markdown(
+            f"<div style='text-align:center; color:#475467;'>Halaman {st.session_state.page} dari {total_pages}</div>",
+            unsafe_allow_html=True
+        )

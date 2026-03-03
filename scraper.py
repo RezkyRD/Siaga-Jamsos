@@ -1,34 +1,22 @@
 import feedparser
 import pandas as pd
+from datetime import datetime
 import re
+import streamlit as st
 
 from gsheet_utils import read_sheet, clear_and_write
 
 
-def clean_html(text: str) -> str:
+def clean_html(text):
     if not text:
         return ""
     text = re.sub("<.*?>", "", text)
-    return text.replace("\n", " ").strip()
+    text = text.replace("\n", " ").strip()
+    return text
 
 
-def _parse_entry_time(entry) -> pd.Timestamp:
-    if entry.get("published_parsed"):
-        return pd.to_datetime(entry.published_parsed, utc=True, errors="coerce")
-    if entry.get("updated_parsed"):
-        return pd.to_datetime(entry.updated_parsed, utc=True, errors="coerce")
-
-    published_str = entry.get("published") or entry.get("updated") or ""
-    return pd.to_datetime(published_str, utc=True, errors="coerce")
-
-
-def run_scraper(sheet_key=None):
-    # kalau dipanggil dari app.py pakai SHEET_KEY, gunakan itu
-    # kalau tidak, ambil dari secrets
-    if sheet_key is None:
-        SHEET_KEY = st.secrets["SHEET_KEY"]
-    else:
-        SHEET_KEY = sheet_key
+def run_scraper():
+    SHEET_KEY = st.secrets["SHEET_KEY"]
 
     rss_sources = {
         "CNN": "https://www.cnnindonesia.com/nasional/rss",
@@ -79,14 +67,18 @@ def run_scraper(sheet_key=None):
         df_old = pd.DataFrame()
 
     # gabung + dedup by Link
-    combined = pd.concat([df_old, df_new], ignore_index=True) if not df_old.empty else df_new
+    if not df_old.empty:
+        combined = pd.concat([df_old, df_new], ignore_index=True)
+    else:
+        combined = df_new
+
     if "Link" in combined.columns:
         combined = combined.drop_duplicates(subset=["Link"])
 
-    # tulis ulang sheet RAW
+    # tulis ulang sheet RAW (lebih stabil daripada append banyak baris)
     clear_and_write(SHEET_KEY, "RAW", combined)
+
     print("Scraping selesai. Data disimpan ke Google Sheets (RAW).")
-    return combined
 
 
 if __name__ == "__main__":

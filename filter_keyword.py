@@ -1,48 +1,55 @@
 import pandas as pd
+import streamlit as st
 
 from gsheet_utils import read_sheet, clear_and_write
 
 
-def run_filter(sheet_key: str | None = None):
-    if not sheet_key:
-        import streamlit as st
-        sheet_key = st.secrets["SHEET_KEY"]
+def run_filter():
+
+    SHEET_KEY = st.secrets["SHEET_KEY"]
 
     keywords = [
-        "phk",
+        "PHK",
         "demo buruh",
-        "bpjs",
-        "jkp",
+        "BPJS",
+        "JKP",
         "mogok",
         "konflik buruh",
-        "jht",
-        "jkk",
-        "jkm",
-        "jp",
+        "JHT",
+        "JKK",
+        "JKM",
+        "JP",
         "buruh",
-        "umr",
-        "ketenagakerjaan",
+        "UMR",
+        "Ketenagakerjaan",
     ]
 
-    df = read_sheet(sheet_key, "RAW")
+    # ===============================
+    # BACA DATA DARI GOOGLE SHEET (RAW)
+    # ===============================
+    df = read_sheet(SHEET_KEY, "RAW")
 
     if df.empty:
-        clear_and_write(sheet_key, "FILTERED", df)  # tulis kosong tapi schema aman
-        return df
+        print("Sheet RAW kosong.")
+        return
 
-    if "Judul" not in df.columns:
-        # kalau tidak ada judul, tidak bisa filter: tulis kosong
-        clear_and_write(sheet_key, "FILTERED", df.iloc[0:0].copy())
-        return df.iloc[0:0].copy()
-
-    def contains_keyword(text) -> bool:
-        t = str(text or "").lower()
-        return any(k in t for k in keywords)
+    # ===============================
+    # FILTER KEYWORD
+    # ===============================
+    def contains_keyword(text):
+        if pd.isna(text):
+            return False
+        return any(k.lower() in str(text).lower() for k in keywords)
 
     df_filtered = df[df["Judul"].apply(contains_keyword)].copy()
 
-    clear_and_write(sheet_key, "FILTERED", df_filtered)
-    return df_filtered
+    # ===============================
+    # SIMPAN KE SHEET FILTERED
+    # ===============================
+    clear_and_write(SHEET_KEY, "FILTERED", df_filtered)
+
+    print("Total RAW:", len(df))
+    print("Total Lolos Keyword:", len(df_filtered))
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ from filter_keyword import run_filter
 from update_priority import run_priority
 from gsheet_utils import read_sheet
 
-SHEET_KEY = st.secrets["1usVNpV9PWDQzh9p_ix0hHY4lvlG02mKcEZAyiimooMs"]
+SHEET_KEY = "1usVNpV9PWDQzh9p_ix0hHY4lvlG02mKcEZAyiimooMs"
 
 # ===============================
 # PAGE CONFIG + THEME

@@ -6,7 +6,7 @@ from gsheet_utils import read_sheet, clear_and_write
 
 def run_filter():
 
-    SHEET_KEY = st.secrets["1usVNpV9PWDQzh9p_ix0hHY4lvlG02mKcEZAyiimooMs"]
+    SHEET_KEY = "1usVNpV9PWDQzh9p_ix0hHY4lvlG02mKcEZAyiimooMs"
 
     keywords = [
         "PHK",

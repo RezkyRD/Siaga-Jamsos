@@ -28,12 +28,16 @@ def norm_title(s: str) -> str:
 
 
 def make_uid(row) -> str:
+    media = (row.get("Media", "") or "").strip().lower()
     judul = norm_title(row.get("Judul", ""))
+
+    waktu = (row.get("Waktu_Publish_WIB", "") or "").strip()
     tgl = (row.get("Tanggal_Publish", "") or "").strip()
-    # fallback kalau tanggal publish kosong
-    if not tgl:
-        tgl = (row.get("Tanggal_Ambil", "") or "").strip()
-    return f"{judul}|{tgl}"
+
+    # pakai waktu publish kalau ada, kalau tidak pakai tanggal publish, kalau tidak pakai tanggal ambil
+    key_time = waktu or tgl or (row.get("Tanggal_Ambil", "") or "").strip()
+
+    return f"{media}|{judul}|{key_time}"
 
 
 def run_scraper(sheet_key=None, *args, **kwargs):

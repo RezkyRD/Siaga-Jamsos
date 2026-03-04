@@ -363,7 +363,7 @@ st.dataframe(
     hide_index=True
 )
 
-    left, right = st.columns([1.1, 0.9], gap="large")
+left, right = st.columns([1.1, 0.9], gap="large")
 
 with left:
     st.subheader("Distribusi Prioritas")

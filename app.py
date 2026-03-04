@@ -169,11 +169,23 @@ max_date = raw["Tanggal_Hari"].max()
 # TOPIC DETECTION (TARUH DI SINI)
 # =====================================
 TOPIC_RULES = {
+    # ===== ISU KETENAGAKERJAAN =====
     "PHK / Layoff": [r"\bphk\b", r"\blayoff\b", r"\bdirumahkan\b", r"pemutusan hubungan kerja"],
     "Upah / Gaji": [r"\bupah\b", r"\bgaji\b", r"tunggakan upah", r"tidak dibayar"],
     "Aksi / Demo": [r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok"],
     "Pabrik Tutup / Pailit": [r"pabrik tutup", r"tutup permanen", r"\bpailit\b", r"\bbangkrut\b", r"likuidasi"],
     "Konflik Hubungan Industrial": [r"perselisihan", r"konflik buruh", r"sengketa", r"tripartit", r"mediasi"],
+
+    # ===== ISU BPJS KETENAGAKERJAAN =====
+    "Klaim JHT": [r"\bjht\b", r"jaminan hari tua", r"klaim jht", r"pencairan jht", r"saldo jht"],
+    "Jaminan Pensiun (JP)": [r"\bjp\b", r"jaminan pensiun", r"manfaat pensiun", r"iuran pensiun", r"usia pensiun", r"pensiun pekerja"],
+    "Manfaat JKP": [r"\bjkp\b", r"jaminan kehilangan pekerjaan", r"manfaat jkp", r"klaim jkp"],
+    "Kecelakaan Kerja (JKK)": [r"\bjkk\b", r"jaminan kecelakaan kerja", r"kecelakaan kerja", r"santunan jkk"],
+    "Santunan Kematian (JKM)": [r"\bjkm\b", r"jaminan kematian", r"santunan kematian", r"ahli waris"],
+    "Kepesertaan BPJS": [r"bpjs ketenagakerjaan", r"bpjamsostek", r"jamsostek", r"kepesertaan bpjs", r"terdaftar bpjs"],
+    "Tunggakan Iuran": [r"tunggakan iuran", r"menunggak iuran", r"telat bayar", r"denda", r"iuran bpjs"],
+    "Kendala Klaim BPJS": [r"klaim ditolak", r"kendala klaim", r"klaim lama", r"antrian klaim", r"verifikasi klaim"],
+    "Pengawasan Kepatuhan": [r"pengawasan", r"pemeriksaan", r"sanksi", r"kepatuhan perusahaan", r"tidak patuh"],
 }
 
 def detect_topic(text: str) -> str:
@@ -288,6 +300,68 @@ with tab_dash:
         </div>""", unsafe_allow_html=True)
     
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
+# ===============================
+# 🔥 INDEKS ESKALASI ISU (berdasarkan Topik)
+# ===============================
+st.markdown("## 🔥 Indeks Eskalasi Isu")
+
+df_ews = filtered_display.copy()
+
+# pastikan kolom Topik sudah ada
+if "Topik" not in df_ews.columns:
+    df_ews["Topik"] = df_ews.get("Judul","").astype(str).apply(detect_topic)
+
+# tentukan kolom waktu publish
+if "Waktu_Publish_WIB" in df_ews.columns:
+    df_ews["publish_dt"] = pd.to_datetime(df_ews["Waktu_Publish_WIB"], errors="coerce")
+elif "Tanggal_Publish" in df_ews.columns:
+    df_ews["publish_dt"] = pd.to_datetime(df_ews["Tanggal_Publish"], errors="coerce")
+else:
+    df_ews["publish_dt"] = pd.to_datetime(df_ews["Tanggal_Hari"], errors="coerce")
+
+df_ews = df_ews.dropna(subset=["publish_dt"]).copy()
+
+now = pd.Timestamp.now(tz="Asia/Jakarta").tz_localize(None)
+w1_start = now - pd.Timedelta(hours=24)
+w0_start = now - pd.Timedelta(hours=48)
+
+w1 = df_ews[df_ews["publish_dt"] >= w1_start].copy()
+w0 = df_ews[(df_ews["publish_dt"] >= w0_start) & (df_ews["publish_dt"] < w1_start)].copy()
+
+def agg(df_recent):
+    if df_recent.empty:
+        return pd.DataFrame(columns=["Topik","Berita 24 Jam","Media 24 Jam","Headline"])
+    out = df_recent.groupby("Topik", dropna=False).agg(
+        **{"Berita 24 Jam": ("Judul","count"), "Media 24 Jam": ("Media", pd.Series.nunique)}
+    ).reset_index()
+    head = (df_recent.sort_values("publish_dt", ascending=False)
+            .groupby("Topik", dropna=False).head(1)[["Topik","Judul"]]
+            .rename(columns={"Judul":"Headline"}))
+    return out.merge(head, on="Topik", how="left")
+
+s1 = agg(w1)
+s0 = agg(w0).rename(columns={"Berita 24 Jam":"Berita 24-48 Jam", "Media 24 Jam":"Media 24-48 Jam"})
+
+esk = s1.merge(s0[["Topik","Berita 24-48 Jam","Media 24-48 Jam"]], on="Topik", how="left")
+esk[["Berita 24-48 Jam","Media 24-48 Jam"]] = esk[["Berita 24-48 Jam","Media 24-48 Jam"]].fillna(0).astype(int)
+
+esk["Skor"] = esk["Media 24 Jam"]*3 + esk["Berita 24 Jam"]
+
+def trend(r):
+    if r["Media 24 Jam"] > r["Media 24-48 Jam"]:
+        return "📈 Naik"
+    if r["Media 24 Jam"] < r["Media 24-48 Jam"]:
+        return "📉 Turun"
+    return "➖ Stabil"
+
+esk["Trend"] = esk.apply(trend, axis=1)
+esk = esk.sort_values(["Skor","Media 24 Jam","Berita 24 Jam"], ascending=False)
+
+st.dataframe(
+    esk[["Topik","Trend","Media 24 Jam","Berita 24 Jam","Media 24-48 Jam","Berita 24-48 Jam","Skor","Headline"]].head(10),
+    use_container_width=True,
+    hide_index=True
+)
 
     left, right = st.columns([1.1, 0.9], gap="large")
 

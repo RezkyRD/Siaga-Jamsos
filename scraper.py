@@ -14,6 +14,28 @@ def clean_html(text: str) -> str:
     return text.replace("\n", " ").strip()
 
 
+# ====== Tambahan: Normalisasi judul + UID untuk dedup lintas sumber ======
+def norm_title(s: str) -> str:
+    s = (s or "").lower()
+    s = re.sub(r"\s+", " ", s).strip()
+    # buang embel-embel sumber di akhir judul (optional tapi membantu)
+    s = re.sub(
+        r"\s*[-|]\s*(kompas\.com|detikcom|cnn indonesia|tribunnews\.com|cnbc indonesia|sindonews)\s*$",
+        "",
+        s
+    )
+    return s
+
+
+def make_uid(row) -> str:
+    judul = norm_title(row.get("Judul", ""))
+    tgl = (row.get("Tanggal_Publish", "") or "").strip()
+    # fallback kalau tanggal publish kosong
+    if not tgl:
+        tgl = (row.get("Tanggal_Ambil", "") or "").strip()
+    return f"{judul}|{tgl}"
+
+
 def run_scraper(sheet_key=None, *args, **kwargs):
     # kebal: bisa dipanggil run_scraper() atau run_scraper(SHEET_KEY)
     if sheet_key is None:
@@ -35,6 +57,7 @@ def run_scraper(sheet_key=None, *args, **kwargs):
 
     for media, url in rss_sources.items():
         feed = feedparser.parse(url)
+
         for entry in feed.entries:
             published_str = entry.get("published") or entry.get("updated") or ""
             ts = pd.to_datetime(published_str, errors="coerce", utc=True)
@@ -64,18 +87,32 @@ def run_scraper(sheet_key=None, *args, **kwargs):
 
     df_new = pd.DataFrame(all_news)
 
+    # ===== UID untuk dedup lintas sumber (Google News vs RSS asli) =====
+    if not df_new.empty:
+        df_new["UID"] = df_new.apply(make_uid, axis=1)
+
+    # ===== baca RAW lama =====
     try:
         df_old = read_sheet(sheet_key, "RAW")
     except Exception:
         df_old = pd.DataFrame()
 
+    # ===== gabung lama + baru =====
     combined = pd.concat([df_old, df_new], ignore_index=True) if not df_old.empty else df_new
 
+    # ===== pastikan UID ada juga untuk data lama, lalu dedup utama pakai UID =====
+    if not combined.empty:
+        if "UID" not in combined.columns:
+            combined["UID"] = combined.apply(make_uid, axis=1)
+        combined = combined.drop_duplicates(subset=["UID"], keep="last")
+
+    # ===== dedup cadangan pakai Link (kalau ada) =====
     if "Link" in combined.columns:
         combined["Link"] = combined["Link"].astype(str).str.strip()
         combined = combined[combined["Link"] != ""]
         combined = combined.drop_duplicates(subset=["Link"], keep="last")
 
+    # ===== tulis balik ke RAW =====
     clear_and_write(sheet_key, "RAW", combined)
     return combined
 

@@ -304,7 +304,7 @@ with tab_dash:
 
     left, right = st.columns([1.1, 0.9], gap="large")
 
-    with left:
+with left:
     st.subheader("Distribusi Prioritas")
     priority_counts = filtered_display["Prioritas"].value_counts()
     if not priority_counts.empty:
@@ -358,7 +358,7 @@ with tab_dash:
     else:
         st.warning("Belum ada data.")
 
-    with right:
+with right:
     st.subheader("🧠 Analisis Situasi")
     total = len(filtered_display)
 

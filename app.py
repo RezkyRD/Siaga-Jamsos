@@ -32,15 +32,6 @@ st.markdown(
 
 /* JANGAN hilangkan header penuh, karena tombol sidebar ada di sana */
 
-/* Hilangkan toolbar kanan atas */
-div[data-testid="stToolbar"] {
-    display: none;
-}
-
-/* Hilangkan menu */
-#MainMenu {
-    visibility: hidden;
-}
 
 /* Hilangkan footer */
 footer {

@@ -108,6 +108,26 @@ def analyze_jamsos(text):
         alasan.append(
         "Aksi buruh menunjukkan potensi konflik hubungan industrial yang dapat berdampak pada stabilitas ketenagakerjaan."
         )
+    # ======================
+    # THR
+    # ======================
+
+    if re.search(r"\bthr\b|tunjangan hari raya", text):
+
+        score += 2
+        kepesertaan.append("PU")
+
+        alasan.append(
+        "Isu pembayaran THR menunjukkan potensi permasalahan hubungan industrial yang dapat mempengaruhi stabilitas pekerja penerima upah."
+        )
+
+    if re.search(r"thr.*tidak dibayar|tidak dibayar.*thr|thr.*terlambat|terlambat.*thr|thr.*dicicil|thr.*dipotong|pengaduan thr|posko thr", text):
+
+        score += 3
+
+        alasan.append(
+        "Permasalahan pembayaran THR dapat memicu pengaduan pekerja, perselisihan hubungan industrial, dan berpotensi berdampak pada kepatuhan perusahaan."
+        )
 
     # ======================
     # PMI

@@ -26,6 +26,36 @@ st.set_page_config(
 st.markdown(
     """
 <style>
+
+/* ===== HILANGKAN HEADER STREAMLIT ===== */
+header[data-testid="stHeader"] {
+    display: none;
+}
+
+div[data-testid="stToolbar"] {
+    display: none;
+}
+
+#MainMenu {
+    visibility: hidden;
+}
+
+footer {
+    visibility: hidden;
+}
+
+/* rapikan jarak atas */
+.block-container {
+    padding-top: 1rem !important;
+}
+
+:root {
+    --bg-light: #f5f7fb;
+    --card-light: rgba(255,255,255,0.78);
+    --card-solid-light: #ffffff;
+    --text-light: #101828;
+    --muted-light: #667085;
+    --line-light: rgba(16,24,40,0.08);
 :root {
     --bg-light: #f5f7fb;
     --card-light: rgba(255,255,255,0.78);

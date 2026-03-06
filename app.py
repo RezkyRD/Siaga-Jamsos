@@ -813,60 +813,13 @@ with tab_dash:
 
             max_val = max(x_vals) if max(x_vals) > 0 else 1
 
-            st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
-            st.markdown(
-                "<div class='chart-caption'>Perbandingan jumlah berita berdasarkan level prioritas pada periode terpilih</div>",
-                unsafe_allow_html=True
-            )
+            st.caption("Perbandingan jumlah berita berdasarkan level prioritas pada periode terpilih")
 
-            fig = go.Figure()
-
-            fig.add_trace(
-                go.Bar(
-                    x=x_vals,
-                    y=y_vals,
-                    orientation="h",
-                    marker=dict(
-                        color=colors,
-                        line=dict(width=0)
-                    ),
-                    text=[f"{v:,}" for v in x_vals],
-                    textposition="outside",
-                    cliponaxis=False,
-                    hovertemplate="<b>%{y}</b><br>Jumlah berita: %{x}<extra></extra>"
-                )
-            )
-
-            fig.update_layout(
-                height=300,
-                margin=dict(l=10, r=45, t=6, b=20),
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                showlegend=False,
-                xaxis=dict(
-                    title="Jumlah Berita",
-                    showgrid=True,
-                    gridcolor="rgba(148, 163, 184, 0.20)",
-                    zeroline=False,
-                    showline=False,
-                    range=[0, max_val * 1.18]
-                ),
-                yaxis=dict(
-                    title="",
-                    autorange="reversed",
-                    showgrid=False
-                ),
-                font=dict(
-                    size=13
-                )
-            )
-
-            st.plotly_chart(
-                fig,
-                use_container_width=True,
-                config={"displayModeBar": False, "responsive": True}
-            )
-            st.markdown("</div>", unsafe_allow_html=True)
+st.plotly_chart(
+    fig,
+    use_container_width=True,
+    config={"displayModeBar": False, "responsive": True}
+)
         else:
             st.info("Belum ada data distribusi prioritas.")
 
@@ -877,40 +830,37 @@ with tab_dash:
             filtered_display["Prioritas"] == "PRIORITAS TINGGI"
         ].copy()
 
-        st.markdown("<div class='top5-card'>", unsafe_allow_html=True)
-
         if not df_high.empty:
-            if "Waktu_Publish_WIB" in df_high.columns:
-                df_high = df_high.sort_values("Waktu_Publish_WIB", ascending=False)
+    for _, row in top5.iterrows():
+        media = escape(str(row.get("Media", "-")))
+        judul = escape(str(row.get("Judul", "-")))
+        link = str(row.get("Link", "")).strip()
+        waktu = escape(str(row.get("Waktu_Publish_WIB", "")))
 
-            top5 = df_high.head(5)
-
-            for _, row in top5.iterrows():
-                media = escape(str(row.get("Media", "-")))
-                judul = escape(str(row.get("Judul", "-")))
-                link = str(row.get("Link", "")).strip()
-                waktu = escape(str(row.get("Waktu_Publish_WIB", "")))
-
-                if link:
-                    item_html = f"""
-                    <div class="top5-item">
-                        <div class="top5-link"><a href="{escape(link, quote=True)}" target="_blank">{judul}</a></div>
-                        <div class="top5-meta">{media} • {waktu}</div>
+        if link:
+            st.markdown(
+                f"""
+                <div class="news-card">
+                    <div class="top5-link">
+                        <a href="{escape(link, quote=True)}" target="_blank">{judul}</a>
                     </div>
-                    """
-                else:
-                    item_html = f"""
-                    <div class="top5-item">
-                        <div class="top5-link">{judul}</div>
-                        <div class="top5-meta">{media} • {waktu}</div>
-                    </div>
-                    """
-
-                st.markdown(item_html, unsafe_allow_html=True)
+                    <div class="top5-meta">{media} • {waktu}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
         else:
-            st.info("Belum ada berita prioritas tinggi.")
-
-        st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"""
+                <div class="news-card">
+                    <div class="top5-link">{judul}</div>
+                    <div class="top5-meta">{media} • {waktu}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+else:
+    st.info("Belum ada berita prioritas tinggi.")
 
     with right:
         st.markdown('<div class="section-title">🧠 Analisis Situasi</div>', unsafe_allow_html=True)
@@ -994,10 +944,10 @@ with tab_dash:
                 "Secara umum, perkembangan isu media dapat berdampak pada kepesertaan, kepatuhan perusahaan, dan potensi tekanan terhadap klaim manfaat BPJS Ketenagakerjaan."
             )
 
-        st.markdown("<div class='analysis-card'><div class='analysis-body'>", unsafe_allow_html=True)
-
         st.markdown(
-            f"""
+    f"""
+<div class="news-card analysis-body">
+
 **Status:** {status_txt}
 
 Total isu ketenagakerjaan terpantau: **{total:,} berita**
@@ -1017,11 +967,10 @@ Secara umum, kondisi saat ini **{kondisi}**.
 {" ".join(dampak_utama[:2])}
 
 **Rekomendasi:** {rekomendasi}
+</div>
 """,
-            unsafe_allow_html=False
-        )
-
-        st.markdown("</div></div>", unsafe_allow_html=True)
+    unsafe_allow_html=True
+)
 
 # ===============================
 # TAB: DATA BERITA

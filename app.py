@@ -889,20 +889,14 @@ with tab_data:
     esk["Trend"] = esk.apply(trend, axis=1)
 
 esk = esk.sort_values(
-    ["Skor", "Media 24 Jam", "Berita 24 Jam"],
+    ["Skor","Media 24 Jam","Berita 24 Jam"],
     ascending=False
 )
 
-# tampilkan topik yang lebih bermakna
-esk = esk[
-    esk["Topik"].notna() &
-    (esk["Topik"].astype(str).str.strip() != "")
-]
-
-    st.dataframe(
+st.dataframe(
     esk[
-        ["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam",
-         "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline"]
+        ["Topik","Trend","Media 24 Jam","Berita 24 Jam",
+         "Media 24-48 Jam","Berita 24-48 Jam","Skor","Headline"]
     ].head(10),
     use_container_width=True,
     hide_index=True

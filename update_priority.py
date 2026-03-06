@@ -5,7 +5,164 @@ import streamlit as st
 from gsheet_utils import read_sheet, clear_and_write
 
 
-def run_priority(sheet_key=None, *args, **kwargs):
+# =====================================
+# KONTEKS INDONESIA
+# =====================================
+
+INDONESIA_CONTEXT = [
+"indonesia","jakarta","jawa","sumatera","kalimantan","sulawesi","papua","bali",
+"kemnaker","bpjs ketenagakerjaan","bpjamsostek","disnaker",
+"pekerja migran","pmi","tki","buruh indonesia"
+]
+
+
+def is_indonesia_related(text):
+
+    text = text.lower()
+
+    for k in INDONESIA_CONTEXT:
+        if k in text:
+            return True
+
+    return False
+
+
+# =====================================
+# ANALISIS JAMINAN SOSIAL
+# =====================================
+
+def analyze_jamsos(text):
+
+    score = 0
+
+    program = []
+    kepesertaan = []
+    klaim = []
+    alasan = []
+
+    # ======================
+    # PHK
+    # ======================
+
+    if re.search(r"\bphk\b|\blayoff\b|\bdirumahkan\b", text):
+
+        score += 4
+
+        program.extend(["JKP","JHT","JP"])
+        kepesertaan.append("PU")
+
+        klaim.append("JKP")
+        klaim.append("JHT")
+
+        alasan.append(
+        "Pemberitaan mengenai PHK berpotensi meningkatkan klaim JKP serta pencairan JHT bagi pekerja terdampak."
+        )
+
+    # PHK MASSAL
+    if re.search(r"phk.*massal|massal.*phk", text):
+
+        score += 6
+
+        alasan.append(
+        "PHK massal berpotensi menurunkan jumlah kepesertaan pekerja penerima upah serta meningkatkan klaim JKP."
+        )
+
+    # ======================
+    # KECELAKAAN KERJA
+    # ======================
+
+    if re.search(r"kecelakaan kerja|ledakan|kebakaran pabrik|tertimbun", text):
+
+        score += 4
+
+        program.append("JKK")
+        klaim.append("JKK")
+
+        alasan.append(
+        "Peristiwa kecelakaan kerja berpotensi menimbulkan klaim JKK."
+        )
+
+    # ======================
+    # KEMATIAN PEKERJA
+    # ======================
+
+    if re.search(r"meninggal dunia|pekerja tewas|buruh tewas", text):
+
+        score += 3
+
+        program.append("JKM")
+        klaim.append("JKM")
+
+        alasan.append(
+        "Kematian pekerja berpotensi menimbulkan klaim JKM bagi ahli waris."
+        )
+
+    # ======================
+    # DEMO BURUH
+    # ======================
+
+    if re.search(r"demo|unjuk rasa|aksi buruh|mogok", text):
+
+        score += 3
+
+        alasan.append(
+        "Aksi buruh menunjukkan potensi konflik hubungan industrial yang dapat berdampak pada stabilitas ketenagakerjaan."
+        )
+
+    # ======================
+    # PMI
+    # ======================
+
+    if re.search(r"pmi|pekerja migran", text):
+
+        kepesertaan.append("PMI")
+
+        alasan.append(
+        "Isu pekerja migran dapat mempengaruhi kepesertaan BPJS Ketenagakerjaan bagi PMI."
+        )
+
+    # ======================
+    # KONSTRUKSI
+    # ======================
+
+    if re.search(r"konstruksi|proyek|pembangunan", text):
+
+        kepesertaan.append("Jasa Konstruksi")
+        program.append("JKK")
+
+        alasan.append(
+        "Sektor konstruksi memiliki risiko kecelakaan kerja tinggi sehingga berkaitan dengan program JKK."
+        )
+
+    # ======================
+    # DEFAULT
+    # ======================
+
+    if not alasan:
+
+        alasan.append(
+        "Berita berkaitan dengan isu ketenagakerjaan yang berpotensi mempengaruhi kepesertaan BPJS Ketenagakerjaan."
+        )
+
+    program = list(set(program))
+    kepesertaan = list(set(kepesertaan))
+    klaim = list(set(klaim))
+
+    return (
+        score,
+        ", ".join(program),
+        ", ".join(kepesertaan),
+        ", ".join(klaim),
+        " ".join(alasan)
+    )
+
+
+# =====================================
+# RUN PRIORITY
+# =====================================
+
+def run_priority(sheet_key=None):
+
     if sheet_key is None:
         sheet_key = st.secrets["SHEET_KEY"]
 
@@ -16,61 +173,67 @@ def run_priority(sheet_key=None, *args, **kwargs):
 
     judul = df.get("Judul", "").astype(str).fillna("")
     ringkasan = df.get("Ringkasan", "").astype(str).fillna("")
+
     text_series = (judul + " " + ringkasan).str.lower()
 
-    score_map = [
-        (re.compile(r"\bphk\b.*\bmassal\b|\bmassal\b.*\bphk\b"), 6),
-        (re.compile(r"\bgelombang\b.*\bphk\b|\bphk\b.*\bgelombang\b"), 6),
-        (re.compile(r"\bpabrik\b.*\btutup\b|\btutup\b.*\bpabrik\b|\btutup permanen\b"), 6),
-        (re.compile(r"\bbangkrut\b|\bpailit\b|\blikuidasi\b"), 6),
-        (re.compile(r"\bkerusuhan\b|\bbentrok\b|\bricuh\b"), 5),
-        (re.compile(r"\bblokade\b|\baksi besar\b|\bancam tutup\b"), 5),
-        (re.compile(r"\bdirumahkan\b|\blayoff\b|\bpemutusan hubungan kerja\b"), 4),
-        (re.compile(r"\bmogok\b|\bmogok kerja\b"), 3),
-        (re.compile(r"\bunjuk rasa\b|\bdemo\b|\baksi buruh\b"), 3),
-        (re.compile(r"\bupah\b.*\btidak dibayar\b|\bgaji\b.*\btidak dibayar\b|\btunggakan upah\b"), 3),
-        (re.compile(r"\bpengurangan karyawan\b|\befisiensi\b|\brestrukturisasi\b"), 2),
-        (re.compile(r"\bperselisihan\b|\bkonflik buruh\b|\bsengketa\b"), 2),
-        (re.compile(r"\bpenutupan sementara\b|\bstop operasional\b"), 2),
-        (re.compile(r"\bphk\b"), 1),
-        (re.compile(r"\bketenagakerjaan\b|\btenaga kerja\b|\bburuh\b|\bpekerja\b"), 1),
-    ]
+    scores = []
+    programs = []
+    kepesertaan = []
+    klaim = []
+    alasan = []
 
-    re_big_scale = re.compile(
-        r"\b(ratusan|ribuan|puluhan ribu|belasan ribu)\b|"
-        r"\b\d{1,3}(\.\d{3})+\b|"
-        r"\b\d{4,}\b"
-    )
+    for text in text_series:
 
-    def calculate_score(text):
-        score = 0
-        for pattern, nilai in score_map:
-            if pattern.search(text):
-                score += nilai
-        if re_big_scale.search(text) and re.search(r"\b(phk|pekerja|buruh|karyawan)\b", text):
-            score += 3
-        return score
+        # =========================
+        # FILTER INDONESIA
+        # =========================
 
-    df["Score"] = text_series.apply(calculate_score)
+        if not is_indonesia_related(text):
 
-    trigger_berat = re.compile(
-        r"phk.*massal|massal.*phk|gelombang phk|pailit|bangkrut|likuidasi|tutup permanen|pabrik tutup"
-    )
+            scores.append(0)
+            programs.append("")
+            kepesertaan.append("")
+            klaim.append("")
+            alasan.append(
+            "Berita ketenagakerjaan global yang tidak berkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
+            )
 
-    def classify_priority(text, score):
-        if score >= 7 or trigger_berat.search(text):
+            continue
+
+        score, p, k, c, a = analyze_jamsos(text)
+
+        scores.append(score)
+        programs.append(p)
+        kepesertaan.append(k)
+        klaim.append(c)
+        alasan.append(a)
+
+    df["Score"] = scores
+    df["Dampak_Program"] = programs
+    df["Dampak_Kepesertaan"] = kepesertaan
+    df["Potensi_Klaim"] = klaim
+    df["Alasan_Prioritas"] = alasan
+
+
+    # ======================
+    # KLASIFIKASI PRIORITAS
+    # ======================
+
+    def classify(score):
+
+        if score >= 7:
             return "PRIORITAS TINGGI"
+
         elif score >= 4:
             return "PRIORITAS SEDANG"
+
         else:
             return "PRIORITAS RENDAH"
 
-    df["Prioritas"] = [
-        classify_priority(t, s)
-        for t, s in zip(text_series.tolist(), df["Score"].tolist())
-    ]
+    df["Prioritas"] = df["Score"].apply(classify)
 
     clear_and_write(sheet_key, "FILTERED", df)
+
     return df
 
 

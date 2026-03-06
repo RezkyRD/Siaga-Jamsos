@@ -452,7 +452,7 @@ with tab_data:
     df_page = df_display.iloc[start_idx:end_idx]
 
     # Tampilkan tabel (versi baru: fleksibel kolom tanggal)
-    preferred_cols = ["Judul", "Tanggal", "Waktu_Publish_WIB", "Tanggal_Hari", "Prioritas", "Link"]
+    preferred_cols = ["Judul", "Tanggal", "Waktu_Publish_WIB", "Tanggal_Hari", "Prioritas", "Dampak_Program", "Dampak_Kepesertaan", "Potensi_Klaim", "Alasan_Prioritas", "Link"]
     show_cols = [c for c in preferred_cols if c in df_page.columns]
     if not show_cols:
         show_cols = df_page.columns.tolist()

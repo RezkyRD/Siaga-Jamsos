@@ -360,30 +360,85 @@ with left:
 
 with right:
     st.subheader("🧠 Analisis Situasi")
+
     total = len(filtered_display)
+
+    # =============================
+    # STATUS RISIKO
+    # =============================
 
     if tinggi > 3:
         status_txt = "🔴 RISIKO TINGGI"
-        kondisi = "menunjukkan eskalasi signifikan"
-        rekomendasi = "Perlu mitigasi cepat dan koordinasi lintas unit."
+        kondisi = "menunjukkan eskalasi signifikan isu ketenagakerjaan"
+        rekomendasi = "Perlu mitigasi cepat serta koordinasi lintas unit terkait."
     elif tinggi > 0:
         status_txt = "🟡 WASPADA"
-        kondisi = "menunjukkan potensi peningkatan risiko"
-        rekomendasi = "Perlu pemantauan intensif dan klarifikasi lapangan."
+        kondisi = "menunjukkan potensi peningkatan risiko ketenagakerjaan"
+        rekomendasi = "Perlu pemantauan intensif serta klarifikasi lapangan."
     else:
         status_txt = "🟢 STABIL"
         kondisi = "relatif stabil tanpa indikasi eskalasi besar"
-        rekomendasi = "Pemantauan rutin sebagai langkah preventif."
+        rekomendasi = "Pemantauan rutin tetap diperlukan sebagai langkah preventif."
+
+    # =============================
+    # DETEKSI TOPIK DOMINAN
+    # =============================
+
+    if "Topik" in filtered_display.columns and not filtered_display.empty:
+        topik_counts = filtered_display["Topik"].value_counts()
+        topik_dominan = topik_counts.index[0]
+        jumlah_topik = topik_counts.iloc[0]
+    else:
+        topik_dominan = "isu ketenagakerjaan umum"
+        jumlah_topik = 0
+
+    # =============================
+    # ANALISIS KONTEKS JAMINAN SOSIAL
+    # =============================
+
+    analisis_program = ""
+
+    if "PHK" in topik_dominan or "Layoff" in topik_dominan:
+        analisis_program = """
+Isu PHK berpotensi meningkatkan klaim **Jaminan Kehilangan Pekerjaan (JKP)** serta pencairan **Jaminan Hari Tua (JHT)** bagi pekerja terdampak. 
+Selain itu kondisi ini juga dapat mempengaruhi jumlah kepesertaan pekerja penerima upah (PU).
+"""
+    elif "Kecelakaan" in topik_dominan:
+        analisis_program = """
+Pemberitaan terkait kecelakaan kerja berpotensi menimbulkan klaim **Jaminan Kecelakaan Kerja (JKK)** serta santunan **Jaminan Kematian (JKM)** apabila terdapat korban meninggal dunia.
+"""
+    elif "THR" in topik_dominan:
+        analisis_program = """
+Isu pembayaran **Tunjangan Hari Raya (THR)** menunjukkan potensi permasalahan hubungan industrial serta kepatuhan perusahaan terhadap kewajiban kesejahteraan pekerja.
+"""
+    elif "Demo" in topik_dominan or "Aksi" in topik_dominan:
+        analisis_program = """
+Aksi buruh dan unjuk rasa menunjukkan potensi meningkatnya konflik hubungan industrial yang dapat mempengaruhi stabilitas ketenagakerjaan.
+"""
+    else:
+        analisis_program = """
+Isu ketenagakerjaan yang muncul masih bersifat umum namun tetap perlu dipantau karena berpotensi berdampak pada kepesertaan dan klaim program BPJS Ketenagakerjaan.
+"""
+
+    # =============================
+    # OUTPUT ANALISIS
+    # =============================
 
     st.markdown(f"""
 **Status:** {status_txt}
 
-Total berita terfilter: **{total:,}**  
+Total isu ketenagakerjaan terpantau: **{total:,} berita**
+
 Prioritas tinggi: **{tinggi:,}**  
 Prioritas sedang: **{sedang:,}**  
 Prioritas rendah: **{rendah:,}**
 
-Kondisi saat ini **{kondisi}**.  
+Isu yang paling banyak muncul adalah **{topik_dominan}** dengan **{jumlah_topik} pemberitaan**.
+
+Kondisi saat ini **{kondisi}**.
+
+{analisis_program}
+
 {rekomendasi}
 """)
 

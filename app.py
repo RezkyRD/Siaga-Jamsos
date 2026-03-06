@@ -823,50 +823,49 @@ st.plotly_chart(
         else:
             st.info("Belum ada data distribusi prioritas.")
 
-        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
         st.markdown('<div class="section-title">Top 5 Berita Prioritas Tinggi</div>', unsafe_allow_html=True)
 
-df_high = filtered_display[
-    filtered_display["Prioritas"] == "PRIORITAS TINGGI"
-].copy()
+        df_high = filtered_display[
+            filtered_display["Prioritas"] == "PRIORITAS TINGGI"
+        ].copy()
 
-if not df_high.empty:
+        if not df_high.empty:
+            if "Waktu_Publish_WIB" in df_high.columns:
+                df_high = df_high.sort_values("Waktu_Publish_WIB", ascending=False)
 
-    if "Waktu_Publish_WIB" in df_high.columns:
-        df_high = df_high.sort_values("Waktu_Publish_WIB", ascending=False)
+            top5 = df_high.head(5)
 
-    top5 = df_high.head(5)
+            for _, row in top5.iterrows():
+                media = escape(str(row.get("Media", "-")))
+                judul = escape(str(row.get("Judul", "-")))
+                link = str(row.get("Link", "")).strip()
+                waktu = escape(str(row.get("Waktu_Publish_WIB", "")))
 
-    for _, row in top5.iterrows():
-        media = escape(str(row.get("Media", "-")))
-        judul = escape(str(row.get("Judul", "-")))
-        link = str(row.get("Link", "")).strip()
-        waktu = escape(str(row.get("Waktu_Publish_WIB", "")))
-
-        if link:
-            st.markdown(
-                f"""
-                <div class="news-card">
-                    <div class="top5-link">
-                        <a href="{escape(link, quote=True)}" target="_blank">{judul}</a>
-                    </div>
-                    <div class="top5-meta">{media} • {waktu}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-         else:
-            st.markdown(
-                f"""
-                <div class="news-card">
-                    <div class="top5-link">{judul}</div>
-                    <div class="top5-meta">{media} • {waktu}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-else:
-    st.info("Belum ada berita prioritas tinggi.")
+                if link:
+                    st.markdown(
+                        f"""
+                        <div class="news-card">
+                            <div class="top5-link">
+                                <a href="{escape(link, quote=True)}" target="_blank">{judul}</a>
+                            </div>
+                            <div class="top5-meta">{media} • {waktu}</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f"""
+                        <div class="news-card">
+                            <div class="top5-link">{judul}</div>
+                            <div class="top5-meta">{media} • {waktu}</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+        else:
+            st.info("Belum ada berita prioritas tinggi.")
 
     with right:
         st.markdown('<div class="section-title">🧠 Analisis Situasi</div>', unsafe_allow_html=True)

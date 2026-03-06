@@ -385,38 +385,6 @@ def safe_clear_caches():
     except Exception:
         pass
 
-# ===============================
-# SIDEBAR: UPDATE DATA
-# ===============================
-if "sidebar_state" not in st.session_state:
-    st.session_state.sidebar_state = True
-
-if st.session_state.sidebar_state:
-    with st.sidebar:
-
-        st.markdown("### Kontrol Data")
-
-        if st.button("🔄 Update Data"):
-            with st.spinner("Memproses update..."):
-                run_scraper()
-                run_filter()
-                run_priority()
-                st.cache_data.clear()
-
-            st.success("Update selesai!")
-            st.rerun()
-
-        st.markdown("### Filter")
-
-        date_range = st.date_input(
-            "Rentang tanggal",
-            value=(min_date, max_date)
-        )
-
-        filter_option = st.selectbox(
-            "Prioritas",
-            ["SEMUA", "PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
-        )
 
 # ===============================
 # LOAD DATA
@@ -472,6 +440,40 @@ if raw.empty:
 
 min_date = raw["Tanggal_Hari"].min()
 max_date = raw["Tanggal_Hari"].max()
+
+# ===============================
+# SIDEBAR: UPDATE DATA
+# ===============================
+if "sidebar_state" not in st.session_state:
+    st.session_state.sidebar_state = True
+
+if st.session_state.sidebar_state:
+    with st.sidebar:
+
+        st.markdown("### Kontrol Data")
+
+        if st.button("🔄 Update Data"):
+            with st.spinner("Memproses update..."):
+                run_scraper()
+                run_filter()
+                run_priority()
+                st.cache_data.clear()
+
+            st.success("Update selesai!")
+            st.rerun()
+
+        st.markdown("### Filter")
+
+        date_range = st.date_input(
+            "Rentang tanggal",
+            value=(min_date, max_date)
+        )
+
+        filter_option = st.selectbox(
+            "Prioritas",
+            ["SEMUA", "PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
+        )
+
 
 # ===============================
 # TOPIC DETECTION

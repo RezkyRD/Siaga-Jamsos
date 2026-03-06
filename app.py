@@ -17,7 +17,8 @@ SHEET_KEY = st.secrets["SHEET_KEY"]
 st.set_page_config(
     page_title="EWS Ketenagakerjaan",
     page_icon="📊",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # ===============================

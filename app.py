@@ -28,9 +28,6 @@ st.markdown(
 <style>
 
 /* ===== HILANGKAN HEADER STREAMLIT ===== */
-header[data-testid="stHeader"] {
-    display: none;
-}
 
 div[data-testid="stToolbar"] {
     display: none;

@@ -810,20 +810,55 @@ with tab_dash:
             x_vals = priority_counts.tolist()
             y_vals = [label_map[x] for x in priority_counts.index]
             colors = [color_map[x] for x in priority_counts.index]
-
             max_val = max(x_vals) if max(x_vals) > 0 else 1
 
             st.caption("Perbandingan jumlah berita berdasarkan level prioritas pada periode terpilih")
 
-st.plotly_chart(
-    fig,
-    use_container_width=True,
-    config={"displayModeBar": False, "responsive": True}
-)
+            fig = go.Figure()
+            fig.add_trace(
+                go.Bar(
+                    x=x_vals,
+                    y=y_vals,
+                    orientation="h",
+                    marker=dict(color=colors, line=dict(width=0)),
+                    text=[f"{v:,}" for v in x_vals],
+                    textposition="outside",
+                    cliponaxis=False,
+                    hovertemplate="<b>%{y}</b><br>Jumlah berita: %{x}<extra></extra>"
+                )
+            )
+
+            fig.update_layout(
+                height=300,
+                margin=dict(l=10, r=45, t=6, b=20),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                showlegend=False,
+                xaxis=dict(
+                    title="Jumlah Berita",
+                    showgrid=True,
+                    gridcolor="rgba(148, 163, 184, 0.20)",
+                    zeroline=False,
+                    showline=False,
+                    range=[0, max_val * 1.18]
+                ),
+                yaxis=dict(
+                    title="",
+                    autorange="reversed",
+                    showgrid=False
+                ),
+                font=dict(size=13)
+            )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True,
+                config={"displayModeBar": False, "responsive": True}
+            )
         else:
             st.info("Belum ada data distribusi prioritas.")
 
-         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
         st.markdown('<div class="section-title">Top 5 Berita Prioritas Tinggi</div>', unsafe_allow_html=True)
 
         df_high = filtered_display[
@@ -950,7 +985,7 @@ st.plotly_chart(
             )
 
         st.markdown(
-    f"""
+            f"""
 <div class="news-card analysis-body">
 
 **Status:** {status_txt}
@@ -974,8 +1009,8 @@ Secara umum, kondisi saat ini **{kondisi}**.
 **Rekomendasi:** {rekomendasi}
 </div>
 """,
-    unsafe_allow_html=True
-)
+            unsafe_allow_html=True
+        )
 
 # ===============================
 # TAB: DATA BERITA

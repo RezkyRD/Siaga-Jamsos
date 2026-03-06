@@ -32,6 +32,18 @@ st.markdown(
 
 /* JANGAN hilangkan header penuh, karena tombol sidebar ada di sana */
 
+header[data-testid="stHeader"] {
+    display: none;
+}
+
+div[data-testid="stToolbar"] {
+    display: none;
+}
+
+#MainMenu {
+    visibility: hidden;
+}
+
 
 /* Hilangkan footer */
 footer {
@@ -345,6 +357,15 @@ st.markdown(
 """,
     unsafe_allow_html=True
 )
+# Toggle Sidebar Button
+if "sidebar_state" not in st.session_state:
+    st.session_state.sidebar_state = True
+
+col_toggle, col_spacer = st.columns([1,10])
+
+with col_toggle:
+    if st.button("☰ Menu"):
+        st.session_state.sidebar_state = not st.session_state.sidebar_state
 st.divider()
 
 # ===============================
@@ -367,17 +388,35 @@ def safe_clear_caches():
 # ===============================
 # SIDEBAR: UPDATE DATA
 # ===============================
-with st.sidebar:
-    st.markdown("### Kontrol Data")
-    if st.button("🔄 Update Data"):
-        with st.spinner("Memproses update..."):
-            run_scraper()
-            run_filter()
-            run_priority()
-            safe_clear_caches()
+if "sidebar_state" not in st.session_state:
+    st.session_state.sidebar_state = True
 
-        st.success("Update selesai!")
-        st.rerun()
+if st.session_state.sidebar_state:
+    with st.sidebar:
+
+        st.markdown("### Kontrol Data")
+
+        if st.button("🔄 Update Data"):
+            with st.spinner("Memproses update..."):
+                run_scraper()
+                run_filter()
+                run_priority()
+                st.cache_data.clear()
+
+            st.success("Update selesai!")
+            st.rerun()
+
+        st.markdown("### Filter")
+
+        date_range = st.date_input(
+            "Rentang tanggal",
+            value=(min_date, max_date)
+        )
+
+        filter_option = st.selectbox(
+            "Prioritas",
+            ["SEMUA", "PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
+        )
 
 # ===============================
 # LOAD DATA

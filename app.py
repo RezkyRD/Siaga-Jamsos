@@ -826,11 +826,17 @@ st.plotly_chart(
         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
         st.markdown('<div class="section-title">Top 5 Berita Prioritas Tinggi</div>', unsafe_allow_html=True)
 
-        df_high = filtered_display[
-            filtered_display["Prioritas"] == "PRIORITAS TINGGI"
-        ].copy()
+        ddf_high = filtered_display[
+    filtered_display["Prioritas"] == "PRIORITAS TINGGI"
+].copy()
 
-        if not df_high.empty:
+if not df_high.empty:
+
+    if "Waktu_Publish_WIB" in df_high.columns:
+        df_high = df_high.sort_values("Waktu_Publish_WIB", ascending=False)
+
+    top5 = df_high.head(5)
+
     for _, row in top5.iterrows():
         media = escape(str(row.get("Media", "-")))
         judul = escape(str(row.get("Judul", "-")))
@@ -859,6 +865,7 @@ st.plotly_chart(
                 """,
                 unsafe_allow_html=True
             )
+
 else:
     st.info("Belum ada berita prioritas tinggi.")
 

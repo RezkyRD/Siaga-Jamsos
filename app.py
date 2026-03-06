@@ -519,191 +519,82 @@ with right:
 
     total = len(filtered_display)
 
-    # ==================================
-    # STATUS UMUM
-    # ==================================
     if tinggi > 3:
         status_txt = "🔴 RISIKO TINGGI"
         kondisi = "menunjukkan eskalasi signifikan isu ketenagakerjaan"
-        rekomendasi = (
-            "Perlu mitigasi cepat, koordinasi lintas unit, serta pemantauan harian "
-            "terhadap isu yang berpotensi mempengaruhi perlindungan jaminan sosial ketenagakerjaan."
-        )
+        rekomendasi = "Perlu mitigasi cepat, koordinasi lintas unit, dan pemantauan harian terhadap isu prioritas."
     elif tinggi > 0:
         status_txt = "🟡 WASPADA"
         kondisi = "menunjukkan potensi peningkatan risiko ketenagakerjaan"
-        rekomendasi = (
-            "Perlu pemantauan intensif, klarifikasi lapangan, dan identifikasi dini "
-            "terhadap isu yang dapat berkembang menjadi tekanan terhadap kepesertaan dan klaim."
-        )
+        rekomendasi = "Perlu pemantauan intensif, klarifikasi lapangan, dan identifikasi dini terhadap isu prioritas."
     else:
         status_txt = "🟢 STABIL"
         kondisi = "relatif stabil tanpa indikasi eskalasi besar"
-        rekomendasi = (
-            "Pemantauan rutin tetap diperlukan sebagai langkah preventif untuk menjaga "
-            "stabilitas kepesertaan dan kualitas perlindungan jaminan sosial ketenagakerjaan."
-        )
+        rekomendasi = "Pemantauan rutin tetap diperlukan sebagai langkah preventif."
 
-    # ==================================
-    # TOPIK DOMINAN
-    # ==================================
     if "Topik" in filtered_display.columns and not filtered_display.empty:
         topik_counts = filtered_display["Topik"].value_counts()
-        top5 = topik_counts.head(5)
+        top3 = topik_counts.head(3)
 
-        topik_list = []
-        for topic, count in top5.items():
-            topik_list.append(f"- **{topic}** ({count} berita)")
-
+        topik_list = [f"- **{topic}** ({count} berita)" for topic, count in top3.items()]
         topik_text = "\n".join(topik_list)
-        topik_values = filtered_display["Topik"].astype(str).tolist()
+        topik_utama = top3.index.tolist()
     else:
         topik_text = "- **Belum ada topik dominan**"
-        topik_values = []
+        topik_utama = []
 
-    # ==================================
-    # ANALISIS PROGRAM DAN DAMPAK
-    # ==================================
-    analisis_program = []
+    ringkasan_utama = []
+    dampak_utama = []
 
-    if "PHK" in topik_values:
-        analisis_program.append(
-            "Pemberitaan mengenai **PHK** merupakan sinyal penting karena berpotensi "
-            "meningkatkan klaim **Jaminan Kehilangan Pekerjaan (JKP)**, mendorong pencairan "
-            "**Jaminan Hari Tua (JHT)**, serta dalam jangka lebih panjang dapat mempengaruhi "
-            "keberlanjutan kepesertaan **Jaminan Pensiun (JP)** pada kelompok pekerja penerima upah."
+    if "PHK" in topik_utama:
+        ringkasan_utama.append(
+            "Pemberitaan mengenai **PHK** menjadi sinyal penting karena menunjukkan potensi tekanan pada hubungan kerja dan keberlanjutan kepesertaan pekerja formal."
+        )
+        dampak_utama.append(
+            "Dari sisi jaminan sosial ketenagakerjaan, isu ini berpotensi meningkatkan klaim **JKP** dan pencairan **JHT**, serta dalam jangka lebih panjang dapat mempengaruhi kepesertaan **JP**."
         )
 
-    if "THR / Kesejahteraan Pekerja" in topik_values:
-        analisis_program.append(
-            "Isu **THR dan kesejahteraan pekerja** menunjukkan adanya potensi tekanan dalam "
-            "hubungan industrial, terutama terkait kepatuhan perusahaan terhadap hak normatif pekerja. "
-            "Walaupun THR bukan manfaat langsung program BPJS Ketenagakerjaan, isu ini penting karena "
-            "sering menjadi pintu masuk meningkatnya pengaduan, perselisihan, aksi buruh, dan penurunan "
-            "kepercayaan pekerja terhadap perlindungan ketenagakerjaan secara umum."
+    if "THR / Kesejahteraan Pekerja" in topik_utama:
+        ringkasan_utama.append(
+            "Isu **THR dan kesejahteraan pekerja** menunjukkan adanya potensi persoalan kepatuhan perusahaan terhadap hak normatif pekerja."
+        )
+        dampak_utama.append(
+            "Walaupun THR bukan manfaat langsung BPJS Ketenagakerjaan, isu ini dapat memicu pengaduan, perselisihan hubungan industrial, dan menurunkan stabilitas pekerja penerima upah."
         )
 
-    if "Upah / Gaji" in topik_values:
-        analisis_program.append(
-            "Pemberitaan mengenai **upah/gaji** mengindikasikan potensi masalah daya bayar perusahaan "
-            "dan kesejahteraan pekerja. Kondisi ini dapat berkembang menjadi tunggakan hak pekerja, "
-            "perselisihan hubungan industrial, hingga risiko pengurangan tenaga kerja yang pada akhirnya "
-            "berdampak pada kestabilan kepesertaan BPJS Ketenagakerjaan."
+    if "Kepesertaan BPJS" in topik_utama:
+        ringkasan_utama.append(
+            "Pemberitaan mengenai **kepesertaan BPJS Ketenagakerjaan** menunjukkan perhatian terhadap cakupan perlindungan sosial tenaga kerja."
+        )
+        dampak_utama.append(
+            "Hal ini berkaitan dengan perluasan kepesertaan, kepatuhan perusahaan, dan kualitas perlindungan bagi pekerja **PU**, **BPU**, **PMI**, serta sektor **jasa konstruksi**."
         )
 
-    if "Aksi / Demo Buruh" in topik_values or "Konflik Hubungan Industrial" in topik_values:
-        analisis_program.append(
-            "Munculnya **aksi buruh, unjuk rasa, dan konflik hubungan industrial** menunjukkan adanya "
-            "ketegangan antara pekerja dan perusahaan. Jika tidak tertangani, kondisi ini dapat berkembang "
-            "menjadi gangguan operasional, PHK, atau penurunan kepatuhan perusahaan dalam memenuhi kewajiban "
-            "perlindungan sosial tenaga kerja."
+    if "Kecelakaan Kerja (JKK)" in topik_utama:
+        ringkasan_utama.append(
+            "Isu **kecelakaan kerja** menunjukkan perlunya perhatian pada keselamatan kerja, terutama di sektor berisiko tinggi."
+        )
+        dampak_utama.append(
+            "Dari sisi manfaat, kondisi ini berpotensi meningkatkan klaim **JKK** dan pada kasus fatal dapat berkembang menjadi klaim **JKM**."
         )
 
-    if "Kecelakaan Kerja (JKK)" in topik_values:
-        analisis_program.append(
-            "Pemberitaan mengenai **kecelakaan kerja** berpotensi menimbulkan klaim "
-            "**Jaminan Kecelakaan Kerja (JKK)**. Pada kasus berat atau fatal, isu ini juga dapat "
-            "berkembang menjadi klaim **Jaminan Kematian (JKM)** serta menjadi indikator perlunya "
-            "penguatan budaya K3, terutama pada sektor dengan risiko tinggi seperti manufaktur, tambang, "
-            "transportasi, dan jasa konstruksi."
+    if "Konflik Hubungan Industrial" in topik_utama or "Aksi / Demo Buruh" in topik_utama:
+        ringkasan_utama.append(
+            "Isu **konflik hubungan industrial dan aksi buruh** menunjukkan adanya ketegangan antara pekerja dan perusahaan yang perlu dicermati lebih dini."
+        )
+        dampak_utama.append(
+            "Jika tidak tertangani, kondisi ini dapat berkembang menjadi gangguan operasional, PHK, dan penurunan kepatuhan terhadap perlindungan sosial tenaga kerja."
         )
 
-    if "Santunan Kematian (JKM)" in topik_values:
-        analisis_program.append(
-            "Pemberitaan terkait **kematian pekerja** relevan terhadap potensi klaim "
-            "**Jaminan Kematian (JKM)** dan menunjukkan pentingnya keberlanjutan perlindungan bagi ahli waris. "
-            "Isu ini juga menjadi pengingat perlunya validitas data kepesertaan dan ketepatan administrasi manfaat."
+    if not ringkasan_utama:
+        ringkasan_utama.append(
+            "Isu yang berkembang masih bersifat campuran, namun tetap perlu dipantau karena dapat mempengaruhi stabilitas ketenagakerjaan dan perlindungan jaminan sosial."
         )
 
-    if "Klaim JHT" in topik_values:
-        analisis_program.append(
-            "Meningkatnya isu seputar **klaim JHT** menunjukkan perhatian pekerja terhadap akses manfaat "
-            "dan likuiditas setelah berhenti bekerja. Pemberitaan jenis ini perlu dicermati karena dapat "
-            "merefleksikan tekanan ekonomi rumah tangga pekerja atau dampak lanjutan dari PHK."
+    if not dampak_utama:
+        dampak_utama.append(
+            "Secara umum, perkembangan isu media dapat berdampak pada kepesertaan, kepatuhan perusahaan, dan potensi tekanan terhadap klaim manfaat BPJS Ketenagakerjaan."
         )
-
-    if "Manfaat JKP" in topik_values:
-        analisis_program.append(
-            "Pemberitaan mengenai **manfaat JKP** menunjukkan tingginya sensitivitas publik terhadap "
-            "perlindungan pasca-PHK. Hal ini penting dipantau karena berhubungan langsung dengan persepsi "
-            "publik atas efektivitas jaring pengaman bagi pekerja yang kehilangan pekerjaan."
-        )
-
-    if "Jaminan Pensiun (JP)" in topik_values:
-        analisis_program.append(
-            "Isu mengenai **Jaminan Pensiun (JP)** menunjukkan perhatian terhadap perlindungan jangka panjang "
-            "pekerja formal. Walaupun dampaknya tidak selalu langsung, pemberitaan ini penting karena "
-            "mencerminkan ekspektasi keberlanjutan manfaat bagi pekerja aktif dan pensiunan."
-        )
-
-    if "Kepesertaan BPJS" in topik_values:
-        analisis_program.append(
-            "Isu **kepesertaan BPJS Ketenagakerjaan** menunjukkan perhatian terhadap cakupan perlindungan sosial "
-            "tenaga kerja. Pemberitaan ini perlu dibaca tidak hanya sebagai isu administratif, tetapi juga "
-            "sebagai indikator kepatuhan perusahaan, efektivitas perluasan kepesertaan, dan kualitas perlindungan "
-            "bagi pekerja formal maupun informal."
-        )
-
-    if "Tunggakan Iuran" in topik_values or "Pengawasan Kepatuhan" in topik_values:
-        analisis_program.append(
-            "Isu **tunggakan iuran dan pengawasan kepatuhan** menunjukkan adanya potensi risiko pada aspek "
-            "kepatuhan pemberi kerja. Hal ini penting karena dapat mempengaruhi keberlangsungan perlindungan pekerja, "
-            "akses terhadap manfaat, serta kredibilitas implementasi program jaminan sosial ketenagakerjaan."
-        )
-
-    if "Kendala Klaim BPJS" in topik_values:
-        analisis_program.append(
-            "Pemberitaan mengenai **kendala klaim BPJS** mengindikasikan adanya perhatian publik pada aspek "
-            "layanan, verifikasi, dan kemudahan akses manfaat. Jika terus meningkat, isu ini dapat membentuk "
-            "persepsi negatif terhadap efektivitas perlindungan yang diberikan."
-        )
-
-    if "Pekerja Migran Indonesia (PMI)" in topik_values:
-        analisis_program.append(
-            "Isu terkait **Pekerja Migran Indonesia (PMI)** penting karena menyangkut perlindungan tenaga kerja "
-            "Indonesia di luar negeri. Dari sisi jaminan sosial, hal ini berkaitan dengan perluasan kepesertaan, "
-            "kepastian manfaat, dan penguatan perlindungan terhadap risiko kerja maupun risiko sosial PMI."
-        )
-
-    if "Jasa Konstruksi" in topik_values:
-        analisis_program.append(
-            "Isu pada sektor **jasa konstruksi** perlu menjadi perhatian karena sektor ini memiliki karakteristik "
-            "risiko kecelakaan kerja yang tinggi dan jumlah tenaga kerja yang besar. Dengan demikian, pemberitaan "
-            "di sektor ini relevan terhadap potensi klaim **JKK** dan kualitas kepesertaan pekerja konstruksi."
-        )
-
-    # ==================================
-    # ANALISIS KELOMPOK KEPESERTAAN
-    # ==================================
-    analisis_kepesertaan = (
-        "Dari perspektif kepesertaan, perkembangan isu media dapat mempengaruhi beberapa kelompok pekerja, yaitu "
-        "**Penerima Upah (PU)** melalui risiko PHK, pengurangan tenaga kerja, dan ketidakpatuhan perusahaan; "
-        "**Bukan Penerima Upah (BPU)** melalui persepsi manfaat dan kemudahan akses perlindungan; "
-        "**PMI** melalui isu perlindungan pekerja migran; serta **jasa konstruksi** yang sangat berkaitan "
-        "dengan risiko kecelakaan kerja dan kepatuhan proyek terhadap kepesertaan."
-    )
-
-    # ==================================
-    # ANALISIS KLAIM
-    # ==================================
-    analisis_klaim = (
-        "Dari sisi manfaat, pola isu yang muncul berpotensi mempengaruhi dinamika klaim, terutama "
-        "**JKP** pada isu PHK, **JHT** pada pekerja yang berhenti bekerja, **JKK** pada kecelakaan kerja, "
-        "dan **JKM** pada kasus kematian pekerja. Walaupun belum seluruh pemberitaan berujung pada klaim aktual, "
-        "intensitas isu dapat menjadi indikator awal potensi tekanan terhadap pelayanan manfaat."
-    )
-
-    # ==================================
-    # FALLBACK
-    # ==================================
-    if not analisis_program:
-        analisis_program.append(
-            "Pola isu yang berkembang masih bersifat campuran, namun tetap relevan untuk dipantau karena dapat "
-            "mempengaruhi kepatuhan perusahaan, stabilitas hubungan industrial, perluasan kepesertaan, dan "
-            "akses pekerja terhadap perlindungan jaminan sosial ketenagakerjaan."
-        )
-
-    analisis_text = "\n\n".join(analisis_program)
 
     st.markdown(f"""
 **Status:** {status_txt}
@@ -720,11 +611,9 @@ Isu yang paling banyak muncul pada periode ini adalah:
 
 Secara umum, kondisi saat ini **{kondisi}**.
 
-{analisis_text}
+{" ".join(ringkasan_utama[:2])}
 
-{analisis_kepesertaan}
-
-{analisis_klaim}
+{" ".join(dampak_utama[:2])}
 
 **Rekomendasi:** {rekomendasi}
 """)

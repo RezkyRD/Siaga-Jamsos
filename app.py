@@ -624,17 +624,6 @@ def detect_topic(text: str) -> str:
     return "Kebijakan Ketenagakerjaan"
 
 # ===============================
-# FILTER PANEL
-# ===============================
-with st.sidebar:
-    st.markdown("### Filter")
-    date_range = st.date_input("Rentang tanggal", value=(min_date, max_date))
-    filter_option = st.selectbox(
-        "Prioritas",
-        ["SEMUA", "PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
-    )
-
-# ===============================
 # APPLY DATE FILTER
 # ===============================
 if isinstance(date_range, (list, tuple)) and len(date_range) == 2:

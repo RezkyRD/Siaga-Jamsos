@@ -441,6 +441,9 @@ if raw.empty:
 min_date = raw["Tanggal_Hari"].min()
 max_date = raw["Tanggal_Hari"].max()
 
+date_range = (min_date, max_date)
+filter_option = "SEMUA"
+
 # ===============================
 # SIDEBAR: UPDATE DATA
 # ===============================
@@ -449,7 +452,6 @@ if "sidebar_state" not in st.session_state:
 
 if st.session_state.sidebar_state:
     with st.sidebar:
-
         st.markdown("### Kontrol Data")
 
         if st.button("🔄 Update Data"):
@@ -466,14 +468,15 @@ if st.session_state.sidebar_state:
 
         date_range = st.date_input(
             "Rentang tanggal",
-            value=(min_date, max_date)
+            value=(min_date, max_date),
+            key="sidebar_date_range"
         )
 
         filter_option = st.selectbox(
             "Prioritas",
-            ["SEMUA", "PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
+            ["SEMUA", "PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"],
+            key="sidebar_filter_option"
         )
-
 
 # ===============================
 # TOPIC DETECTION

@@ -311,24 +311,15 @@ thead tr th {
     unsafe_allow_html=True
 )
 
-card_html = f"""
-<div class="news-card">
-    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
-        <div style="flex:1; min-width:250px;">
-            <div class="news-title">{i + 1}. {judul}</div>
-            <div class="news-meta">{media} • {waktu}</div>
-        </div>
-        <div>{badge_html(prioritas)}</div>
-    </div>
-
-    <div style="margin:8px 0 10px 0;">{''.join(chips)}</div>
-    <div style="font-size:.95rem; line-height:1.65; margin-bottom:10px;">
-        {alasan if alasan else "Belum ada analisis prioritas."}
-    </div>
-    {link_html}
+st.markdown(
+    """
+<div style="margin-bottom:18px;">
+  <h1 class="ews-title">Early Warning System</h1>
+  <p class="ews-sub">Monitoring Isu Jaminan Sosial Ketenagakerjaan</p>
 </div>
-"""
-st.markdown(card_html, unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True
+)
 st.divider()
 
 # ===============================

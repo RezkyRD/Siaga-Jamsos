@@ -2,6 +2,7 @@ import re
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+from html import escape
 
 from scraper import run_scraper
 from filter_keyword import run_filter
@@ -886,16 +887,17 @@ with tab_data:
         return "<span class='badge badge-low'>Prioritas Rendah</span>"
 
     for i, row in df_page.iterrows():
-        judul = clean_label(row.get("Judul", "-"))
-        media = clean_label(row.get("Media", "-"))
-        link = row.get("Link", "")
-        waktu = clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal", "-")))
-        prioritas = row.get("Prioritas", "PRIORITAS RENDAH")
-        topik = clean_label(row.get("Topik", ""))
-        dampak_program = clean_label(row.get("Dampak_Program", ""))
-        dampak_kepesertaan = clean_label(row.get("Dampak_Kepesertaan", ""))
-        potensi_klaim = clean_label(row.get("Potensi_Klaim", ""))
-        alasan = clean_label(row.get("Alasan_Prioritas", ""))
+        judul = escape(clean_label(row.get("Judul", "-")))
+        media = escape(clean_label(row.get("Media", "-")))
+        link = str(row.get("Link", "")).strip()
+        waktu = escape(clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal", "-"))))
+        prioritas = str(row.get("Prioritas", "PRIORITAS RENDAH")).strip()
+
+        topik = escape(clean_label(row.get("Topik", "")))
+        dampak_program = escape(clean_label(row.get("Dampak_Program", "")))
+        dampak_kepesertaan = escape(clean_label(row.get("Dampak_Kepesertaan", "")))
+        potensi_klaim = escape(clean_label(row.get("Potensi_Klaim", "")))
+        alasan = escape(clean_label(row.get("Alasan_Prioritas", "")))
 
         chips = []
         if topik:
@@ -909,27 +911,24 @@ with tab_data:
 
         link_html = ""
         if link:
-            link_html = f"<div class='news-link'><a href='{link}' target='_blank'>Baca berita</a></div>"
+            safe_link = escape(link, quote=True)
+            link_html = f"<div class='news-link'><a href='{safe_link}' target='_blank'>Baca berita</a></div>"
 
-        card_html = f"""
-<div class="news-card">
-    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
-        <div style="flex:1; min-width:250px;">
-            <div class="news-title">{i + 1}. {judul}</div>
-            <div class="news-meta">{media} • {waktu}</div>
-        </div>
-        <div>{badge_html(prioritas)}</div>
-    </div>
+        card_html = (
+            f"<div class='news-card'>"
+            f"<div style='display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;'>"
+            f"<div style='flex:1; min-width:250px;'>"
+            f"<div class='news-title'>{i + 1}. {judul}</div>"
+            f"<div class='news-meta'>{media} • {waktu}</div>"
+            f"</div>"
+            f"<div>{badge_html(prioritas)}</div>"
+            f"</div>"
+            f"<div style='margin:8px 0 10px 0;'>{''.join(chips)}</div>"
+            f"<div style='font-size:.95rem; line-height:1.65; margin-bottom:10px;'>{alasan if alasan else 'Belum ada analisis prioritas.'}</div>"
+            f"{link_html}"
+            f"</div>"
+        )
 
-    <div style="margin:8px 0 10px 0;">{''.join(chips)}</div>
-
-    <div style="font-size:.95rem; line-height:1.65; margin-bottom:10px;">
-        {alasan if alasan else "Belum ada analisis prioritas."}
-    </div>
-
-    {link_html}
-</div>
-"""
         st.markdown(card_html, unsafe_allow_html=True)
 
     st.markdown(

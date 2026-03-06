@@ -27,15 +27,6 @@ st.set_page_config(
 st.markdown(
     """
 <style>
-
-/* ===== HILANGKAN HEADER STREAMLIT ===== */
-
-/* JANGAN hilangkan header penuh, karena tombol sidebar ada di sana */
-
-header[data-testid="stHeader"] {
-    display: none;
-}
-
 div[data-testid="stToolbar"] {
     display: none;
 }
@@ -44,24 +35,10 @@ div[data-testid="stToolbar"] {
     visibility: hidden;
 }
 
-
-/* Hilangkan footer */
 footer {
     visibility: hidden;
 }
 
-/* rapikan jarak atas */
-.block-container {
-    padding-top: 1rem !important;
-}
-
-:root {
-    --bg-light: #f5f7fb;
-    --card-light: rgba(255,255,255,0.78);
-    --card-solid-light: #ffffff;
-    --text-light: #101828;
-    --muted-light: #667085;
-    --line-light: rgba(16,24,40,0.08);
 :root {
     --bg-light: #f5f7fb;
     --card-light: rgba(255,255,255,0.78);
@@ -107,7 +84,7 @@ html, body, [class*="css"] {
 }
 
 .block-container {
-    padding-top: 2.2rem;
+    padding-top: 2rem;
     padding-bottom: 2rem;
     max-width: 1450px;
 }
@@ -240,7 +217,7 @@ html, body, [class*="css"] {
     background: linear-gradient(135deg, #22c55e, #16a34a);
 }
 
-/* Streamlit tabs */
+/* Tabs */
 button[data-baseweb="tab"] {
     border-radius: 999px !important;
     padding: 10px 16px !important;
@@ -313,22 +290,6 @@ thead tr th {
     }
 }
 
-/* Small glass box */
-.mini-panel {
-    padding: 18px;
-    border-radius: 18px;
-    background: var(--card-light);
-    border: 1px solid var(--line-light);
-    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
-}
-@media (prefers-color-scheme: dark) {
-    .mini-panel {
-        background: var(--card-dark);
-        border: 1px solid var(--line-dark);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
-    }
-}
-
 /* Mobile */
 @media (max-width: 768px) {
     .block-container {
@@ -357,16 +318,6 @@ st.markdown(
 """,
     unsafe_allow_html=True
 )
-if "sidebar_state" not in st.session_state:
-    st.session_state.sidebar_state = True
-
-col_menu, col_title_space = st.columns([1, 12])
-
-with col_menu:
-    if st.button("☰ Menu", key="toggle_sidebar_main"):
-        st.session_state.sidebar_state = not st.session_state.sidebar_state
-        st.rerun()
-
 st.divider()
 
 # ===============================
@@ -385,7 +336,6 @@ def safe_clear_caches():
         read_sheet.clear()
     except Exception:
         pass
-
 
 # ===============================
 # LOAD DATA
@@ -409,20 +359,16 @@ def ensure_publish_date(df: pd.DataFrame) -> pd.DataFrame:
 
     if "Tanggal_Publish" in df.columns:
         s = pd.to_datetime(df["Tanggal_Publish"], errors="coerce")
-
     elif "Waktu_Publish_WIB" in df.columns:
         s = pd.to_datetime(df["Waktu_Publish_WIB"], errors="coerce")
-
     elif "Tanggal" in df.columns:
         s = pd.to_datetime(df["Tanggal"], errors="coerce", utc=True)
         try:
             s = s.dt.tz_convert("Asia/Jakarta")
         except Exception:
             pass
-
     elif "Tanggal_Ambil" in df.columns:
         s = pd.to_datetime(df["Tanggal_Ambil"], errors="coerce")
-
     else:
         raise ValueError("Data tidak punya kolom tanggal yang dikenali.")
 
@@ -446,35 +392,35 @@ date_range = (min_date, max_date)
 filter_option = "SEMUA"
 
 # ===============================
-# SIDEBAR: UPDATE DATA
+# KONTROL UTAMA
 # ===============================
-if st.session_state.sidebar_state:
-    with st.sidebar:
-        st.markdown("### Kontrol Data")
+st.markdown('<div class="section-title">Kontrol Data</div>', unsafe_allow_html=True)
 
-        if st.button("🔄 Update Data", key="update_data_btn"):
-            with st.spinner("Memproses update..."):
-                run_scraper()
-                run_filter()
-                run_priority()
-                safe_clear_caches()
+c_ctrl1, c_ctrl2, c_ctrl3 = st.columns([1.2, 2.2, 1.5])
 
-            st.success("Update selesai!")
-            st.rerun()
+with c_ctrl1:
+    if st.button("🔄 Update Data", key="update_data_main"):
+        with st.spinner("Memproses update..."):
+            run_scraper()
+            run_filter()
+            run_priority()
+            safe_clear_caches()
+        st.success("Update selesai!")
+        st.rerun()
 
-        st.markdown("### Filter")
+with c_ctrl2:
+    date_range = st.date_input(
+        "Rentang tanggal",
+        value=(min_date, max_date),
+        key="main_date_range"
+    )
 
-        date_range = st.date_input(
-            "Rentang tanggal",
-            value=(min_date, max_date),
-            key="sidebar_date_range"
-        )
-
-        filter_option = st.selectbox(
-            "Prioritas",
-            ["SEMUA", "PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"],
-            key="sidebar_filter_option"
-        )
+with c_ctrl3:
+    filter_option = st.selectbox(
+        "Prioritas",
+        ["SEMUA", "PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"],
+        key="main_filter_option"
+    )
 
 # ===============================
 # TOPIC DETECTION

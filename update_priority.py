@@ -10,22 +10,91 @@ from gsheet_utils import read_sheet, clear_and_write
 # =====================================
 
 INDONESIA_CONTEXT = [
-"indonesia","jakarta","jawa","sumatera","kalimantan","sulawesi","papua","bali",
-"kemnaker","bpjs ketenagakerjaan","bpjamsostek","disnaker",
-"pekerja migran","pmi","tki","buruh indonesia"
+    "jakarta", "jawa", "sumatera", "kalimantan", "sulawesi", "papua", "bali",
+    "kemnaker", "bpjs ketenagakerjaan", "bpjamsostek", "disnaker",
+    "pekerja migran", "pmi", "tki", "buruh indonesia",
+    "pekerja indonesia", "perusahaan indonesia", "pabrik di indonesia",
+    "jabar", "jateng", "jatim", "bandung", "surabaya", "medan", "makassar",
+    "karawang", "bekasi", "tangerang", "semarang", "batam"
+]
+
+# =====================================
+# BLACKLIST PERUSAHAAN GLOBAL
+# =====================================
+
+GLOBAL_COMPANY = [
+    "amazon",
+    "google",
+    "morgan stanley",
+    "meta",
+    "facebook",
+    "apple",
+    "tesla",
+    "microsoft",
+    "intel",
+    "nvidia",
+    "tiktok",
+    "netflix"
 ]
 
 
 def is_indonesia_related(text):
+    text = (text or "").lower()
 
-    text = text.lower()
+    pmi_keywords = [
+        "pekerja migran indonesia",
+        "pmi",
+        "tki",
+        "buruh indonesia",
+        "pekerja indonesia"
+    ]
 
-    for k in INDONESIA_CONTEXT:
-        if k in text:
-            return True
+    # PMI/pekerja Indonesia di luar negeri tetap dianggap relevan
+    if any(k in text for k in pmi_keywords):
+        return True
+
+    # Tolak berita global perusahaan asing, kecuali jelas terkait Indonesia
+    if any(g in text for g in GLOBAL_COMPANY):
+        indonesia_strong_context = [
+            "di indonesia",
+            "indonesia",
+            "pekerja indonesia",
+            "buruh indonesia",
+            "pabrik di indonesia",
+            "anak usaha indonesia",
+            "operasi di indonesia",
+            "karyawan di indonesia",
+            "phk di indonesia",
+            "kemnaker",
+            "disnaker",
+            "bpjs ketenagakerjaan",
+            "bpjamsostek"
+        ]
+
+        # jika hanya nama media Indonesia, tetap ditolak
+        media_only_context = [
+            "cnbc indonesia",
+            "cnn indonesia",
+            "kompas.com",
+            "detik",
+            "tempo.co",
+            "bisnis.com",
+            "tribun",
+            "kontan",
+            "beritasatu"
+        ]
+
+        has_strong_id_context = any(k in text for k in indonesia_strong_context)
+        has_only_media_context = any(m in text for m in media_only_context)
+
+        if not has_strong_id_context or has_only_media_context:
+            return False
+
+    # konteks Indonesia umum
+    if any(k in text for k in INDONESIA_CONTEXT):
+        return True
 
     return False
-
 
 # =====================================
 # ANALISIS JAMINAN SOSIAL
@@ -44,7 +113,7 @@ def analyze_jamsos(text):
     # PHK
     # ======================
 
-    if re.search(r"\bphk\b|\blayoff\b|\bdirumahkan\b", text):
+    if re.search(r"\bphk\b|\bdirumahkan\b", text):
 
         score += 4
 

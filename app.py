@@ -887,7 +887,11 @@ with tab_data:
         return "➖ Stabil"
 
     esk["Trend"] = esk.apply(trend, axis=1)
-   esk = esk.sort_values(["Skor", "Media 24 Jam", "Berita 24 Jam"], ascending=False)
+
+esk = esk.sort_values(
+    ["Skor", "Media 24 Jam", "Berita 24 Jam"],
+    ascending=False
+)
 
 # tampilkan topik yang lebih bermakna
 esk = esk[

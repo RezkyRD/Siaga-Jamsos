@@ -452,7 +452,7 @@ with tab_data:
     df_page = df_display.iloc[start_idx:end_idx]
 
     # Tampilkan tabel (versi baru: fleksibel kolom tanggal)
-    preferred_cols = [preferred_cols = [
+    preferred_cols = [
     "Judul",
     "Tanggal",
     "Waktu_Publish_WIB",

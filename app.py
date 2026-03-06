@@ -357,15 +357,16 @@ st.markdown(
 """,
     unsafe_allow_html=True
 )
-# Toggle Sidebar Button
 if "sidebar_state" not in st.session_state:
     st.session_state.sidebar_state = True
 
-col_toggle, col_spacer = st.columns([1,10])
+col_menu, col_title_space = st.columns([1, 12])
 
-with col_toggle:
-    if st.button("☰ Menu"):
+with col_menu:
+    if st.button("☰ Menu", key="toggle_sidebar_main"):
         st.session_state.sidebar_state = not st.session_state.sidebar_state
+        st.rerun()
+
 st.divider()
 
 # ===============================
@@ -447,19 +448,16 @@ filter_option = "SEMUA"
 # ===============================
 # SIDEBAR: UPDATE DATA
 # ===============================
-if "sidebar_state" not in st.session_state:
-    st.session_state.sidebar_state = True
-
 if st.session_state.sidebar_state:
     with st.sidebar:
         st.markdown("### Kontrol Data")
 
-        if st.button("🔄 Update Data"):
+        if st.button("🔄 Update Data", key="update_data_btn"):
             with st.spinner("Memproses update..."):
                 run_scraper()
                 run_filter()
                 run_priority()
-                st.cache_data.clear()
+                safe_clear_caches()
 
             st.success("Update selesai!")
             st.rerun()

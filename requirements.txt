@@ -1,6 +1,7 @@
 streamlit
 pandas
 matplotlib
+plotly
 gspread
 oauth2client
 google-auth

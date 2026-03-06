@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from html import escape
+import plotly.graph_objects as go
 
 from scraper import run_scraper
 from filter_keyword import run_filter
@@ -199,6 +200,104 @@ html, body, [class*="css"] {
     font-size: 1.45rem;
     font-weight: 700;
     margin-bottom: .65rem;
+}
+
+.chart-card,
+.analysis-card {
+    background: var(--card-light);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line-light);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+    padding: 16px 18px;
+    height: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+    .chart-card,
+    .analysis-card {
+        background: var(--card-dark);
+        border: 1px solid var(--line-dark);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+    }
+}
+
+.chart-caption {
+    font-size: 12px;
+    color: #667085;
+    margin-top: -2px;
+    margin-bottom: 8px;
+}
+
+.analysis-body {
+    font-size: .97rem;
+    line-height: 1.75;
+}
+
+.analysis-body p,
+.analysis-body li {
+    color: inherit;
+}
+
+@media (prefers-color-scheme: dark) {
+    .chart-caption {
+        color: #94a3b8;
+    }
+}
+
+.top5-card {
+    background: var(--card-light);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line-light);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+    padding: 16px 18px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .top5-card {
+        background: var(--card-dark);
+        border: 1px solid var(--line-dark);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+    }
+}
+
+.top5-item {
+    padding: 10px 0;
+    border-bottom: 1px dashed rgba(102, 112, 133, 0.25);
+}
+
+.top5-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.top5-link a {
+    color: #4338ca;
+    text-decoration: none;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.top5-link a:hover {
+    text-decoration: underline;
+}
+
+.top5-meta {
+    font-size: .86rem;
+    color: #667085;
+    margin-top: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .top5-link a {
+        color: #a5b4fc;
+    }
+    .top5-meta {
+        color: #94a3b8;
+    }
 }
 
 /* Badge */
@@ -687,7 +786,7 @@ with tab_dash:
 
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
 
-    left, right = st.columns([1.1, 0.9], gap="large")
+    left, right = st.columns([1.05, 0.95], gap="large")
 
     with left:
         st.markdown('<div class="section-title">Distribusi Prioritas</div>', unsafe_allow_html=True)
@@ -695,25 +794,90 @@ with tab_dash:
         priority_counts = filtered_display["Prioritas"].value_counts()
         if not priority_counts.empty:
             order = ["PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
+            label_map = {
+                "PRIORITAS TINGGI": "Prioritas Tinggi",
+                "PRIORITAS SEDANG": "Prioritas Sedang",
+                "PRIORITAS RENDAH": "Prioritas Rendah"
+            }
+            color_map = {
+                "PRIORITAS TINGGI": "#ef4444",
+                "PRIORITAS SEDANG": "#f59e0b",
+                "PRIORITAS RENDAH": "#22c55e"
+            }
+
             priority_counts = priority_counts.reindex(order).fillna(0).astype(int)
 
-            fig, ax = plt.subplots(figsize=(7.5, 2.8), dpi=120)
-            priority_counts.plot(kind="barh", ax=ax)
+            x_vals = priority_counts.tolist()
+            y_vals = [label_map[x] for x in priority_counts.index]
+            colors = [color_map[x] for x in priority_counts.index]
 
-            ax.set_xlabel("Jumlah Berita")
-            ax.set_ylabel("")
-            ax.set_title("")
-            fig.subplots_adjust(top=0.92, left=0.35, right=0.98, bottom=0.22)
-            st.pyplot(fig, width="stretch")
+            max_val = max(x_vals) if max(x_vals) > 0 else 1
+
+            st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
+            st.markdown(
+                "<div class='chart-caption'>Perbandingan jumlah berita berdasarkan level prioritas pada periode terpilih</div>",
+                unsafe_allow_html=True
+            )
+
+            fig = go.Figure()
+
+            fig.add_trace(
+                go.Bar(
+                    x=x_vals,
+                    y=y_vals,
+                    orientation="h",
+                    marker=dict(
+                        color=colors,
+                        line=dict(width=0)
+                    ),
+                    text=[f"{v:,}" for v in x_vals],
+                    textposition="outside",
+                    cliponaxis=False,
+                    hovertemplate="<b>%{y}</b><br>Jumlah berita: %{x}<extra></extra>"
+                )
+            )
+
+            fig.update_layout(
+                height=300,
+                margin=dict(l=10, r=45, t=6, b=20),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                showlegend=False,
+                xaxis=dict(
+                    title="Jumlah Berita",
+                    showgrid=True,
+                    gridcolor="rgba(148, 163, 184, 0.20)",
+                    zeroline=False,
+                    showline=False,
+                    range=[0, max_val * 1.18]
+                ),
+                yaxis=dict(
+                    title="",
+                    autorange="reversed",
+                    showgrid=False
+                ),
+                font=dict(
+                    size=13
+                )
+            )
+
+            st.plotly_chart(
+                fig,
+                use_container_width=True,
+                config={"displayModeBar": False, "responsive": True}
+            )
+            st.markdown("</div>", unsafe_allow_html=True)
         else:
             st.info("Belum ada data distribusi prioritas.")
 
-        st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
         st.markdown('<div class="section-title">Top 5 Berita Prioritas Tinggi</div>', unsafe_allow_html=True)
 
         df_high = filtered_display[
             filtered_display["Prioritas"] == "PRIORITAS TINGGI"
         ].copy()
+
+        st.markdown("<div class='top5-card'>", unsafe_allow_html=True)
 
         if not df_high.empty:
             if "Waktu_Publish_WIB" in df_high.columns:
@@ -722,17 +886,31 @@ with tab_dash:
             top5 = df_high.head(5)
 
             for _, row in top5.iterrows():
-                media = row.get("Media", "-")
-                judul = row.get("Judul", "-")
-                link = row.get("Link", "")
-                waktu = row.get("Waktu_Publish_WIB", "")
+                media = escape(str(row.get("Media", "-")))
+                judul = escape(str(row.get("Judul", "-")))
+                link = str(row.get("Link", "")).strip()
+                waktu = escape(str(row.get("Waktu_Publish_WIB", "")))
 
                 if link:
-                    st.markdown(f"- **[{judul}]({link})**  \n  _{media} • {waktu}_")
+                    item_html = f"""
+                    <div class="top5-item">
+                        <div class="top5-link"><a href="{escape(link, quote=True)}" target="_blank">{judul}</a></div>
+                        <div class="top5-meta">{media} • {waktu}</div>
+                    </div>
+                    """
                 else:
-                    st.markdown(f"- **{judul}**  \n  _{media} • {waktu}_")
+                    item_html = f"""
+                    <div class="top5-item">
+                        <div class="top5-link">{judul}</div>
+                        <div class="top5-meta">{media} • {waktu}</div>
+                    </div>
+                    """
+
+                st.markdown(item_html, unsafe_allow_html=True)
         else:
             st.info("Belum ada berita prioritas tinggi.")
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with right:
         st.markdown('<div class="section-title">🧠 Analisis Situasi</div>', unsafe_allow_html=True)
@@ -816,6 +994,8 @@ with tab_dash:
                 "Secara umum, perkembangan isu media dapat berdampak pada kepesertaan, kepatuhan perusahaan, dan potensi tekanan terhadap klaim manfaat BPJS Ketenagakerjaan."
             )
 
+        st.markdown("<div class='analysis-card'><div class='analysis-body'>", unsafe_allow_html=True)
+
         st.markdown(
             f"""
 **Status:** {status_txt}
@@ -840,6 +1020,8 @@ Secara umum, kondisi saat ini **{kondisi}**.
 """,
             unsafe_allow_html=False
         )
+
+        st.markdown("</div></div>", unsafe_allow_html=True)
 
 # ===============================
 # TAB: DATA BERITA

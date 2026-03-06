@@ -886,10 +886,10 @@ with tab_data:
         return "<span class='badge badge-low'>Prioritas Rendah</span>"
 
     for i, row in df_page.iterrows():
-        judul = row.get("Judul", "-")
-        media = row.get("Media", "-")
+        judul = clean_label(row.get("Judul", "-"))
+        media = clean_label(row.get("Media", "-"))
         link = row.get("Link", "")
-        waktu = row.get("Waktu_Publish_WIB", row.get("Tanggal", "-"))
+        waktu = clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal", "-")))
         prioritas = row.get("Prioritas", "PRIORITAS RENDAH")
         topik = clean_label(row.get("Topik", ""))
         dampak_program = clean_label(row.get("Dampak_Program", ""))
@@ -907,28 +907,30 @@ with tab_data:
         if potensi_klaim:
             chips.append(f"<span class='news-chip'>Klaim: {potensi_klaim}</span>")
 
-        link_html = f"<div class='news-link'><a href='{link}' target='_blank'>Baca berita</a></div>" if link else ""
+        link_html = ""
+        if link:
+            link_html = f"<div class='news-link'><a href='{link}' target='_blank'>Baca berita</a></div>"
 
-        st.markdown(
-            f"""
-            <div class="news-card">
-                <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
-                    <div style="flex:1; min-width:250px;">
-                        <div class="news-title">{i + 1}. {judul}</div>
-                        <div class="news-meta">{media} • {waktu}</div>
-                    </div>
-                    <div>{badge_html(prioritas)}</div>
-                </div>
+        card_html = f"""
+<div class="news-card">
+    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+        <div style="flex:1; min-width:250px;">
+            <div class="news-title">{i + 1}. {judul}</div>
+            <div class="news-meta">{media} • {waktu}</div>
+        </div>
+        <div>{badge_html(prioritas)}</div>
+    </div>
 
-                <div style="margin:8px 0 10px 0;">{''.join(chips)}</div>
-                <div style="font-size:.95rem; line-height:1.65; margin-bottom:10px;">
-                    {alasan if alasan else "Belum ada analisis prioritas."}
-                </div>
-                {link_html}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    <div style="margin:8px 0 10px 0;">{''.join(chips)}</div>
+
+    <div style="font-size:.95rem; line-height:1.65; margin-bottom:10px;">
+        {alasan if alasan else "Belum ada analisis prioritas."}
+    </div>
+
+    {link_html}
+</div>
+"""
+        st.markdown(card_html, unsafe_allow_html=True)
 
     st.markdown(
         f"""

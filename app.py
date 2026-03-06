@@ -855,7 +855,7 @@ if not df_high.empty:
                 """,
                 unsafe_allow_html=True
             )
-        else:
+         else:
             st.markdown(
                 f"""
                 <div class="news-card">
@@ -865,7 +865,6 @@ if not df_high.empty:
                 """,
                 unsafe_allow_html=True
             )
-
 else:
     st.info("Belum ada berita prioritas tinggi.")
 

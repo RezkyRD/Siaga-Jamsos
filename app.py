@@ -334,17 +334,20 @@ TOPIC_RULES = {
 
 def detect_topic(text: str) -> str:
     t = (text or "").lower()
+
     for topic, patterns in TOPIC_RULES.items():
         for p in patterns:
             if re.search(p, t):
                 return topic
+
+    # fallback jika tidak masuk rules
     if re.search(r"bpjs|bpjamsostek|jamsostek|klaim|iuran", t):
-    return "Kepesertaan BPJS"
+        return "Kepesertaan BPJS"
 
-if re.search(r"buruh|pekerja|ketenagakerjaan|tenaga kerja", t):
-    return "Konflik Hubungan Industrial"
+    if re.search(r"buruh|pekerja|ketenagakerjaan|tenaga kerja", t):
+        return "Konflik Hubungan Industrial"
 
-return "Kebijakan Ketenagakerjaan"
+    return "Kebijakan Ketenagakerjaan"
 
 # ===============================
 # FILTER PANEL (GLOBAL, DIPAKAI 2 TAB)

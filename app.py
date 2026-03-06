@@ -826,7 +826,7 @@ st.plotly_chart(
         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
         st.markdown('<div class="section-title">Top 5 Berita Prioritas Tinggi</div>', unsafe_allow_html=True)
 
-        ddf_high = filtered_display[
+        df_high = filtered_display[
     filtered_display["Prioritas"] == "PRIORITAS TINGGI"
 ].copy()
 

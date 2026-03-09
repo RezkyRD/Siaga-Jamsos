@@ -1264,76 +1264,115 @@ with tab_data:
 # ===============================
 with tab_info:
 
-    st.markdown('<div class="section-title">Panduan Membaca Dashboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Panduan Sistem Early Warning System</div>', unsafe_allow_html=True)
 
     st.markdown(
-        """
+"""
 <div class="info-card">
-<div class="info-title">Dashboard</div>
+
 <div class="info-text">
 
-Tab **Dashboard** menampilkan gambaran umum kondisi isu ketenagakerjaan berdasarkan hasil monitoring media online.
+Sistem **Early Warning System (EWS) Isu Ketenagakerjaan** digunakan untuk memantau perkembangan isu ketenagakerjaan yang muncul di media online serta menganalisis potensi dampaknya terhadap program jaminan sosial ketenagakerjaan.
 
-Elemen yang ditampilkan antara lain:
+Sistem bekerja melalui beberapa tahapan proses analisis data berita sebagai berikut:
 
-• **Total Berita Raw**  
-Jumlah seluruh berita yang berhasil diambil dari media online.
+<br>
 
-• **Lolos Keyword**  
-Jumlah berita yang telah difilter berdasarkan kata kunci ketenagakerjaan.
+<b>1. Pengumpulan Data Berita (Scraping Media Online)</b>  
 
-• **Prioritas Tinggi / Sedang / Rendah**  
-Klasifikasi tingkat urgensi berita berdasarkan analisis sistem.
-
-• **Distribusi Prioritas**  
-Grafik perbandingan jumlah berita berdasarkan tingkat prioritas.
-
-• **Top 5 Berita Prioritas Tinggi**  
-Daftar lima berita paling penting yang perlu diperhatikan.
-
-• **Analisis Situasi**  
-Ringkasan kondisi isu ketenagakerjaan serta rekomendasi pemantauan.
-
-</div>
-</div>
-""",
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        """
-<div class="info-card">
-<div class="info-title">Data Berita</div>
-<div class="info-text">
-
-Tab **Data Berita** menampilkan daftar berita yang telah dianalisis oleh sistem.
-
-Informasi yang ditampilkan meliputi:
+Sistem secara otomatis mengambil berita dari berbagai media online yang memuat isu ketenagakerjaan.  
+Data yang dikumpulkan meliputi:
 
 • Judul berita  
 • Media sumber berita  
-• Waktu publikasi  
-• Tingkat prioritas berita  
-• Topik isu ketenagakerjaan  
-• Dampak terhadap program jaminan sosial  
-• Potensi klaim program BPJS Ketenagakerjaan  
-• Analisis singkat alasan prioritas
+• Waktu publikasi berita  
+• Ringkasan atau isi berita  
+• Tautan berita asli  
 
-Data berita disusun berdasarkan tingkat prioritas dan waktu publikasi terbaru.
+Proses ini memungkinkan sistem melakukan pemantauan isu ketenagakerjaan secara berkelanjutan.
 
-</div>
-</div>
-""",
-        unsafe_allow_html=True
-    )
+<br>
 
-    st.markdown(
-        """
-<div class="info-card">
-<div class="info-title">Indeks Eskalasi Isu</div>
-<div class="info-text">
+<b>2. Penyaringan Isu Ketenagakerjaan (Keyword Filtering)</b>  
 
-Indeks eskalasi isu digunakan untuk memantau perkembangan topik ketenagakerjaan dalam periode waktu tertentu.
+Seluruh berita yang terkumpul kemudian disaring menggunakan kata kunci yang berkaitan dengan isu ketenagakerjaan seperti:
+
+• PHK  
+• Upah dan gaji  
+• Buruh dan pekerja  
+• Hubungan industrial  
+• BPJS Ketenagakerjaan  
+• Kecelakaan kerja  
+• Jaminan sosial tenaga kerja  
+
+Hanya berita yang relevan dengan ketenagakerjaan yang akan diproses lebih lanjut oleh sistem.
+
+<br>
+
+<b>3. Identifikasi Topik Isu</b>  
+
+Setelah berita lolos tahap penyaringan, sistem melakukan analisis untuk mengidentifikasi topik utama dari setiap berita.
+
+Topik yang dianalisis antara lain:
+
+• PHK (Pemutusan Hubungan Kerja)  
+• Konflik hubungan industrial  
+• Kepesertaan BPJS Ketenagakerjaan  
+• Upah dan kesejahteraan pekerja  
+• Aksi buruh atau demonstrasi pekerja  
+• Kecelakaan kerja  
+• Tunggakan iuran BPJS  
+
+Analisis ini dilakukan menggunakan pencocokan pola kata (pattern matching) pada judul dan ringkasan berita.
+
+<br>
+
+<b>4. Analisis Dampak terhadap Program Jaminan Sosial</b>  
+
+Setiap berita dianalisis untuk melihat potensi dampaknya terhadap program BPJS Ketenagakerjaan, antara lain:
+
+• JHT (Jaminan Hari Tua)  
+• JKK (Jaminan Kecelakaan Kerja)  
+• JKM (Jaminan Kematian)  
+• JKP (Jaminan Kehilangan Pekerjaan)  
+• JP (Jaminan Pensiun)
+
+Analisis ini membantu mengidentifikasi apakah suatu isu berpotensi mempengaruhi kepesertaan, klaim program, atau stabilitas perlindungan sosial tenaga kerja.
+
+<br>
+
+<b>5. Penentuan Prioritas Berita</b>  
+
+Setiap berita kemudian diklasifikasikan berdasarkan tingkat urgensi isu menjadi tiga kategori:
+
+• <b>Prioritas Tinggi</b>  
+Berita yang berpotensi memiliki dampak besar terhadap kondisi ketenagakerjaan atau program jaminan sosial.
+
+• <b>Prioritas Sedang</b>  
+Berita yang perlu dipantau karena memiliki potensi perkembangan isu.
+
+• <b>Prioritas Rendah</b>  
+Berita yang bersifat informatif dan tidak menunjukkan potensi dampak signifikan.
+
+<br>
+
+<b>6. Dashboard Monitoring Isu</b>  
+
+Hasil analisis kemudian ditampilkan dalam bentuk dashboard yang memuat:
+
+• Total berita yang berhasil dikumpulkan  
+• Jumlah berita yang relevan dengan isu ketenagakerjaan  
+• Distribusi berita berdasarkan tingkat prioritas  
+• Daftar berita prioritas tinggi  
+• Analisis situasi isu ketenagakerjaan
+
+Dashboard ini membantu pengguna memahami kondisi isu ketenagakerjaan secara cepat.
+
+<br>
+
+<b>7. Indeks Eskalasi Isu</b>  
+
+Indeks eskalasi digunakan untuk memantau perkembangan intensitas isu ketenagakerjaan.
 
 Perhitungan dilakukan dengan membandingkan:
 
@@ -1341,9 +1380,16 @@ Perhitungan dilakukan dengan membandingkan:
 • jumlah media yang memberitakan  
 • tren peningkatan atau penurunan isu
 
-Semakin tinggi skor eskalasi, semakin besar potensi isu tersebut berkembang dan memerlukan perhatian lebih lanjut.
+Sistem kemudian menentukan tren isu sebagai:
+
+• 📈 Naik  
+• 📉 Turun  
+• ➖ Stabil  
+
+Semakin tinggi skor eskalasi, semakin besar kemungkinan isu tersebut berkembang dan memerlukan perhatian lebih lanjut.
 
 </div>
+
 </div>
 """,
         unsafe_allow_html=True

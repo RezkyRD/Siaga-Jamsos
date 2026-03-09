@@ -394,6 +394,47 @@ thead tr th {
     }
 }
 
+.info-card {
+    background: var(--card-light);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line-light);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .info-card {
+        background: var(--card-dark);
+        border: 1px solid var(--line-dark);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+    }
+}
+
+.info-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.info-text {
+    font-size: .96rem;
+    line-height: 1.75;
+    color: inherit;
+}
+
+.info-text ul {
+    padding-left: 18px;
+    margin-top: 8px;
+    margin-bottom: 0;
+}
+
+.info-text li {
+    margin-bottom: 6px;
+}
+
 /* Mobile */
 @media (max-width: 768px) {
     .block-container {
@@ -708,7 +749,7 @@ if filter_option != "SEMUA" and "Prioritas" in filtered_for_table.columns:
 # ===============================
 # TABS
 # ===============================
-tab_dash, tab_data = st.tabs(["📊 Dashboard", "📰 Data Berita"])
+tab_dash, tab_data = st.tabs(["📊 Dashboard", "📰 Data Berita", "📘 Panduan"])
 
 # ===============================
 # TAB: DASHBOARD
@@ -1217,3 +1258,172 @@ with tab_data:
         use_container_width=True,
         hide_index=True
     )
+
+# ===============================
+# TAB: PANDUAN
+# ===============================
+with tab_info:
+    st.markdown('<div class="section-title">Panduan Membaca Dashboard</div>', unsafe_allow_html=True)
+    st.caption("Tab ini menjelaskan arti setiap unsur yang tampil pada Dashboard dan Data Berita.")
+
+    c_info1, c_info2 = st.columns(2, gap="large")
+
+    with c_info1:
+        st.markdown(
+            """
+            <div class="info-card">
+                <div class="info-title">1. Total Berita Raw</div>
+                <div class="info-text">
+                    Menunjukkan jumlah seluruh berita mentah hasil scraping dari media online pada rentang tanggal yang dipilih.
+                    Nilai ini merupakan data awal sebelum dilakukan penyaringan isu.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            """
+            <div class="info-card">
+                <div class="info-title">2. Lolos Keyword</div>
+                <div class="info-text">
+                    Menunjukkan jumlah berita yang telah lolos proses penyaringan kata kunci dan dianggap relevan dengan isu
+                    ketenagakerjaan atau jaminan sosial ketenagakerjaan. Data ini menjadi dasar analisis sistem EWS.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            """
+            <div class="info-card">
+                <div class="info-title">3. Prioritas Tinggi / Sedang / Rendah</div>
+                <div class="info-text">
+                    Menunjukkan hasil klasifikasi tingkat urgensi berita:
+                    <ul>
+                        <li><b>Prioritas Tinggi</b>: isu yang perlu perhatian cepat karena berpotensi berdampak besar.</li>
+                        <li><b>Prioritas Sedang</b>: isu yang perlu dipantau lebih lanjut karena memiliki potensi berkembang.</li>
+                        <li><b>Prioritas Rendah</b>: isu yang tetap relevan, tetapi dampaknya relatif lebih kecil atau belum mendesak.</li>
+                    </ul>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            """
+            <div class="info-card">
+                <div class="info-title">4. Distribusi Prioritas</div>
+                <div class="info-text">
+                    Grafik ini memperlihatkan perbandingan jumlah berita berdasarkan level prioritas pada periode yang dipilih.
+                    Tujuannya untuk membantu melihat dominasi isu, apakah cenderung stabil, waspada, atau meningkat risikonya.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            """
+            <div class="info-card">
+                <div class="info-title">5. Top 5 Berita Prioritas Tinggi</div>
+                <div class="info-text">
+                    Menampilkan lima berita prioritas tinggi yang paling penting untuk diperhatikan.
+                    Bagian ini membantu pengguna fokus pada isu utama tanpa harus membaca seluruh daftar berita.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with c_info2:
+        st.markdown(
+            """
+            <div class="info-card">
+                <div class="info-title">6. Analisis Situasi</div>
+                <div class="info-text">
+                    Bagian ini berisi ringkasan kondisi isu ketenagakerjaan pada periode tertentu berdasarkan hasil pemantauan berita.
+                    Analisis situasi menjelaskan:
+                    <ul>
+                        <li>status kondisi umum (stabil, waspada, atau risiko tinggi),</li>
+                        <li>jumlah berita tiap prioritas,</li>
+                        <li>topik dominan yang paling banyak muncul,</li>
+                        <li>potensi dampak terhadap jaminan sosial ketenagakerjaan,</li>
+                        <li>serta rekomendasi tindak lanjut.</li>
+                    </ul>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            """
+            <div class="info-card">
+                <div class="info-title">7. Tab Data Berita</div>
+                <div class="info-text">
+                    Tab ini menampilkan daftar berita hasil analisis secara lebih rinci. Setiap kartu berita memuat judul,
+                    media, waktu publikasi, tingkat prioritas, topik, serta alasan prioritas.
+                    Bagian ini membantu pengguna menelusuri detail isu satu per satu.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            """
+            <div class="info-card">
+                <div class="info-title">8. Chip Informasi pada Berita</div>
+                <div class="info-text">
+                    Chip atau label kecil pada setiap berita berfungsi sebagai penanda cepat, misalnya:
+                    <ul>
+                        <li><b>Topik</b>: tema utama berita, seperti PHK, kepesertaan BPJS, atau konflik hubungan industrial.</li>
+                        <li><b>Dampak Program</b>: program jaminan sosial yang berpotensi terdampak.</li>
+                        <li><b>Dampak Kepesertaan</b>: potensi pengaruh terhadap peserta aktif atau cakupan kepesertaan.</li>
+                        <li><b>Klaim</b>: potensi manfaat yang mungkin meningkat akibat isu tersebut.</li>
+                    </ul>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            """
+            <div class="info-card">
+                <div class="info-title">9. Indeks Eskalasi Isu</div>
+                <div class="info-text">
+                    Indeks eskalasi isu menunjukkan perkembangan intensitas topik dalam 24 jam terakhir dibandingkan 24 jam sebelumnya.
+                    Unsur yang dilihat meliputi:
+                    <ul>
+                        <li>jumlah berita per topik,</li>
+                        <li>jumlah media yang memberitakan,</li>
+                        <li>arah tren (naik, turun, atau stabil),</li>
+                        <li>headline terbaru dari topik tersebut.</li>
+                    </ul>
+                    Semakin tinggi skor, semakin besar perhatian yang perlu diberikan pada topik tersebut.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            """
+            <div class="info-card">
+                <div class="info-title">10. Filter Rentang Tanggal dan Prioritas</div>
+                <div class="info-text">
+                    Filter di bagian atas berfungsi untuk mempersempit tampilan data.
+                    <ul>
+                        <li><b>Rentang tanggal</b> digunakan untuk memilih periode berita yang ingin dianalisis.</li>
+                        <li><b>Prioritas</b> digunakan untuk menampilkan semua berita atau hanya berita dengan tingkat prioritas tertentu.</li>
+                    </ul>
+                    Dengan filter ini, pengguna dapat menyesuaikan analisis sesuai kebutuhan pemantauan.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )

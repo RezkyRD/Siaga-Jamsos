@@ -507,7 +507,7 @@ with tab_dash:
         .astype(str).str.contains("Tidak Terpetakan", case=False, na=False).sum()
     )
 
-     c1, c2, c3, c4, c5, c6, c7 = st.columns([1.25, 1.25, 1, 1, 1, 1, 1], gap="medium")
+    c1, c2, c3, c4, c5, c6, c7 = st.columns([1.25, 1.25, 1, 1, 1, 1, 1], gap="medium")
 
     with c1:
         st.markdown(

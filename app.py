@@ -507,7 +507,7 @@ with tab_dash:
         .astype(str).str.contains("Tidak Terpetakan", case=False, na=False).sum()
     )
 
-    c1, c2, c3, c4, c5 = st.columns([1.2, 1.2, 1, 1, 1], gap="large")
+     c1, c2, c3, c4, c5, c6, c7 = st.columns([1.25, 1.25, 1, 1, 1, 1, 1], gap="medium")
 
     with c1:
         st.markdown(
@@ -549,6 +549,30 @@ with tab_dash:
         st.markdown(
             f"""
             <div class="kpi-card">
+              <div class="kpi-title">Prioritas Sedang</div>
+              <div class="kpi-value">{sedang:,}</div>
+              <div class="kpi-sub"><span class="badge badge-mid">MED</span></div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with c5:
+        st.markdown(
+            f"""
+            <div class="kpi-card">
+              <div class="kpi-title">Prioritas Rendah</div>
+              <div class="kpi-value">{rendah:,}</div>
+              <div class="kpi-sub"><span class="badge badge-low">LOW</span></div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with c6:
+        st.markdown(
+            f"""
+            <div class="kpi-card">
               <div class="kpi-title">Dasar Aturan Aktif</div>
               <div class="kpi-value">{total_regulasi:,}</div>
               <div class="kpi-sub">Berita dengan rujukan regulasi</div>
@@ -557,7 +581,7 @@ with tab_dash:
             unsafe_allow_html=True
         )
 
-    with c5:
+    with c7:
         st.markdown(
             f"""
             <div class="kpi-card">

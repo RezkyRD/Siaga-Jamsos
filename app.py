@@ -206,17 +206,37 @@ html, body, [class*="css"] {
     color: #667085;
     margin-bottom: 10px;
 }
+
 .news-chip {
     display: inline-block;
     font-size: .76rem;
     font-weight: 700;
     padding: 5px 10px;
     border-radius: 999px;
-    background: rgba(79,70,229,.12);
-    color: #4338ca;
     margin-right: 6px;
     margin-bottom: 6px;
 }
+
+.news-chip-isu {
+    background: rgba(239,68,68,.12);
+    color: #b91c1c;
+}
+
+.news-chip-dampak {
+    background: rgba(79,70,229,.12);
+    color: #4338ca;
+}
+
+.news-chip-kepesertaan {
+    background: rgba(14,165,233,.12);
+    color: #0369a1;
+}
+
+.news-chip-klaim {
+    background: rgba(34,197,94,.12);
+    color: #15803d;
+}
+
 .news-link a {
     color: #4338ca;
     text-decoration: none;
@@ -226,10 +246,27 @@ html, body, [class*="css"] {
 
 @media (prefers-color-scheme: dark) {
     .news-meta { color: #94a3b8; }
-    .news-chip {
+
+    .news-chip-isu {
+        background: rgba(248,113,113,.18);
+        color: #fecaca;
+    }
+
+    .news-chip-dampak {
         background: rgba(129,140,248,.18);
         color: #c7d2fe;
     }
+
+    .news-chip-kepesertaan {
+        background: rgba(56,189,248,.18);
+        color: #bae6fd;
+    }
+
+    .news-chip-klaim {
+        background: rgba(74,222,128,.18);
+        color: #bbf7d0;
+    }
+
     .news-link a { color: #a5b4fc; }
 }
 
@@ -326,6 +363,22 @@ def badge_html(prioritas):
     elif prioritas == "PRIORITAS SEDANG":
         return "<span class='badge badge-mid'>Prioritas Sedang</span>"
     return "<span class='badge badge-low'>Prioritas Rendah</span>"
+
+def split_clean_unique(value):
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return []
+
+    items = [x.strip() for x in str(value).split(",") if x.strip()]
+    result = []
+    seen = set()
+
+    for item in items:
+        key = item.lower()
+        if key not in seen:
+            seen.add(key)
+            result.append(item)
+
+    return result
 
 # ===============================
 # LOAD DATA
@@ -692,7 +745,7 @@ with tab_dash:
                 waktu = escape(safe_text(row.get("Waktu_Publish_WIB", row.get("Tanggal_Berita", row.get("Tanggal_Ambil", "")))))
                 regulasi = escape(safe_text(row.get("Rujukan_Tampilan", "")))
 
-                regulasi_html = f"<div class='top5-meta'><b>Dasar aturan:</b> {regulasi}</div>" if regulasi else ""
+                regulasi_html = f"<div style='font-size:.9rem; line-height:1.65;'><b>Dasar aturan:</b> {regulasi}</div>" if regulasi else ""
 
                 if link:
                     st.markdown(
@@ -869,23 +922,52 @@ with tab_data:
         waktu = escape(clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal_Berita", row.get("Tanggal_Ambil", "-")))))
         prioritas = normalize_priority(row.get("Prioritas", "PRIORITAS RENDAH"))
 
-        kategori_isu = escape(clean_label(row.get("Kategori_Isu", "")))
-        dampak_program = escape(clean_label(row.get("Dampak_Program", row.get("Program_Terdampak", ""))))
-        dampak_kepesertaan = escape(clean_label(row.get("Dampak_Kepesertaan", "")))
-        potensi_klaim = escape(clean_label(row.get("Potensi_Klaim", "")))
+        kategori_isu_raw = clean_label(row.get("Kategori_Isu", ""))
+        dampak_program_raw = clean_label(row.get("Dampak_Program", row.get("Program_Terdampak", "")))
+        dampak_kepesertaan_raw = clean_label(row.get("Dampak_Kepesertaan", ""))
+        potensi_klaim_raw = clean_label(row.get("Potensi_Klaim", ""))
+
+        kategori_isu_list = split_clean_unique(kategori_isu_raw)
+        dampak_program_list = split_clean_unique(dampak_program_raw)
+        dampak_kepesertaan_list = split_clean_unique(dampak_kepesertaan_raw)
+        potensi_klaim_list = split_clean_unique(potensi_klaim_raw)
+
         alasan = escape(clean_label(row.get("Alasan_Prioritas", row.get("Analisis_Regulatif", ""))))
         regulasi = escape(clean_label(row.get("Rujukan_Tampilan", "")))
         analisis_reg = escape(clean_label(row.get("Analisis_Regulatif", "")))
 
-        chips = []
-        if kategori_isu:
-            chips.append(f"<span class='news-chip'>{kategori_isu}</span>")
-        if dampak_program:
-            chips.append(f"<span class='news-chip'>{dampak_program}</span>")
-        if dampak_kepesertaan:
-            chips.append(f"<span class='news-chip'>{dampak_kepesertaan}</span>")
-        if potensi_klaim:
-            chips.append(f"<span class='news-chip'>Klaim: {potensi_klaim}</span>")
+        isu_html = ""
+        dampak_html = ""
+        kepesertaan_html = ""
+        klaim_html = ""
+
+        if kategori_isu_list:
+            isu_chips = "".join(
+                f"<span class='news-chip news-chip-isu'>{escape(x)}</span>"
+                for x in kategori_isu_list
+            )
+            isu_html = f"<div style='margin:6px 0 4px 0;'><b>Isu:</b> {isu_chips}</div>"
+
+        if dampak_program_list:
+            dampak_chips = "".join(
+                f"<span class='news-chip news-chip-dampak'>{escape(x)}</span>"
+                for x in dampak_program_list
+            )
+            dampak_html = f"<div style='margin:4px 0;'><b>Dampak:</b> {dampak_chips}</div>"
+
+        if dampak_kepesertaan_list:
+            kepesertaan_chips = "".join(
+                f"<span class='news-chip news-chip-kepesertaan'>{escape(x)}</span>"
+                for x in dampak_kepesertaan_list
+            )
+            kepesertaan_html = f"<div style='margin:4px 0;'><b>Jenis Peserta:</b> {kepesertaan_chips}</div>"
+
+        if potensi_klaim_list:
+            klaim_chips = "".join(
+                f"<span class='news-chip news-chip-klaim'>{escape(x)}</span>"
+                for x in potensi_klaim_list
+            )
+            klaim_html = f"<div style='margin:4px 0 10px 0;'><b>Potensi Klaim:</b> {klaim_chips}</div>"
 
         link_html = ""
         if link:
@@ -909,7 +991,7 @@ with tab_data:
             f"</div>"
             f"<div>{badge_html(prioritas)}</div>"
             f"</div>"
-            f"<div style='margin:8px 0 10px 0;'>{''.join(chips)}</div>"
+            f"<div style='margin:8px 0 10px 0;'>{isu_html}{dampak_html}{kepesertaan_html}{klaim_html}</div>"
             f"{regulasi_html}"
             f"{analisis_html}"
             f"<div style='font-size:.95rem; line-height:1.65; margin-bottom:10px;'>{alasan if alasan else 'Belum ada analisis prioritas.'}</div>"

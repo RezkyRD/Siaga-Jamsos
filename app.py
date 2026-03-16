@@ -1,6 +1,6 @@
 import re
 from html import escape
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -10,6 +10,23 @@ from scraper import run_scraper
 from filter_keyword import run_filter
 from update_priority import run_priority
 from gsheet_utils import read_sheet
+from config import (
+    RAW_SHEET_NAME,
+    FILTERED_SHEET_NAME,
+    PRIORITY_OPTIONS,
+    PRIORITY_ORDER,
+    TOPIC_RULES,
+    TOPIC_FALLBACK_BPJS,
+    TOPIC_FALLBACK_KETENAGAKERJAAN,
+    TOPIC_DEFAULT,
+    ITEMS_PER_PAGE,
+    TOP_NEWS_LIMIT,
+    TIMEZONE,
+    ESCALATION_WINDOW_1_HOURS,
+    ESCALATION_WINDOW_2_HOURS,
+    ESCALATION_MEDIA_WEIGHT,
+    ESCALATION_NEWS_WEIGHT,
+)
 
 SHEET_KEY = st.secrets["SHEET_KEY"]
 
@@ -296,67 +313,6 @@ st.divider()
 # ===============================
 # HELPERS
 # ===============================
-TOPIC_RULES: Dict[str, List[str]] = {
-    "PHK": [
-        r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b",
-        r"gelombang phk", r"phk massal", r"pengurangan karyawan", r"efisiensi tenaga kerja"
-    ],
-    "THR / Kesejahteraan Pekerja": [
-        r"\bthr\b", r"tunjangan hari raya", r"pengaduan thr", r"posko thr",
-        r"thr tidak dibayar", r"thr terlambat", r"thr dicicil", r"thr dipotong"
-    ],
-    "Upah / Gaji": [
-        r"\bupah\b", r"\bgaji\b", r"tunggakan upah", r"gaji tidak dibayar",
-        r"ump", r"umk", r"upah minimum"
-    ],
-    "Aksi / Demo Buruh": [
-        r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok", r"mogok kerja"
-    ],
-    "Konflik Hubungan Industrial": [
-        r"perselisihan", r"konflik buruh", r"sengketa", r"tripartit", r"mediasi hubungan industrial"
-    ],
-    "Pabrik Tutup / Pailit": [
-        r"pabrik tutup", r"tutup permanen", r"\bpailit\b", r"\bbangkrut\b", r"likuidasi", r"stop operasional"
-    ],
-    "Kepesertaan BPJS": [
-        r"bpjs ketenagakerjaan", r"bpjamsostek", r"jamsostek", r"kepesertaan bpjs", r"terdaftar bpjs", r"peserta bpjs"
-    ],
-    "Klaim JHT": [
-        r"\bjht\b", r"jaminan hari tua", r"klaim jht", r"pencairan jht", r"saldo jht"
-    ],
-    "Manfaat JKP": [
-        r"\bjkp\b", r"jaminan kehilangan pekerjaan", r"manfaat jkp", r"klaim jkp"
-    ],
-    "Jaminan Pensiun (JP)": [
-        r"\bjp\b", r"jaminan pensiun", r"manfaat pensiun", r"iuran pensiun", r"usia pensiun"
-    ],
-    "Kecelakaan Kerja (JKK)": [
-        r"\bjkk\b", r"jaminan kecelakaan kerja", r"kecelakaan kerja",
-        r"santunan jkk", r"ledakan pabrik", r"buruh tewas", r"pekerja tewas"
-    ],
-    "Santunan Kematian (JKM)": [
-        r"\bjkm\b", r"jaminan kematian", r"santunan kematian", r"ahli waris", r"meninggal dunia"
-    ],
-    "Tunggakan Iuran": [
-        r"tunggakan iuran", r"menunggak iuran", r"telat bayar iuran", r"denda bpjs"
-    ],
-    "Pengawasan Kepatuhan": [
-        r"pengawasan", r"pemeriksaan", r"sanksi perusahaan", r"kepatuhan perusahaan", r"tidak patuh"
-    ],
-    "Kendala Klaim BPJS": [
-        r"klaim ditolak", r"kendala klaim", r"klaim lama", r"antrian klaim", r"verifikasi klaim"
-    ],
-    "Pekerja Migran Indonesia (PMI)": [
-        r"\bpmi\b", r"pekerja migran", r"tki", r"buruh migran"
-    ],
-    "Jasa Konstruksi": [
-        r"konstruksi", r"proyek", r"pembangunan", r"jasa konstruksi"
-    ],
-}
-
-PRIORITY_OPTIONS = ["SEMUA", "PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
-
-
 def clean_label(text) -> str:
     return str(text).replace("_", " ").strip()
 
@@ -392,7 +348,7 @@ def ensure_publish_date(df: pd.DataFrame) -> pd.DataFrame:
     elif "Tanggal" in temp.columns:
         s = pd.to_datetime(temp["Tanggal"], errors="coerce", utc=True)
         try:
-            s = s.dt.tz_convert("Asia/Jakarta")
+            s = s.dt.tz_convert(TIMEZONE)
         except Exception:
             pass
     elif "Tanggal_Ambil" in temp.columns:
@@ -414,13 +370,13 @@ def detect_topic(text: str) -> str:
             if re.search(pattern, t):
                 return topic
 
-    if re.search(r"bpjs|bpjamsostek|jamsostek|klaim|iuran", t):
+    if re.search(TOPIC_FALLBACK_BPJS, t):
         return "Kepesertaan BPJS"
 
-    if re.search(r"buruh|pekerja|ketenagakerjaan|tenaga kerja", t):
+    if re.search(TOPIC_FALLBACK_KETENAGAKERJAAN, t):
         return "Konflik Hubungan Industrial"
 
-    return "Kebijakan Ketenagakerjaan"
+    return TOPIC_DEFAULT
 
 
 def apply_topic_detection(df: pd.DataFrame) -> pd.DataFrame:
@@ -564,9 +520,9 @@ def build_escalation_table(df: pd.DataFrame) -> pd.DataFrame:
     if temp.empty:
         return pd.DataFrame()
 
-    now = pd.Timestamp.now(tz="Asia/Jakarta").tz_localize(None)
-    w1_start = now - pd.Timedelta(hours=24)
-    w0_start = now - pd.Timedelta(hours=48)
+    now = pd.Timestamp.now(tz=TIMEZONE).tz_localize(None)
+    w1_start = now - pd.Timedelta(hours=ESCALATION_WINDOW_1_HOURS)
+    w0_start = now - pd.Timedelta(hours=ESCALATION_WINDOW_2_HOURS)
 
     w1 = temp[temp["publish_dt"] >= w1_start].copy()
     w0 = temp[(temp["publish_dt"] >= w0_start) & (temp["publish_dt"] < w1_start)].copy()
@@ -604,7 +560,10 @@ def build_escalation_table(df: pd.DataFrame) -> pd.DataFrame:
         ["Berita 24-48 Jam", "Media 24-48 Jam"]
     ].fillna(0).astype(int)
 
-    esk["Skor"] = esk["Media 24 Jam"] * 3 + esk["Berita 24 Jam"]
+    esk["Skor"] = (
+        esk["Media 24 Jam"] * ESCALATION_MEDIA_WEIGHT +
+        esk["Berita 24 Jam"] * ESCALATION_NEWS_WEIGHT
+    )
 
     def trend(row) -> str:
         if row["Media 24 Jam"] > row["Media 24-48 Jam"]:
@@ -624,6 +583,7 @@ def build_escalation_table(df: pd.DataFrame) -> pd.DataFrame:
 
 def build_priority_chart(df: pd.DataFrame):
     priority_counts = df["Prioritas"].value_counts()
+
     order = ["PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
     label_map = {
         "PRIORITAS TINGGI": "Prioritas Tinggi",
@@ -692,8 +652,8 @@ def badge_html(prioritas: str) -> str:
 # LOAD DATA
 # ===============================
 try:
-    raw = load_sheet(SHEET_KEY, "RAW")
-    filtered = load_sheet(SHEET_KEY, "FILTERED")
+    raw = load_sheet(SHEET_KEY, RAW_SHEET_NAME)
+    filtered = load_sheet(SHEET_KEY, FILTERED_SHEET_NAME)
 except Exception as e:
     st.error(f"Gagal membaca Google Sheets: {e}")
     st.stop()
@@ -768,7 +728,6 @@ if filter_option != "SEMUA" and "Prioritas" in filtered_for_table.columns:
         filtered_for_table["Prioritas"] == filter_option
     ].copy()
 
-# reset page kalau jumlah data/filter berubah
 current_signature = f"{start_date}_{end_date}_{filter_option}_{len(filtered_for_table)}"
 if "table_signature" not in st.session_state:
     st.session_state.table_signature = current_signature
@@ -880,7 +839,7 @@ with tab_dash:
         if not df_high.empty:
             sort_col = get_sort_column(df_high)
             df_high = df_high.sort_values(sort_col, ascending=False)
-            top5 = df_high.head(5)
+            top5 = df_high.head(TOP_NEWS_LIMIT)
 
             for _, row in top5.iterrows():
                 media = escape(str(row.get("Media", "-")))
@@ -930,28 +889,22 @@ with tab_data:
     if df_display.empty:
         st.info("Tidak ada berita untuk filter yang dipilih.")
     else:
-        priority_order = {
-            "PRIORITAS TINGGI": 1,
-            "PRIORITAS SEDANG": 2,
-            "PRIORITAS RENDAH": 3
-        }
-        df_display["Urutan"] = df_display["Prioritas"].map(priority_order).fillna(99)
+        df_display["Urutan"] = df_display["Prioritas"].map(PRIORITY_ORDER).fillna(99)
         sort_col = get_sort_column(df_display)
 
         df_display = df_display.sort_values(["Urutan", sort_col], ascending=[True, False]).drop(columns=["Urutan"])
         df_display = df_display.reset_index(drop=True)
 
-        items_per_page = 10
         total_rows = len(df_display)
-        total_pages = max(1, (total_rows - 1) // items_per_page + 1)
+        total_pages = max(1, (total_rows - 1) // ITEMS_PER_PAGE + 1)
 
         if "page" not in st.session_state:
             st.session_state.page = 1
         if st.session_state.page > total_pages:
             st.session_state.page = total_pages
 
-        start_idx = (st.session_state.page - 1) * items_per_page
-        end_idx = start_idx + items_per_page
+        start_idx = (st.session_state.page - 1) * ITEMS_PER_PAGE
+        end_idx = start_idx + ITEMS_PER_PAGE
         df_page = df_display.iloc[start_idx:end_idx].copy()
 
         for i, row in df_page.iterrows():
@@ -1043,7 +996,7 @@ with tab_info:
 <div class="info-card">
 <div class="info-text">
 
-Sistem **Early Warning System (EWS) Isu Ketenagakerjaan** digunakan untuk memantau perkembangan isu ketenagakerjaan yang muncul di media online serta menganalisis potensi dampaknya terhadap program jaminan sosial ketenagakerjaan.
+Sistem <b>Early Warning System (EWS) Isu Ketenagakerjaan</b> digunakan untuk memantau perkembangan isu ketenagakerjaan yang muncul di media online serta menganalisis potensi dampaknya terhadap program jaminan sosial ketenagakerjaan.
 
 Sistem bekerja melalui beberapa tahapan proses analisis data berita sebagai berikut:
 

@@ -1,42 +1,44 @@
-import re
 import pandas as pd
+import re
 import streamlit as st
 
 from gsheet_utils import read_sheet, clear_and_write
 
-from config import (
-    FILTERED_SHEET_NAME,
-    HIGH_PRIORITY_PATTERNS,
-    MEDIUM_PRIORITY_PATTERNS,
-    LOW_PRIORITY_PATTERNS,
-    PRIORITY_THRESHOLD_HIGH,
-    PRIORITY_THRESHOLD_MEDIUM,
-)
 
 # =====================================
 # KONTEKS INDONESIA
 # =====================================
 
 INDONESIA_CONTEXT = [
-    "jakarta","jawa","sumatera","kalimantan","sulawesi","papua","bali",
-    "kemnaker","bpjs ketenagakerjaan","bpjamsostek","disnaker",
-    "pekerja migran","pmi","tki","buruh indonesia",
-    "pekerja indonesia","perusahaan indonesia","pabrik di indonesia",
-    "jabar","jateng","jatim","bandung","surabaya","medan","makassar",
-    "karawang","bekasi","tangerang","semarang","batam"
+    "jakarta", "jawa", "sumatera", "kalimantan", "sulawesi", "papua", "bali",
+    "kemnaker", "bpjs ketenagakerjaan", "bpjamsostek", "disnaker",
+    "pekerja migran", "pmi", "tki", "buruh indonesia",
+    "pekerja indonesia", "perusahaan indonesia", "pabrik di indonesia",
+    "jabar", "jateng", "jatim", "bandung", "surabaya", "medan", "makassar",
+    "karawang", "bekasi", "tangerang", "semarang", "batam"
 ]
+
+# =====================================
+# BLACKLIST PERUSAHAAN GLOBAL
+# =====================================
 
 GLOBAL_COMPANY = [
-    "amazon","google","morgan stanley","meta","facebook",
-    "apple","tesla","microsoft","intel","nvidia","tiktok","netflix"
+    "amazon",
+    "google",
+    "morgan stanley",
+    "meta",
+    "facebook",
+    "apple",
+    "tesla",
+    "microsoft",
+    "intel",
+    "nvidia",
+    "tiktok",
+    "netflix"
 ]
 
-# =====================================
-# CEK KONTEKS INDONESIA
-# =====================================
 
 def is_indonesia_related(text):
-
     text = (text or "").lower()
 
     pmi_keywords = [
@@ -47,11 +49,12 @@ def is_indonesia_related(text):
         "pekerja indonesia"
     ]
 
+    # PMI/pekerja Indonesia di luar negeri tetap dianggap relevan
     if any(k in text for k in pmi_keywords):
         return True
 
+    # Tolak berita global perusahaan asing, kecuali jelas terkait Indonesia
     if any(g in text for g in GLOBAL_COMPANY):
-
         indonesia_strong_context = [
             "di indonesia",
             "indonesia",
@@ -68,10 +71,17 @@ def is_indonesia_related(text):
             "bpjamsostek"
         ]
 
+        # jika hanya nama media Indonesia, tetap ditolak
         media_only_context = [
-            "cnbc indonesia","cnn indonesia","kompas.com",
-            "detik","tempo.co","bisnis.com","tribun",
-            "kontan","beritasatu"
+            "cnbc indonesia",
+            "cnn indonesia",
+            "kompas.com",
+            "detik",
+            "tempo.co",
+            "bisnis.com",
+            "tribun",
+            "kontan",
+            "beritasatu"
         ]
 
         has_strong_id_context = any(k in text for k in indonesia_strong_context)
@@ -80,110 +90,161 @@ def is_indonesia_related(text):
         if not has_strong_id_context or has_only_media_context:
             return False
 
+    # konteks Indonesia umum
     if any(k in text for k in INDONESIA_CONTEXT):
         return True
 
     return False
 
 # =====================================
-# HITUNG SKOR BERITA
+# ANALISIS JAMINAN SOSIAL
 # =====================================
 
-def calculate_score(text):
+def analyze_jamsos(text):
 
     score = 0
-    alasan = []
-
-    # PRIORITAS TINGGI
-    for pattern in HIGH_PRIORITY_PATTERNS:
-
-        if re.search(pattern, text):
-
-            score += 3
-            alasan.append("Isu berdampak signifikan terhadap kondisi ketenagakerjaan.")
-
-    # PRIORITAS SEDANG
-    for pattern in MEDIUM_PRIORITY_PATTERNS:
-
-        if re.search(pattern, text):
-
-            score += 2
-            alasan.append("Isu memiliki potensi berkembang dan perlu pemantauan.")
-
-    # PRIORITAS RENDAH
-    for pattern in LOW_PRIORITY_PATTERNS:
-
-        if re.search(pattern, text):
-
-            score += 1
-            alasan.append("Isu bersifat informatif terkait ketenagakerjaan.")
-
-    if not alasan:
-
-        alasan.append(
-            "Berita berkaitan dengan isu ketenagakerjaan yang berpotensi mempengaruhi kepesertaan BPJS Ketenagakerjaan."
-        )
-
-    return score, " ".join(alasan)
-
-# =====================================
-# ANALISIS PROGRAM JAMINAN SOSIAL
-# =====================================
-
-def analyze_program(text):
 
     program = []
     kepesertaan = []
     klaim = []
+    alasan = []
+
+    # ======================
+    # PHK
+    # ======================
 
     if re.search(r"\bphk\b|\bdirumahkan\b", text):
 
+        score += 4
+
         program.extend(["JKP","JHT","JP"])
         kepesertaan.append("PU")
-        klaim.extend(["JKP","JHT"])
 
-    if re.search(r"kecelakaan kerja|ledakan|kebakaran pabrik", text):
+        klaim.append("JKP")
+        klaim.append("JHT")
+
+        alasan.append(
+        "Pemberitaan mengenai PHK berpotensi meningkatkan klaim JKP serta pencairan JHT bagi pekerja terdampak."
+        )
+
+    # PHK MASSAL
+    if re.search(r"phk.*massal|massal.*phk", text):
+
+        score += 6
+
+        alasan.append(
+        "PHK massal berpotensi menurunkan jumlah kepesertaan pekerja penerima upah serta meningkatkan klaim JKP."
+        )
+
+    # ======================
+    # KECELAKAAN KERJA
+    # ======================
+
+    if re.search(r"kecelakaan kerja|ledakan|kebakaran pabrik|tertimbun", text):
+
+        score += 4
 
         program.append("JKK")
         klaim.append("JKK")
 
-    if re.search(r"meninggal dunia|buruh tewas|pekerja tewas", text):
+        alasan.append(
+        "Peristiwa kecelakaan kerja berpotensi menimbulkan klaim JKK."
+        )
+
+    # ======================
+    # KEMATIAN PEKERJA
+    # ======================
+
+    if re.search(r"meninggal dunia|pekerja tewas|buruh tewas", text):
+
+        score += 3
 
         program.append("JKM")
         klaim.append("JKM")
 
+        alasan.append(
+        "Kematian pekerja berpotensi menimbulkan klaim JKM bagi ahli waris."
+        )
+
+    # ======================
+    # DEMO BURUH
+    # ======================
+
+    if re.search(r"demo|unjuk rasa|aksi buruh|mogok", text):
+
+        score += 3
+
+        alasan.append(
+        "Aksi buruh menunjukkan potensi konflik hubungan industrial yang dapat berdampak pada stabilitas ketenagakerjaan."
+        )
+    # ======================
+    # THR
+    # ======================
+
+    if re.search(r"\bthr\b|tunjangan hari raya", text):
+
+        score += 2
+        kepesertaan.append("PU")
+
+        alasan.append(
+        "Isu pembayaran THR menunjukkan potensi permasalahan hubungan industrial yang dapat mempengaruhi stabilitas pekerja penerima upah."
+        )
+
+    if re.search(r"thr.*tidak dibayar|tidak dibayar.*thr|thr.*terlambat|terlambat.*thr|thr.*dicicil|thr.*dipotong|pengaduan thr|posko thr", text):
+
+        score += 3
+
+        alasan.append(
+        "Permasalahan pembayaran THR dapat memicu pengaduan pekerja, perselisihan hubungan industrial, dan berpotensi berdampak pada kepatuhan perusahaan."
+        )
+
+    # ======================
+    # PMI
+    # ======================
+
     if re.search(r"pmi|pekerja migran", text):
 
         kepesertaan.append("PMI")
+
+        alasan.append(
+        "Isu pekerja migran dapat mempengaruhi kepesertaan BPJS Ketenagakerjaan bagi PMI."
+        )
+
+    # ======================
+    # KONSTRUKSI
+    # ======================
 
     if re.search(r"konstruksi|proyek|pembangunan", text):
 
         kepesertaan.append("Jasa Konstruksi")
         program.append("JKK")
 
+        alasan.append(
+        "Sektor konstruksi memiliki risiko kecelakaan kerja tinggi sehingga berkaitan dengan program JKK."
+        )
+
+    # ======================
+    # DEFAULT
+    # ======================
+
+    if not alasan:
+
+        alasan.append(
+        "Berita berkaitan dengan isu ketenagakerjaan yang berpotensi mempengaruhi kepesertaan BPJS Ketenagakerjaan."
+        )
+
     program = list(set(program))
     kepesertaan = list(set(kepesertaan))
     klaim = list(set(klaim))
 
     return (
+        score,
         ", ".join(program),
         ", ".join(kepesertaan),
-        ", ".join(klaim)
+        ", ".join(klaim),
+        " ".join(alasan)
     )
 
-# =====================================
-# KLASIFIKASI PRIORITAS
-# =====================================
-
-def classify(score):
-
-    if score >= PRIORITY_THRESHOLD_HIGH:
-        return "PRIORITAS TINGGI"
-
-    if score >= PRIORITY_THRESHOLD_MEDIUM:
-        return "PRIORITAS SEDANG"
-
-    return "PRIORITAS RENDAH"
 
 # =====================================
 # RUN PRIORITY
@@ -194,13 +255,13 @@ def run_priority(sheet_key=None):
     if sheet_key is None:
         sheet_key = st.secrets["SHEET_KEY"]
 
-    df = read_sheet(sheet_key, FILTERED_SHEET_NAME)
+    df = read_sheet(sheet_key, "FILTERED")
 
     if df is None or df.empty:
         return
 
-    judul = df.get("Judul","").astype(str).fillna("")
-    ringkasan = df.get("Ringkasan","").astype(str).fillna("")
+    judul = df.get("Judul", "").astype(str).fillna("")
+    ringkasan = df.get("Ringkasan", "").astype(str).fillna("")
 
     text_series = (judul + " " + ringkasan).str.lower()
 
@@ -212,6 +273,10 @@ def run_priority(sheet_key=None):
 
     for text in text_series:
 
+        # =========================
+        # FILTER INDONESIA
+        # =========================
+
         if not is_indonesia_related(text):
 
             scores.append(0)
@@ -219,18 +284,18 @@ def run_priority(sheet_key=None):
             kepesertaan.append("")
             klaim.append("")
             alasan.append(
-                "Berita ketenagakerjaan global yang tidak berkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
+            "Berita ketenagakerjaan global yang tidak berkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
             )
+
             continue
 
-        score, reason = calculate_score(text)
-        p, k, c = analyze_program(text)
+        score, p, k, c, a = analyze_jamsos(text)
 
         scores.append(score)
         programs.append(p)
         kepesertaan.append(k)
         klaim.append(c)
-        alasan.append(reason)
+        alasan.append(a)
 
     df["Score"] = scores
     df["Dampak_Program"] = programs
@@ -238,9 +303,25 @@ def run_priority(sheet_key=None):
     df["Potensi_Klaim"] = klaim
     df["Alasan_Prioritas"] = alasan
 
+
+    # ======================
+    # KLASIFIKASI PRIORITAS
+    # ======================
+
+    def classify(score):
+
+        if score >= 7:
+            return "PRIORITAS TINGGI"
+
+        elif score >= 4:
+            return "PRIORITAS SEDANG"
+
+        else:
+            return "PRIORITAS RENDAH"
+
     df["Prioritas"] = df["Score"].apply(classify)
 
-    clear_and_write(sheet_key, FILTERED_SHEET_NAME, df)
+    clear_and_write(sheet_key, "FILTERED", df)
 
     return df
 

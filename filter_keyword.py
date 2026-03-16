@@ -4,7 +4,7 @@ from typing import List
 import pandas as pd
 import streamlit as st
 
-from gsheet_utils import read_sheet, write_sheet
+from gsheet_utils import read_sheet, clear_and_write
 from config import (
     RAW_SHEET_NAME,
     FILTERED_SHEET_NAME,
@@ -16,15 +16,10 @@ from config import (
     TOPIC_DEFAULT,
 )
 
-
 SHEET_KEY = st.secrets["SHEET_KEY"]
 
 
-# =========================
-# HELPER DASAR
-# =========================
 def normalize_text(text) -> str:
-    """Membersihkan teks dasar agar lebih konsisten untuk matching."""
     if pd.isna(text):
         return ""
 
@@ -36,7 +31,6 @@ def normalize_text(text) -> str:
 
 
 def combine_text_columns(df: pd.DataFrame) -> pd.Series:
-    """Gabungkan judul + ringkasan sebagai basis filtering."""
     judul = df["Judul"].astype(str) if "Judul" in df.columns else ""
     ringkasan = df["Ringkasan"].astype(str) if "Ringkasan" in df.columns else ""
 
@@ -47,7 +41,6 @@ def combine_text_columns(df: pd.DataFrame) -> pd.Series:
 
 
 def contains_any_keyword(text: str, keywords: List[str]) -> bool:
-    """Cek apakah teks mengandung salah satu keyword."""
     if not text:
         return False
 
@@ -60,7 +53,6 @@ def contains_any_keyword(text: str, keywords: List[str]) -> bool:
 
 
 def extract_detected_keywords(text: str, keywords: List[str]) -> str:
-    """Ambil daftar keyword yang terdeteksi di teks."""
     if not text:
         return ""
 
@@ -72,13 +64,11 @@ def extract_detected_keywords(text: str, keywords: List[str]) -> str:
         if kw_norm and kw_norm in t:
             found.append(kw)
 
-    # hilangkan duplikat, jaga urutan
     unique_found = list(dict.fromkeys(found))
     return ", ".join(unique_found)
 
 
 def detect_topic(text: str) -> str:
-    """Deteksi topik utama berdasarkan pattern rules."""
     t = normalize_text(text)
 
     for topic, patterns in TOPIC_RULES.items():
@@ -96,7 +86,6 @@ def detect_topic(text: str) -> str:
 
 
 def detect_program_impact(topic: str, text: str) -> str:
-    """Deteksi dampak program secara sederhana."""
     t = normalize_text(text)
 
     if topic == "PHK":
@@ -135,7 +124,6 @@ def detect_program_impact(topic: str, text: str) -> str:
 
 
 def detect_kepesertaan_impact(topic: str, text: str) -> str:
-    """Deteksi dampak kepesertaan."""
     t = normalize_text(text)
 
     if topic == "PHK":
@@ -158,7 +146,6 @@ def detect_kepesertaan_impact(topic: str, text: str) -> str:
 
 
 def detect_claim_impact(topic: str, text: str) -> str:
-    """Deteksi potensi klaim."""
     t = normalize_text(text)
 
     if topic == "PHK":
@@ -184,17 +171,13 @@ def detect_claim_impact(topic: str, text: str) -> str:
     return "-"
 
 
-# =========================
-# FILTER UTAMA
-# =========================
 def run_filter() -> pd.DataFrame:
-    """Baca RAW, filter berita relevan, lalu simpan ke FILTERED."""
     df = read_sheet(SHEET_KEY, RAW_SHEET_NAME)
 
     if df is None or df.empty:
         print("[filter_keyword] Sheet RAW kosong.")
         empty_df = pd.DataFrame()
-        write_sheet(SHEET_KEY, FILTERED_SHEET_NAME, empty_df)
+        clear_and_write(SHEET_KEY, FILTERED_SHEET_NAME, empty_df)
         return empty_df
 
     df = df.copy()
@@ -204,23 +187,20 @@ def run_filter() -> pd.DataFrame:
     if combined_text.empty:
         print("[filter_keyword] Kolom Judul/Ringkasan tidak tersedia.")
         empty_df = pd.DataFrame()
-        write_sheet(SHEET_KEY, FILTERED_SHEET_NAME, empty_df)
+        clear_and_write(SHEET_KEY, FILTERED_SHEET_NAME, empty_df)
         return empty_df
 
     df["Teks_Gabungan"] = combined_text
     df["Teks_Bersih"] = df["Teks_Gabungan"].apply(normalize_text)
 
-    # Relevansi ketenagakerjaan
     df["Lolos_Keyword"] = df["Teks_Bersih"].apply(
         lambda x: contains_any_keyword(x, KEYWORDS_KETENAGAKERJAAN)
     )
 
-    # Relevansi jamsos
     df["Relevan_Jamsos"] = df["Teks_Bersih"].apply(
         lambda x: contains_any_keyword(x, KEYWORDS_JAMSOS)
     )
 
-    # Keyword terdeteksi
     df["Keyword_Ketenagakerjaan"] = df["Teks_Bersih"].apply(
         lambda x: extract_detected_keywords(x, KEYWORDS_KETENAGAKERJAAN)
     )
@@ -228,18 +208,15 @@ def run_filter() -> pd.DataFrame:
         lambda x: extract_detected_keywords(x, KEYWORDS_JAMSOS)
     )
 
-    # Ambil yang lolos keyword ketenagakerjaan
     filtered = df[df["Lolos_Keyword"]].copy()
 
     if filtered.empty:
         print("[filter_keyword] Tidak ada berita yang lolos keyword.")
-        write_sheet(SHEET_KEY, FILTERED_SHEET_NAME, filtered)
+        clear_and_write(SHEET_KEY, FILTERED_SHEET_NAME, filtered)
         return filtered
 
-    # Topik
     filtered["Topik"] = filtered["Teks_Gabungan"].apply(detect_topic)
 
-    # Dampak
     filtered["Dampak_Program"] = filtered.apply(
         lambda row: detect_program_impact(row["Topik"], row["Teks_Gabungan"]),
         axis=1
@@ -253,7 +230,6 @@ def run_filter() -> pd.DataFrame:
         axis=1
     )
 
-    # Rapikan urutan kolom
     preferred_cols = [
         "Judul",
         "Ringkasan",
@@ -279,7 +255,7 @@ def run_filter() -> pd.DataFrame:
     other_cols = [c for c in filtered.columns if c not in existing_cols]
     filtered = filtered[existing_cols + other_cols]
 
-    write_sheet(SHEET_KEY, FILTERED_SHEET_NAME, filtered)
+    clear_and_write(SHEET_KEY, FILTERED_SHEET_NAME, filtered)
 
     print(f"[filter_keyword] Total RAW       : {len(df)}")
     print(f"[filter_keyword] Lolos keyword   : {len(filtered)}")

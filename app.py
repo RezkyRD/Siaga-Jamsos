@@ -1,7 +1,6 @@
 import re
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 from html import escape
 import plotly.graph_objects as go
 
@@ -28,40 +27,25 @@ st.set_page_config(
 st.markdown(
     """
 <style>
-/* ===== HILANGKAN HEADER STREAMLIT ===== */
-header[data-testid="stHeader"] {
-    display: none;
-}
-
-div[data-testid="stToolbar"] {
-    display: none;
-}
-
-#MainMenu {
-    visibility: hidden;
-}
-
-footer {
-    visibility: hidden;
-}
+header[data-testid="stHeader"] { display: none; }
+div[data-testid="stToolbar"] { display: none; }
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
 
 :root {
     --bg-light: #f5f7fb;
     --card-light: rgba(255,255,255,0.78);
-    --card-solid-light: #ffffff;
     --text-light: #101828;
     --muted-light: #667085;
     --line-light: rgba(16,24,40,0.08);
 
     --bg-dark: #0b1120;
     --card-dark: rgba(17,25,40,0.78);
-    --card-solid-dark: #111827;
     --text-dark: #e5e7eb;
     --muted-dark: #94a3b8;
     --line-dark: rgba(255,255,255,0.08);
 
     --primary: #4f46e5;
-    --primary-2: #06b6d4;
     --success: #16a34a;
     --warn: #d97706;
     --danger: #dc2626;
@@ -95,7 +79,6 @@ html, body, [class*="css"] {
     max-width: 1450px;
 }
 
-/* Sidebar */
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #0b2c5f 0%, #0b1530 100%);
     border-right: 1px solid rgba(255,255,255,0.08);
@@ -126,7 +109,6 @@ html, body, [class*="css"] {
     font-weight: 700;
 }
 
-/* Heading */
 .ews-title {
     font-family: "Space Grotesk", Inter, "Segoe UI", sans-serif;
     font-size: clamp(2rem, 4vw, 3rem);
@@ -141,15 +123,12 @@ html, body, [class*="css"] {
     margin-top: .35rem;
 }
 @media (prefers-color-scheme: dark) {
-    .ews-sub {
-        color: #94a3b8;
-    }
+    .ews-sub { color: #94a3b8; }
 }
 
-/* Cards */
 .kpi-card,
-.glass-card,
-.news-card {
+.news-card,
+.info-card {
     background: var(--card-light);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
@@ -160,17 +139,15 @@ html, body, [class*="css"] {
 
 @media (prefers-color-scheme: dark) {
     .kpi-card,
-    .glass-card,
-    .news-card {
+    .news-card,
+    .info-card {
         background: var(--card-dark);
         border: 1px solid var(--line-dark);
         box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
     }
 }
 
-.kpi-card {
-    padding: 16px 18px;
-}
+.kpi-card { padding: 16px 18px; }
 .kpi-title {
     font-size: 12px;
     color: #667085;
@@ -190,9 +167,7 @@ html, body, [class*="css"] {
     margin-top: 8px;
 }
 @media (prefers-color-scheme: dark) {
-    .kpi-title, .kpi-sub {
-        color: #94a3b8;
-    }
+    .kpi-title, .kpi-sub { color: #94a3b8; }
 }
 
 .section-title {
@@ -202,105 +177,6 @@ html, body, [class*="css"] {
     margin-bottom: .65rem;
 }
 
-.chart-card,
-.analysis-card {
-    background: var(--card-light);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid var(--line-light);
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
-    padding: 16px 18px;
-    height: 100%;
-}
-
-@media (prefers-color-scheme: dark) {
-    .chart-card,
-    .analysis-card {
-        background: var(--card-dark);
-        border: 1px solid var(--line-dark);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
-    }
-}
-
-.chart-caption {
-    font-size: 12px;
-    color: #667085;
-    margin-top: -2px;
-    margin-bottom: 8px;
-}
-
-.analysis-body {
-    font-size: .97rem;
-    line-height: 1.75;
-}
-
-.analysis-body p,
-.analysis-body li {
-    color: inherit;
-}
-
-@media (prefers-color-scheme: dark) {
-    .chart-caption {
-        color: #94a3b8;
-    }
-}
-
-.top5-card {
-    background: var(--card-light);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid var(--line-light);
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
-    padding: 16px 18px;
-}
-
-@media (prefers-color-scheme: dark) {
-    .top5-card {
-        background: var(--card-dark);
-        border: 1px solid var(--line-dark);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
-    }
-}
-
-.top5-item {
-    padding: 10px 0;
-    border-bottom: 1px dashed rgba(102, 112, 133, 0.25);
-}
-
-.top5-item:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.top5-link a {
-    color: #4338ca;
-    text-decoration: none;
-    font-weight: 700;
-    line-height: 1.5;
-}
-
-.top5-link a:hover {
-    text-decoration: underline;
-}
-
-.top5-meta {
-    font-size: .86rem;
-    color: #667085;
-    margin-top: 4px;
-}
-
-@media (prefers-color-scheme: dark) {
-    .top5-link a {
-        color: #a5b4fc;
-    }
-    .top5-meta {
-        color: #94a3b8;
-    }
-}
-
-/* Badge */
 .badge {
     display: inline-flex;
     align-items: center;
@@ -311,42 +187,10 @@ html, body, [class*="css"] {
     font-weight: 700;
     color: #fff;
 }
-.badge-high {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-}
-.badge-mid {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-}
-.badge-low {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-}
+.badge-high { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.badge-mid { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.badge-low { background: linear-gradient(135deg, #22c55e, #16a34a); }
 
-/* Tabs */
-button[data-baseweb="tab"] {
-    border-radius: 999px !important;
-    padding: 10px 16px !important;
-}
-
-/* Prevent white tap issues */
-table {
-    -webkit-tap-highlight-color: transparent;
-}
-tbody tr:hover,
-tbody tr:active,
-tbody tr:focus {
-    background-color: transparent !important;
-}
-tbody tr {
-    transition: none !important;
-}
-
-/* Dataframe headers */
-thead tr th {
-    text-align: center !important;
-    font-size: 12px !important;
-}
-
-/* News cards */
 .news-card {
     padding: 18px 18px 16px 18px;
     margin-bottom: 14px;
@@ -378,76 +222,45 @@ thead tr th {
     text-decoration: none;
     font-weight: 700;
 }
-.news-link a:hover {
-    text-decoration: underline;
-}
+.news-link a:hover { text-decoration: underline; }
+
 @media (prefers-color-scheme: dark) {
-    .news-meta {
-        color: #94a3b8;
-    }
+    .news-meta { color: #94a3b8; }
     .news-chip {
         background: rgba(129,140,248,.18);
         color: #c7d2fe;
     }
-    .news-link a {
-        color: #a5b4fc;
-    }
+    .news-link a { color: #a5b4fc; }
 }
 
 .info-card {
-    background: var(--card-light);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid var(--line-light);
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
     padding: 18px 20px;
     margin-bottom: 14px;
 }
-
-@media (prefers-color-scheme: dark) {
-    .info-card {
-        background: var(--card-dark);
-        border: 1px solid var(--line-dark);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
-    }
-}
-
 .info-title {
     font-size: 1.05rem;
     font-weight: 800;
     margin-bottom: 10px;
 }
-
 .info-text {
     font-size: .96rem;
     line-height: 1.75;
     color: inherit;
 }
 
-.info-text ul {
-    padding-left: 18px;
-    margin-top: 8px;
-    margin-bottom: 0;
+thead tr th {
+    text-align: center !important;
+    font-size: 12px !important;
 }
 
-.info-text li {
-    margin-bottom: 6px;
-}
-
-/* Mobile */
 @media (max-width: 768px) {
     .block-container {
         padding-top: 1.2rem;
         padding-left: 1rem;
         padding-right: 1rem;
     }
-    .kpi-value {
-        font-size: 22px;
-    }
-    .news-card {
-        padding: 14px;
-    }
+    .kpi-value { font-size: 22px; }
+    .news-card { padding: 14px; }
 }
 </style>
 """,
@@ -458,7 +271,7 @@ st.markdown(
     """
 <div style="margin-bottom:18px;">
   <h1 class="ews-title">Early Warning System</h1>
-  <p class="ews-sub">Monitoring Isu Jaminan Sosial Ketenagakerjaan</p>
+  <p class="ews-sub">Monitoring Isu Jaminan Sosial Ketenagakerjaan Berbasis Analisis Regulasi</p>
 </div>
 """,
     unsafe_allow_html=True
@@ -482,18 +295,50 @@ def safe_clear_caches():
     except Exception:
         pass
 
+def safe_text(val, default=""):
+    if pd.isna(val):
+        return default
+    return str(val).strip()
+
+def pick_first_existing_sheet(key: str, names: list[str]) -> pd.DataFrame:
+    for name in names:
+        try:
+            df = read_sheet(key, name)
+            if df is not None:
+                return df
+        except Exception:
+            continue
+    return pd.DataFrame()
+
+def normalize_priority(val: str) -> str:
+    v = safe_text(val).upper()
+    if "TINGGI" in v:
+        return "PRIORITAS TINGGI"
+    if "SEDANG" in v:
+        return "PRIORITAS SEDANG"
+    if "RENDAH" in v:
+        return "PRIORITAS RENDAH"
+    return v or "PRIORITAS RENDAH"
+
+def badge_html(prioritas):
+    if prioritas == "PRIORITAS TINGGI":
+        return "<span class='badge badge-high'>Prioritas Tinggi</span>"
+    elif prioritas == "PRIORITAS SEDANG":
+        return "<span class='badge badge-mid'>Prioritas Sedang</span>"
+    return "<span class='badge badge-low'>Prioritas Rendah</span>"
+
 # ===============================
 # LOAD DATA
 # ===============================
 @st.cache_data(ttl=300, show_spinner=False)
-def load_sheet(key: str, tab: str) -> pd.DataFrame:
+def load_sheet_cached(key: str, tab: str) -> pd.DataFrame:
     return read_sheet(key, tab)
 
-raw = load_sheet(SHEET_KEY, "RAW")
-filtered = load_sheet(SHEET_KEY, "FILTERED")
+raw = pick_first_existing_sheet(SHEET_KEY, ["RAW", "RAW_NEWS"])
+hasil = pick_first_existing_sheet(SHEET_KEY, ["HASIL_ANALISIS", "FILTERED"])
 
-raw.columns = raw.columns.astype(str).str.strip()
-filtered.columns = filtered.columns.astype(str).str.strip()
+raw.columns = raw.columns.astype(str).str.strip() if not raw.empty else pd.Index([])
+hasil.columns = hasil.columns.astype(str).str.strip() if not hasil.empty else pd.Index([])
 
 # ===============================
 # FIX TANGGAL
@@ -506,6 +351,8 @@ def ensure_publish_date(df: pd.DataFrame) -> pd.DataFrame:
         s = pd.to_datetime(df["Tanggal_Publish"], errors="coerce")
     elif "Waktu_Publish_WIB" in df.columns:
         s = pd.to_datetime(df["Waktu_Publish_WIB"], errors="coerce")
+    elif "Tanggal_Berita" in df.columns:
+        s = pd.to_datetime(df["Tanggal_Berita"], errors="coerce")
     elif "Tanggal" in df.columns:
         s = pd.to_datetime(df["Tanggal"], errors="coerce", utc=True)
         try:
@@ -515,7 +362,7 @@ def ensure_publish_date(df: pd.DataFrame) -> pd.DataFrame:
     elif "Tanggal_Ambil" in df.columns:
         s = pd.to_datetime(df["Tanggal_Ambil"], errors="coerce")
     else:
-        raise ValueError("Data tidak punya kolom tanggal yang dikenali.")
+        s = pd.Series([pd.NaT] * len(df))
 
     s = pd.to_datetime(s, errors="coerce")
     df = df.copy()
@@ -524,7 +371,7 @@ def ensure_publish_date(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 raw = ensure_publish_date(raw)
-filtered = ensure_publish_date(filtered)
+hasil = ensure_publish_date(hasil)
 
 if raw.empty:
     st.warning("Data RAW belum tersedia.")
@@ -568,151 +415,33 @@ with c_ctrl3:
     )
 
 # ===============================
-# TOPIC DETECTION
+# TOPIC DETECTION FALLBACK
 # ===============================
 TOPIC_RULES = {
-    "PHK": [
-        r"\bphk\b",
-        r"pemutusan hubungan kerja",
-        r"\bdirumahkan\b",
-        r"gelombang phk",
-        r"phk massal",
-        r"pengurangan karyawan",
-        r"efisiensi tenaga kerja"
-    ],
-    "THR / Kesejahteraan Pekerja": [
-        r"\bthr\b",
-        r"tunjangan hari raya",
-        r"pengaduan thr",
-        r"posko thr",
-        r"thr tidak dibayar",
-        r"thr terlambat",
-        r"thr dicicil",
-        r"thr dipotong"
-    ],
-    "Upah / Gaji": [
-        r"\bupah\b",
-        r"\bgaji\b",
-        r"tunggakan upah",
-        r"gaji tidak dibayar",
-        r"ump",
-        r"umk",
-        r"upah minimum"
-    ],
-    "Aksi / Demo Buruh": [
-        r"\bdemo\b",
-        r"unjuk rasa",
-        r"aksi buruh",
-        r"mogok",
-        r"mogok kerja"
-    ],
-    "Konflik Hubungan Industrial": [
-        r"perselisihan",
-        r"konflik buruh",
-        r"sengketa",
-        r"tripartit",
-        r"mediasi hubungan industrial"
-    ],
-    "Pabrik Tutup / Pailit": [
-        r"pabrik tutup",
-        r"tutup permanen",
-        r"\bpailit\b",
-        r"\bbangkrut\b",
-        r"likuidasi",
-        r"stop operasional"
-    ],
-    "Kepesertaan BPJS": [
-        r"bpjs ketenagakerjaan",
-        r"bpjamsostek",
-        r"jamsostek",
-        r"kepesertaan bpjs",
-        r"terdaftar bpjs",
-        r"peserta bpjs"
-    ],
-    "Klaim JHT": [
-        r"\bjht\b",
-        r"jaminan hari tua",
-        r"klaim jht",
-        r"pencairan jht",
-        r"saldo jht"
-    ],
-    "Manfaat JKP": [
-        r"\bjkp\b",
-        r"jaminan kehilangan pekerjaan",
-        r"manfaat jkp",
-        r"klaim jkp"
-    ],
-    "Jaminan Pensiun (JP)": [
-        r"\bjp\b",
-        r"jaminan pensiun",
-        r"manfaat pensiun",
-        r"iuran pensiun",
-        r"usia pensiun"
-    ],
-    "Kecelakaan Kerja (JKK)": [
-        r"\bjkk\b",
-        r"jaminan kecelakaan kerja",
-        r"kecelakaan kerja",
-        r"santunan jkk",
-        r"ledakan pabrik",
-        r"buruh tewas",
-        r"pekerja tewas"
-    ],
-    "Santunan Kematian (JKM)": [
-        r"\bjkm\b",
-        r"jaminan kematian",
-        r"santunan kematian",
-        r"ahli waris",
-        r"meninggal dunia"
-    ],
-    "Tunggakan Iuran": [
-        r"tunggakan iuran",
-        r"menunggak iuran",
-        r"telat bayar iuran",
-        r"denda bpjs"
-    ],
-    "Pengawasan Kepatuhan": [
-        r"pengawasan",
-        r"pemeriksaan",
-        r"sanksi perusahaan",
-        r"kepatuhan perusahaan",
-        r"tidak patuh"
-    ],
-    "Kendala Klaim BPJS": [
-        r"klaim ditolak",
-        r"kendala klaim",
-        r"klaim lama",
-        r"antrian klaim",
-        r"verifikasi klaim"
-    ],
-    "Pekerja Migran Indonesia (PMI)": [
-        r"\bpmi\b",
-        r"pekerja migran",
-        r"tki",
-        r"buruh migran"
-    ],
-    "Jasa Konstruksi": [
-        r"konstruksi",
-        r"proyek",
-        r"pembangunan",
-        r"jasa konstruksi"
-    ],
+    "PHK": [r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b", r"phk massal"],
+    "THR / Kesejahteraan Pekerja": [r"\bthr\b", r"tunjangan hari raya", r"pengaduan thr"],
+    "Upah / Gaji": [r"\bupah\b", r"\bgaji\b", r"ump", r"umk", r"upah minimum"],
+    "Aksi / Demo Buruh": [r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok"],
+    "Konflik Hubungan Industrial": [r"perselisihan", r"konflik buruh", r"sengketa"],
+    "Pabrik Tutup / Pailit": [r"pabrik tutup", r"\bpailit\b", r"\bbangkrut\b"],
+    "Kepesertaan BPJS": [r"bpjs ketenagakerjaan", r"bpjamsostek", r"jamsostek"],
+    "Klaim JHT": [r"\bjht\b", r"jaminan hari tua", r"klaim jht", r"pencairan jht"],
+    "Manfaat JKP": [r"\bjkp\b", r"jaminan kehilangan pekerjaan", r"manfaat jkp"],
+    "Jaminan Pensiun (JP)": [r"\bjp\b", r"jaminan pensiun", r"manfaat pensiun"],
+    "Kecelakaan Kerja (JKK)": [r"\bjkk\b", r"jaminan kecelakaan kerja", r"kecelakaan kerja", r"ledakan pabrik"],
+    "Santunan Kematian (JKM)": [r"\bjkm\b", r"jaminan kematian", r"santunan kematian", r"meninggal dunia"],
 }
 
 def detect_topic(text: str) -> str:
     t = (text or "").lower()
-
     for topic, patterns in TOPIC_RULES.items():
         for p in patterns:
             if re.search(p, t):
                 return topic
-
     if re.search(r"bpjs|bpjamsostek|jamsostek|klaim|iuran", t):
         return "Kepesertaan BPJS"
-
     if re.search(r"buruh|pekerja|ketenagakerjaan|tenaga kerja", t):
         return "Konflik Hubungan Industrial"
-
     return "Kebijakan Ketenagakerjaan"
 
 # ===============================
@@ -728,19 +457,23 @@ raw_filtered = raw[
     (raw["Tanggal_Hari"] <= end_date)
 ].copy()
 
-filtered_display = filtered[
-    (filtered["Tanggal_Hari"] >= start_date) &
-    (filtered["Tanggal_Hari"] <= end_date)
-].copy()
+hasil_display = hasil[
+    (hasil["Tanggal_Hari"] >= start_date) &
+    (hasil["Tanggal_Hari"] <= end_date)
+].copy() if not hasil.empty else pd.DataFrame()
 
-if not filtered_display.empty:
-    combo = (
-        filtered_display.get("Judul", "").astype(str) + " " +
-        filtered_display.get("Ringkasan", "").astype(str)
-    )
-    filtered_display["Topik"] = combo.apply(detect_topic)
+if not hasil_display.empty:
+    if "Prioritas" in hasil_display.columns:
+        hasil_display["Prioritas"] = hasil_display["Prioritas"].apply(normalize_priority)
 
-filtered_for_table = filtered_display.copy()
+    if "Kategori_Isu" not in hasil_display.columns or hasil_display["Kategori_Isu"].astype(str).str.strip().eq("").all():
+        combo = (
+            hasil_display.get("Judul", "").astype(str) + " " +
+            hasil_display.get("Ringkasan", "").astype(str)
+        )
+        hasil_display["Kategori_Isu"] = combo.apply(detect_topic)
+
+filtered_for_table = hasil_display.copy()
 if filter_option != "SEMUA" and "Prioritas" in filtered_for_table.columns:
     filtered_for_table = filtered_for_table[
         filtered_for_table["Prioritas"] == filter_option
@@ -755,13 +488,24 @@ tab_dash, tab_data, tab_info = st.tabs(["📊 Dashboard", "📰 Data Berita", "�
 # TAB: DASHBOARD
 # ===============================
 with tab_dash:
-    if "Prioritas" not in filtered_display.columns:
-        st.error("Kolom 'Prioritas' belum ada di data FILTERED. Klik 🔄 Update Data dulu.")
+    if hasil_display.empty or "Prioritas" not in hasil_display.columns:
+        st.error("Data HASIL_ANALISIS belum tersedia. Klik 🔄 Update Data dulu.")
         st.stop()
 
-    tinggi = int((filtered_display["Prioritas"] == "PRIORITAS TINGGI").sum())
-    sedang = int((filtered_display["Prioritas"] == "PRIORITAS SEDANG").sum())
-    rendah = int((filtered_display["Prioritas"] == "PRIORITAS RENDAH").sum())
+    tinggi = int((hasil_display["Prioritas"] == "PRIORITAS TINGGI").sum())
+    sedang = int((hasil_display["Prioritas"] == "PRIORITAS SEDANG").sum())
+    rendah = int((hasil_display["Prioritas"] == "PRIORITAS RENDAH").sum())
+
+    total_berita = len(raw_filtered)
+    total_isu = len(hasil_display)
+    total_regulasi = int(
+        hasil_display.get("Rujukan_Tampilan", pd.Series(dtype=str))
+        .astype(str).str.strip().ne("").sum()
+    )
+    total_tidak_terpetakan = int(
+        hasil_display.get("Kategori_Isu", pd.Series(dtype=str))
+        .astype(str).str.contains("Tidak Terpetakan", case=False, na=False).sum()
+    )
 
     c1, c2, c3, c4, c5 = st.columns([1.2, 1.2, 1, 1, 1], gap="large")
 
@@ -770,7 +514,7 @@ with tab_dash:
             f"""
             <div class="kpi-card">
               <div class="kpi-title">Total Berita Raw</div>
-              <div class="kpi-value">{len(raw_filtered):,}</div>
+              <div class="kpi-value">{total_berita:,}</div>
               <div class="kpi-sub">Sesuai rentang tanggal</div>
             </div>
             """,
@@ -781,9 +525,9 @@ with tab_dash:
         st.markdown(
             f"""
             <div class="kpi-card">
-              <div class="kpi-title">Lolos Keyword</div>
-              <div class="kpi-value">{len(filtered_display):,}</div>
-              <div class="kpi-sub">Basis analisis EWS</div>
+              <div class="kpi-title">Isu Teranalisis</div>
+              <div class="kpi-value">{total_isu:,}</div>
+              <div class="kpi-sub">Data hasil analisis EWS</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -805,9 +549,9 @@ with tab_dash:
         st.markdown(
             f"""
             <div class="kpi-card">
-              <div class="kpi-title">Prioritas Sedang</div>
-              <div class="kpi-value">{sedang:,}</div>
-              <div class="kpi-sub"><span class="badge badge-mid">MED</span></div>
+              <div class="kpi-title">Dasar Aturan Aktif</div>
+              <div class="kpi-value">{total_regulasi:,}</div>
+              <div class="kpi-sub">Berita dengan rujukan regulasi</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -817,9 +561,9 @@ with tab_dash:
         st.markdown(
             f"""
             <div class="kpi-card">
-              <div class="kpi-title">Prioritas Rendah</div>
-              <div class="kpi-value">{rendah:,}</div>
-              <div class="kpi-sub"><span class="badge badge-low">LOW</span></div>
+              <div class="kpi-title">Belum Terpetakan</div>
+              <div class="kpi-value">{total_tidak_terpetakan:,}</div>
+              <div class="kpi-sub">Perlu penyempurnaan mapping</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -832,7 +576,7 @@ with tab_dash:
     with left:
         st.markdown('<div class="section-title">Distribusi Prioritas</div>', unsafe_allow_html=True)
 
-        priority_counts = filtered_display["Prioritas"].value_counts()
+        priority_counts = hasil_display["Prioritas"].value_counts()
         if not priority_counts.empty:
             order = ["PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
             label_map = {
@@ -902,30 +646,39 @@ with tab_dash:
         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
         st.markdown('<div class="section-title">Top 5 Berita Prioritas Tinggi</div>', unsafe_allow_html=True)
 
-        df_high = filtered_display[
-            filtered_display["Prioritas"] == "PRIORITAS TINGGI"
+        df_high = hasil_display[
+            hasil_display["Prioritas"] == "PRIORITAS TINGGI"
         ].copy()
 
         if not df_high.empty:
-            if "Waktu_Publish_WIB" in df_high.columns:
-                df_high = df_high.sort_values("Waktu_Publish_WIB", ascending=False)
+            for c in ["Skor_Akhir", "Waktu_Publish_WIB", "Tanggal_Publish", "Tanggal_Ambil"]:
+                if c in df_high.columns:
+                    try:
+                        df_high = df_high.sort_values(c, ascending=False)
+                        break
+                    except Exception:
+                        pass
 
             top5 = df_high.head(5)
 
             for _, row in top5.iterrows():
-                media = escape(str(row.get("Media", "-")))
-                judul = escape(str(row.get("Judul", "-")))
-                link = str(row.get("Link", "")).strip()
-                waktu = escape(str(row.get("Waktu_Publish_WIB", "")))
+                media = escape(safe_text(row.get("Media", "-")))
+                judul = escape(safe_text(row.get("Judul", "-")))
+                link = safe_text(row.get("Link", row.get("URL", "")))
+                waktu = escape(safe_text(row.get("Waktu_Publish_WIB", row.get("Tanggal_Berita", row.get("Tanggal_Ambil", "")))))
+                regulasi = escape(safe_text(row.get("Rujukan_Tampilan", "")))
+
+                regulasi_html = f"<div class='top5-meta'><b>Dasar aturan:</b> {regulasi}</div>" if regulasi else ""
 
                 if link:
                     st.markdown(
                         f"""
                         <div class="news-card">
-                            <div class="top5-link">
-                                <a href="{escape(link, quote=True)}" target="_blank">{judul}</a>
+                            <div class="news-title">
+                                <a href="{escape(link, quote=True)}" target="_blank" style="text-decoration:none; color:inherit;">{judul}</a>
                             </div>
-                            <div class="top5-meta">{media} • {waktu}</div>
+                            <div class="news-meta">{media} • {waktu}</div>
+                            {regulasi_html}
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -934,8 +687,9 @@ with tab_dash:
                     st.markdown(
                         f"""
                         <div class="news-card">
-                            <div class="top5-link">{judul}</div>
-                            <div class="top5-meta">{media} • {waktu}</div>
+                            <div class="news-title">{judul}</div>
+                            <div class="news-meta">{media} • {waktu}</div>
+                            {regulasi_html}
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -943,10 +697,25 @@ with tab_dash:
         else:
             st.info("Belum ada berita prioritas tinggi.")
 
+        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Regulasi Paling Sering Muncul</div>', unsafe_allow_html=True)
+
+        reg_series = hasil_display.get("Rujukan_Tampilan", pd.Series(dtype=str)).astype(str).str.strip()
+        reg_series = reg_series[reg_series != ""]
+        if not reg_series.empty:
+            reg_counts = reg_series.value_counts().head(5)
+            reg_df = pd.DataFrame({
+                "Rujukan Regulasi": reg_counts.index,
+                "Jumlah Berita": reg_counts.values
+            })
+            st.dataframe(reg_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("Belum ada data regulasi yang terpetakan.")
+
     with right:
         st.markdown('<div class="section-title">🧠 Analisis Situasi</div>', unsafe_allow_html=True)
 
-        total = len(filtered_display)
+        total = len(hasil_display)
 
         if tinggi > 3:
             status_txt = "🔴 RISIKO TINGGI"
@@ -961,93 +730,65 @@ with tab_dash:
             kondisi = "relatif stabil tanpa indikasi eskalasi besar"
             rekomendasi = "Pemantauan rutin tetap diperlukan sebagai langkah preventif."
 
-        if "Topik" in filtered_display.columns and not filtered_display.empty:
-            topik_counts = filtered_display["Topik"].value_counts()
+        if "Kategori_Isu" in hasil_display.columns and not hasil_display.empty:
+            topik_counts = hasil_display["Kategori_Isu"].astype(str).str.strip().replace("", "Tidak Terpetakan").value_counts()
             top3 = topik_counts.head(3)
-
             topik_list = [f"- **{clean_label(topic)}** ({count} berita)" for topic, count in top3.items()]
             topik_text = "\n".join(topik_list)
-            topik_utama = top3.index.tolist()
+            topik_utama = [str(x) for x in top3.index.tolist()]
         else:
             topik_text = "- **Belum ada topik dominan**"
             topik_utama = []
 
-        ringkasan_utama = []
-        dampak_utama = []
+        regulasi_dominan = ""
+        reg_counts = hasil_display.get("Rujukan_Tampilan", pd.Series(dtype=str)).astype(str).str.strip()
+        reg_counts = reg_counts[reg_counts != ""]
+        if not reg_counts.empty:
+            regulasi_dominan = reg_counts.value_counts().index[0]
 
-        if "PHK" in topik_utama:
-            ringkasan_utama.append(
-                "Pemberitaan mengenai **PHK** menjadi sinyal penting karena menunjukkan potensi tekanan pada hubungan kerja dan keberlanjutan kepesertaan pekerja formal."
+        ringkasan = []
+        if any("PHK" in x.upper() for x in topik_utama):
+            ringkasan.append(
+                "Dominasi isu **PHK** menunjukkan potensi tekanan pada keberlanjutan hubungan kerja, kesinambungan kepesertaan, dan peningkatan klaim manfaat pasca pemutusan hubungan kerja."
             )
-            dampak_utama.append(
-                "Dari sisi jaminan sosial ketenagakerjaan, isu ini berpotensi meningkatkan klaim **JKP** dan pencairan **JHT**, serta dalam jangka lebih panjang dapat mempengaruhi kepesertaan **JP**."
+        if any("KECELAKAAN" in x.upper() or "JKK" in x.upper() for x in topik_utama):
+            ringkasan.append(
+                "Munculnya isu **kecelakaan kerja** menunjukkan perlunya perhatian pada sektor berisiko tinggi karena berpotensi menambah klaim JKK dan pada kasus fatal juga dapat memicu JKM."
             )
-
-        if "THR / Kesejahteraan Pekerja" in topik_utama:
-            ringkasan_utama.append(
-                "Isu **THR dan kesejahteraan pekerja** menunjukkan adanya potensi persoalan kepatuhan perusahaan terhadap hak normatif pekerja."
+        if any("KEPESERTAAN" in x.upper() or "BPJS" in x.upper() for x in topik_utama):
+            ringkasan.append(
+                "Isu **kepesertaan BPJS Ketenagakerjaan** menunjukkan pentingnya pengawasan terhadap perluasan cakupan perlindungan dan kepatuhan perusahaan mendaftarkan pekerja."
             )
-            dampak_utama.append(
-                "Walaupun THR bukan manfaat langsung BPJS Ketenagakerjaan, isu ini dapat memicu pengaduan, perselisihan hubungan industrial, dan menurunkan stabilitas pekerja penerima upah."
-            )
-
-        if "Kepesertaan BPJS" in topik_utama:
-            ringkasan_utama.append(
-                "Pemberitaan mengenai **kepesertaan BPJS Ketenagakerjaan** menunjukkan perhatian terhadap cakupan perlindungan sosial tenaga kerja."
-            )
-            dampak_utama.append(
-                "Hal ini berkaitan dengan perluasan kepesertaan, kepatuhan perusahaan, dan kualitas perlindungan bagi pekerja **PU**, **BPU**, **PMI**, serta sektor **jasa konstruksi**."
-            )
-
-        if "Kecelakaan Kerja (JKK)" in topik_utama:
-            ringkasan_utama.append(
-                "Isu **kecelakaan kerja** menunjukkan perlunya perhatian pada keselamatan kerja, terutama di sektor berisiko tinggi."
-            )
-            dampak_utama.append(
-                "Dari sisi manfaat, kondisi ini berpotensi meningkatkan klaim **JKK** dan pada kasus fatal dapat berkembang menjadi klaim **JKM**."
-            )
-
-        if "Konflik Hubungan Industrial" in topik_utama or "Aksi / Demo Buruh" in topik_utama:
-            ringkasan_utama.append(
-                "Isu **konflik hubungan industrial dan aksi buruh** menunjukkan adanya ketegangan antara pekerja dan perusahaan yang perlu dicermati lebih dini."
-            )
-            dampak_utama.append(
-                "Jika tidak tertangani, kondisi ini dapat berkembang menjadi gangguan operasional, PHK, dan penurunan kepatuhan terhadap perlindungan sosial tenaga kerja."
-            )
-
-        if not ringkasan_utama:
-            ringkasan_utama.append(
+        if not ringkasan:
+            ringkasan.append(
                 "Isu yang berkembang masih bersifat campuran, namun tetap perlu dipantau karena dapat mempengaruhi stabilitas ketenagakerjaan dan perlindungan jaminan sosial."
             )
 
-        if not dampak_utama:
-            dampak_utama.append(
-                "Secara umum, perkembangan isu media dapat berdampak pada kepesertaan, kepatuhan perusahaan, dan potensi tekanan terhadap klaim manfaat BPJS Ketenagakerjaan."
-            )
+        if regulasi_dominan:
+            regulasi_text = f"Rujukan regulasi yang paling sering muncul pada periode ini adalah **{clean_label(regulasi_dominan)}**."
+        else:
+            regulasi_text = "Belum seluruh isu memiliki pemetaan dasar aturan, sehingga penyempurnaan register regulasi masih diperlukan."
 
         st.markdown(
             f"""
-<div class="news-card analysis-body">
+<div class="news-card" style="line-height:1.75;">
+<b>Status:</b> {status_txt}<br><br>
 
-**Status:** {status_txt}
+Total isu teranalisis: <b>{total:,} berita</b><br>
+Prioritas tinggi: <b>{tinggi:,}</b><br>
+Prioritas sedang: <b>{sedang:,}</b><br>
+Prioritas rendah: <b>{rendah:,}</b><br><br>
 
-Total isu ketenagakerjaan terpantau: **{total:,} berita**
+Isu dominan pada periode ini:<br>
+{topik_text}<br><br>
 
-Prioritas tinggi: **{tinggi:,}**  
-Prioritas sedang: **{sedang:,}**  
-Prioritas rendah: **{rendah:,}**
+Secara umum, kondisi saat ini <b>{kondisi}</b>.<br><br>
 
-Isu yang paling banyak muncul pada periode ini adalah:
+{" ".join(ringkasan[:2])}<br><br>
 
-{topik_text}
+{regulasi_text}<br><br>
 
-Secara umum, kondisi saat ini **{kondisi}**.
-
-{" ".join(ringkasan_utama[:2])}
-
-{" ".join(dampak_utama[:2])}
-
-**Rekomendasi:** {rekomendasi}
+<b>Rekomendasi:</b> {rekomendasi}
 </div>
 """,
             unsafe_allow_html=True
@@ -1058,7 +799,7 @@ Secara umum, kondisi saat ini **{kondisi}**.
 # ===============================
 with tab_data:
     st.markdown('<div class="section-title">Berita Terkini</div>', unsafe_allow_html=True)
-    st.caption("Daftar 10 berita terbaru berdasarkan prioritas dan waktu publikasi.")
+    st.caption("Daftar 10 berita terbaru berdasarkan prioritas, kategori isu, dan dasar aturan.")
 
     df_display = filtered_for_table.copy()
 
@@ -1074,7 +815,7 @@ with tab_data:
     df_display["Urutan"] = df_display["Prioritas"].map(priority_order).fillna(99)
 
     sort_col = None
-    for c in ["Waktu_Publish_WIB", "Tanggal_Publish", "Tanggal_Ambil", "Tanggal_Hari"]:
+    for c in ["Skor_Akhir", "Waktu_Publish_WIB", "Tanggal_Publish", "Tanggal_Berita", "Tanggal_Ambil", "Tanggal_Hari"]:
         if c in df_display.columns:
             sort_col = c
             break
@@ -1097,29 +838,24 @@ with tab_data:
     end_idx = start_idx + items_per_page
     df_page = df_display.iloc[start_idx:end_idx].copy()
 
-    def badge_html(prioritas):
-        if prioritas == "PRIORITAS TINGGI":
-            return "<span class='badge badge-high'>Prioritas Tinggi</span>"
-        elif prioritas == "PRIORITAS SEDANG":
-            return "<span class='badge badge-mid'>Prioritas Sedang</span>"
-        return "<span class='badge badge-low'>Prioritas Rendah</span>"
-
     for i, row in df_page.iterrows():
         judul = escape(clean_label(row.get("Judul", "-")))
         media = escape(clean_label(row.get("Media", "-")))
-        link = str(row.get("Link", "")).strip()
-        waktu = escape(clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal", "-"))))
-        prioritas = str(row.get("Prioritas", "PRIORITAS RENDAH")).strip()
+        link = safe_text(row.get("Link", row.get("URL", "")))
+        waktu = escape(clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal_Berita", row.get("Tanggal_Ambil", "-")))))
+        prioritas = normalize_priority(row.get("Prioritas", "PRIORITAS RENDAH"))
 
-        topik = escape(clean_label(row.get("Topik", "")))
-        dampak_program = escape(clean_label(row.get("Dampak_Program", "")))
+        kategori_isu = escape(clean_label(row.get("Kategori_Isu", "")))
+        dampak_program = escape(clean_label(row.get("Dampak_Program", row.get("Program_Terdampak", ""))))
         dampak_kepesertaan = escape(clean_label(row.get("Dampak_Kepesertaan", "")))
         potensi_klaim = escape(clean_label(row.get("Potensi_Klaim", "")))
-        alasan = escape(clean_label(row.get("Alasan_Prioritas", "")))
+        alasan = escape(clean_label(row.get("Alasan_Prioritas", row.get("Analisis_Regulatif", ""))))
+        regulasi = escape(clean_label(row.get("Rujukan_Tampilan", "")))
+        analisis_reg = escape(clean_label(row.get("Analisis_Regulatif", "")))
 
         chips = []
-        if topik:
-            chips.append(f"<span class='news-chip'>{topik}</span>")
+        if kategori_isu:
+            chips.append(f"<span class='news-chip'>{kategori_isu}</span>")
         if dampak_program:
             chips.append(f"<span class='news-chip'>{dampak_program}</span>")
         if dampak_kepesertaan:
@@ -1132,6 +868,14 @@ with tab_data:
             safe_link = escape(link, quote=True)
             link_html = f"<div class='news-link'><a href='{safe_link}' target='_blank'>Baca berita</a></div>"
 
+        regulasi_html = ""
+        if regulasi:
+            regulasi_html = f"<div style='font-size:.9rem; line-height:1.65; margin-bottom:8px;'><b>Dasar aturan:</b> {regulasi}</div>"
+
+        analisis_html = ""
+        if analisis_reg:
+            analisis_html = f"<div style='font-size:.92rem; line-height:1.65; margin-bottom:10px;'><b>Analisis regulatif:</b> {analisis_reg}</div>"
+
         card_html = (
             f"<div class='news-card'>"
             f"<div style='display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;'>"
@@ -1142,6 +886,8 @@ with tab_data:
             f"<div>{badge_html(prioritas)}</div>"
             f"</div>"
             f"<div style='margin:8px 0 10px 0;'>{''.join(chips)}</div>"
+            f"{regulasi_html}"
+            f"{analisis_html}"
             f"<div style='font-size:.95rem; line-height:1.65; margin-bottom:10px;'>{alasan if alasan else 'Belum ada analisis prioritas.'}</div>"
             f"{link_html}"
             f"</div>"
@@ -1176,19 +922,21 @@ with tab_data:
     st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
     st.markdown('<div class="section-title">Indeks Eskalasi Isu</div>', unsafe_allow_html=True)
 
-    df_ews = filtered_display.copy()
+    df_ews = hasil_display.copy()
 
-    if "Topik" not in df_ews.columns:
+    if "Kategori_Isu" not in df_ews.columns:
         combo = (
             df_ews.get("Judul", "").astype(str) + " " +
             df_ews.get("Ringkasan", "").astype(str)
         )
-        df_ews["Topik"] = combo.apply(detect_topic)
+        df_ews["Kategori_Isu"] = combo.apply(detect_topic)
 
     if "Waktu_Publish_WIB" in df_ews.columns:
         df_ews["publish_dt"] = pd.to_datetime(df_ews["Waktu_Publish_WIB"], errors="coerce")
     elif "Tanggal_Publish" in df_ews.columns:
         df_ews["publish_dt"] = pd.to_datetime(df_ews["Tanggal_Publish"], errors="coerce")
+    elif "Tanggal_Berita" in df_ews.columns:
+        df_ews["publish_dt"] = pd.to_datetime(df_ews["Tanggal_Berita"], errors="coerce")
     else:
         df_ews["publish_dt"] = pd.to_datetime(df_ews["Tanggal_Hari"], errors="coerce")
 
@@ -1203,9 +951,9 @@ with tab_data:
 
     def agg(df_recent):
         if df_recent.empty:
-            return pd.DataFrame(columns=["Topik", "Berita 24 Jam", "Media 24 Jam", "Headline"])
+            return pd.DataFrame(columns=["Kategori_Isu", "Berita 24 Jam", "Media 24 Jam", "Headline"])
 
-        out = df_recent.groupby("Topik", dropna=False).agg(
+        out = df_recent.groupby("Kategori_Isu", dropna=False).agg(
             **{
                 "Berita 24 Jam": ("Judul", "count"),
                 "Media 24 Jam": ("Media", pd.Series.nunique)
@@ -1214,12 +962,12 @@ with tab_data:
 
         head = (
             df_recent.sort_values("publish_dt", ascending=False)
-            .groupby("Topik", dropna=False)
-            .head(1)[["Topik", "Judul"]]
+            .groupby("Kategori_Isu", dropna=False)
+            .head(1)[["Kategori_Isu", "Judul"]]
             .rename(columns={"Judul": "Headline"})
         )
 
-        return out.merge(head, on="Topik", how="left")
+        return out.merge(head, on="Kategori_Isu", how="left")
 
     s1 = agg(w1)
     s0 = agg(w0).rename(columns={
@@ -1228,168 +976,99 @@ with tab_data:
     })
 
     esk = s1.merge(
-        s0[["Topik", "Berita 24-48 Jam", "Media 24-48 Jam"]],
-        on="Topik",
+        s0[["Kategori_Isu", "Berita 24-48 Jam", "Media 24-48 Jam"]],
+        on="Kategori_Isu",
         how="left"
     )
 
-    esk[["Berita 24-48 Jam", "Media 24-48 Jam"]] = esk[
-        ["Berita 24-48 Jam", "Media 24-48 Jam"]
-    ].fillna(0).astype(int)
+    if not esk.empty:
+        esk[["Berita 24-48 Jam", "Media 24-48 Jam"]] = esk[
+            ["Berita 24-48 Jam", "Media 24-48 Jam"]
+        ].fillna(0).astype(int)
 
-    esk["Skor"] = esk["Media 24 Jam"] * 3 + esk["Berita 24 Jam"]
+        esk["Skor"] = esk["Media 24 Jam"] * 3 + esk["Berita 24 Jam"]
 
-    def trend(r):
-        if r["Media 24 Jam"] > r["Media 24-48 Jam"]:
-            return "📈 Naik"
-        if r["Media 24 Jam"] < r["Media 24-48 Jam"]:
-            return "📉 Turun"
-        return "➖ Stabil"
+        def trend(r):
+            if r["Media 24 Jam"] > r["Media 24-48 Jam"]:
+                return "📈 Naik"
+            if r["Media 24 Jam"] < r["Media 24-48 Jam"]:
+                return "📉 Turun"
+            return "➖ Stabil"
 
-    esk["Trend"] = esk.apply(trend, axis=1)
-    esk["Topik"] = esk["Topik"].astype(str).apply(clean_label)
-    esk = esk.sort_values(["Skor", "Media 24 Jam", "Berita 24 Jam"], ascending=False)
+        esk["Trend"] = esk.apply(trend, axis=1)
+        esk["Kategori_Isu"] = esk["Kategori_Isu"].astype(str).apply(clean_label)
+        esk = esk.sort_values(["Skor", "Media 24 Jam", "Berita 24 Jam"], ascending=False)
 
-    st.dataframe(
-        esk[
-            ["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam",
-             "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline"]
-        ].head(10),
-        use_container_width=True,
-        hide_index=True
-    )
+        st.dataframe(
+            esk[
+                ["Kategori_Isu", "Trend", "Media 24 Jam", "Berita 24 Jam",
+                 "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline"]
+            ].head(10),
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.info("Belum ada data yang cukup untuk menghitung indeks eskalasi isu.")
 
 # ===============================
 # TAB: PANDUAN
 # ===============================
 with tab_info:
-
     st.markdown('<div class="section-title">Panduan Sistem Early Warning System</div>', unsafe_allow_html=True)
 
     st.markdown(
 """
 <div class="info-card">
-
 <div class="info-text">
 
-Sistem **Early Warning System (EWS) Isu Ketenagakerjaan** digunakan untuk memantau perkembangan isu ketenagakerjaan yang muncul di media online serta menganalisis potensi dampaknya terhadap program jaminan sosial ketenagakerjaan.
+Sistem <b>Early Warning System (EWS) Isu Ketenagakerjaan</b> digunakan untuk memantau perkembangan isu ketenagakerjaan di media online serta menganalisis potensi dampaknya terhadap program jaminan sosial ketenagakerjaan <b>berdasarkan kategori isu dan dasar aturan yang relevan</b>.
 
-Sistem bekerja melalui beberapa tahapan proses analisis data berita sebagai berikut:
+<br><br>
 
-<br>
+<b>1. Pengumpulan Data Berita (Scraping Media Online)</b><br>
+Sistem secara otomatis mengambil berita dari berbagai media online yang memuat isu ketenagakerjaan. Data yang dikumpulkan meliputi judul berita, media sumber, waktu publikasi, ringkasan, dan tautan berita asli.
 
-<b>1. Pengumpulan Data Berita (Scraping Media Online)</b>  
+<br><br>
 
-Sistem secara otomatis mengambil berita dari berbagai media online yang memuat isu ketenagakerjaan.  
-Data yang dikumpulkan meliputi:
+<b>2. Penyaringan Isu Ketenagakerjaan (Keyword Filtering)</b><br>
+Seluruh berita yang terkumpul kemudian disaring menggunakan kata kunci yang berkaitan dengan isu ketenagakerjaan dan jaminan sosial tenaga kerja. Hanya berita yang relevan yang diproses lebih lanjut.
 
-• Judul berita  
-• Media sumber berita  
-• Waktu publikasi berita  
-• Ringkasan atau isi berita  
-• Tautan berita asli  
+<br><br>
 
-Proses ini memungkinkan sistem melakukan pemantauan isu ketenagakerjaan secara berkelanjutan.
+<b>3. Identifikasi Kategori Isu</b><br>
+Setelah berita lolos tahap penyaringan, sistem melakukan analisis untuk mengidentifikasi kategori isu utama, misalnya PHK, kecelakaan kerja, kepesertaan BPJS Ketenagakerjaan, jaminan hari tua, jaminan kehilangan pekerjaan, pekerja migran, dan isu hubungan industrial.
 
-<br>
+<br><br>
 
-<b>2. Penyaringan Isu Ketenagakerjaan (Keyword Filtering)</b>  
+<b>4. Analisis Dampak terhadap Program Jaminan Sosial</b><br>
+Setiap berita dianalisis untuk melihat potensi dampaknya terhadap program BPJS Ketenagakerjaan, antara lain JHT, JKK, JKM, JKP, dan JP. Analisis ini membantu mengidentifikasi dampak terhadap kepesertaan, klaim, dan perlindungan pekerja.
 
-Seluruh berita yang terkumpul kemudian disaring menggunakan kata kunci yang berkaitan dengan isu ketenagakerjaan seperti:
+<br><br>
 
-• PHK  
-• Upah dan gaji  
-• Buruh dan pekerja  
-• Hubungan industrial  
-• BPJS Ketenagakerjaan  
-• Kecelakaan kerja  
-• Jaminan sosial tenaga kerja  
+<b>5. Pemetaan Dasar Aturan</b><br>
+Sistem kemudian menghubungkan kategori isu dengan register regulasi aktif yang telah disusun dalam <b>MASTER_REGULASI</b>. Dengan cara ini, setiap isu dapat ditampilkan bersama aturan induk, aturan teknis, topik norma, dan rujukan regulasi yang relevan. Aturan yang sudah tidak aktif tidak digunakan sebagai dasar analisis.
 
-Hanya berita yang relevan dengan ketenagakerjaan yang akan diproses lebih lanjut oleh sistem.
+<br><br>
 
-<br>
+<b>6. Penentuan Prioritas Berita</b><br>
+Setiap berita diklasifikasikan berdasarkan skor isu, bobot hukum, dan indikator eskalasi menjadi tiga kategori: <b>Prioritas Tinggi</b>, <b>Prioritas Sedang</b>, dan <b>Prioritas Rendah</b>.
 
-<b>3. Identifikasi Topik Isu</b>  
+<br><br>
 
-Setelah berita lolos tahap penyaringan, sistem melakukan analisis untuk mengidentifikasi topik utama dari setiap berita.
+<b>7. Dashboard Monitoring Isu</b><br>
+Hasil analisis ditampilkan dalam dashboard yang memuat total berita raw, jumlah isu teranalisis, distribusi prioritas, daftar berita prioritas tinggi, regulasi yang paling sering muncul, serta analisis situasi.
 
-Topik yang dianalisis antara lain:
+<br><br>
 
-• PHK (Pemutusan Hubungan Kerja)  
-• Konflik hubungan industrial  
-• Kepesertaan BPJS Ketenagakerjaan  
-• Upah dan kesejahteraan pekerja  
-• Aksi buruh atau demonstrasi pekerja  
-• Kecelakaan kerja  
-• Tunggakan iuran BPJS  
+<b>8. Indeks Eskalasi Isu</b><br>
+Indeks eskalasi digunakan untuk memantau perkembangan intensitas isu berdasarkan jumlah berita dalam 24 jam terakhir, jumlah media yang memberitakan, serta tren peningkatan atau penurunan isu.
 
-Analisis ini dilakukan menggunakan pencocokan pola kata (pattern matching) pada judul dan ringkasan berita.
+<br><br>
 
-<br>
-
-<b>4. Analisis Dampak terhadap Program Jaminan Sosial</b>  
-
-Setiap berita dianalisis untuk melihat potensi dampaknya terhadap program BPJS Ketenagakerjaan, antara lain:
-
-• JHT (Jaminan Hari Tua)  
-• JKK (Jaminan Kecelakaan Kerja)  
-• JKM (Jaminan Kematian)  
-• JKP (Jaminan Kehilangan Pekerjaan)  
-• JP (Jaminan Pensiun)
-
-Analisis ini membantu mengidentifikasi apakah suatu isu berpotensi mempengaruhi kepesertaan, klaim program, atau stabilitas perlindungan sosial tenaga kerja.
-
-<br>
-
-<b>5. Penentuan Prioritas Berita</b>  
-
-Setiap berita kemudian diklasifikasikan berdasarkan tingkat urgensi isu menjadi tiga kategori:
-
-• <b>Prioritas Tinggi</b>  
-Berita yang berpotensi memiliki dampak besar terhadap kondisi ketenagakerjaan atau program jaminan sosial.
-
-• <b>Prioritas Sedang</b>  
-Berita yang perlu dipantau karena memiliki potensi perkembangan isu.
-
-• <b>Prioritas Rendah</b>  
-Berita yang bersifat informatif dan tidak menunjukkan potensi dampak signifikan.
-
-<br>
-
-<b>6. Dashboard Monitoring Isu</b>  
-
-Hasil analisis kemudian ditampilkan dalam bentuk dashboard yang memuat:
-
-• Total berita yang berhasil dikumpulkan  
-• Jumlah berita yang relevan dengan isu ketenagakerjaan  
-• Distribusi berita berdasarkan tingkat prioritas  
-• Daftar berita prioritas tinggi  
-• Analisis situasi isu ketenagakerjaan
-
-Dashboard ini membantu pengguna memahami kondisi isu ketenagakerjaan secara cepat.
-
-<br>
-
-<b>7. Indeks Eskalasi Isu</b>  
-
-Indeks eskalasi digunakan untuk memantau perkembangan intensitas isu ketenagakerjaan.
-
-Perhitungan dilakukan dengan membandingkan:
-
-• jumlah berita dalam 24 jam terakhir  
-• jumlah media yang memberitakan  
-• tren peningkatan atau penurunan isu
-
-Sistem kemudian menentukan tren isu sebagai:
-
-• 📈 Naik  
-• 📉 Turun  
-• ➖ Stabil  
-
-Semakin tinggi skor eskalasi, semakin besar kemungkinan isu tersebut berkembang dan memerlukan perhatian lebih lanjut.
+<b>Catatan Penting</b><br>
+Analisis regulatif dalam dashboard bersifat <b>indikatif</b> dan digunakan untuk kebutuhan pemantauan dini. Sistem tidak menyimpulkan pelanggaran hukum secara final, tetapi menunjukkan keterkaitan isu dengan norma hukum dan program jaminan sosial ketenagakerjaan yang relevan.
 
 </div>
-
 </div>
 """,
         unsafe_allow_html=True

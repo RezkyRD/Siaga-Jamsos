@@ -82,47 +82,38 @@ def is_indonesia_related(text: str) -> bool:
     text = clean_text(text)
 
     # PMI / pekerja Indonesia di luar negeri tetap relevan
-    pmi_keywords = [
+    if any(k in text for k in [
         "pekerja migran indonesia",
-        "pmi",
-        "tki",
-        "buruh indonesia",
-        "pekerja indonesia"
-    ]
-    if any(k in text for k in pmi_keywords):
+        "buruh migran indonesia",
+        "pmi indonesia",
+        "tki indonesia",
+        "wni"
+    ]):
         return True
 
-    # jika ada konteks Indonesia umum
-    if any(k in text for k in INDONESIA_CONTEXT):
-        return True
-
-    # kalau ada perusahaan global, harus ada konteks Indonesia yang kuat
+    # kalau ada perusahaan global, HARUS ada konteks Indonesia yang benar-benar kuat
     if any(g in text for g in GLOBAL_COMPANY):
-        indonesia_strong_context = [
+        strong_id_context = [
             "di indonesia",
             "indonesia",
-            "anak usaha indonesia",
-            "operasi di indonesia",
+            "pekerja indonesia",
+            "buruh indonesia",
             "karyawan di indonesia",
-            "phk di indonesia",
+            "operasi di indonesia",
+            "anak usaha di indonesia",
+            "anak usaha indonesia",
             "pabrik di indonesia",
+            "kantor di indonesia",
             "kemnaker",
             "disnaker",
             "bpjs ketenagakerjaan",
-            "bpjamsostek",
-            "pekerja indonesia",
-            "buruh indonesia"
+            "bpjamsostek"
         ]
+        return any(k in text for k in strong_id_context)
 
-        has_strong_id_context = any(k in text for k in indonesia_strong_context)
-
-        # kalau hanya ada nama media indonesia, jangan dianggap relevan
-        media_only_hit = any(m in text for m in MEDIA_ONLY_CONTEXT)
-
-        if has_strong_id_context and not media_only_hit:
-            return True
-
-        return False
+    # konteks umum Indonesia
+    if any(k in text for k in INDONESIA_CONTEXT):
+        return True
 
     return False
 
@@ -620,6 +611,43 @@ def run_priority(sheet_key=None):
     konteks_list = []
 
     for text in text_series:
+    global_only_keywords = [
+        "epic games",
+        "warner bros",
+        "ubisoft",
+        "amazon",
+        "google",
+        "meta",
+        "tesla",
+        "microsoft",
+        "netflix",
+        "apple",
+        "intel",
+        "nvidia"
+    ]
+
+    strong_id_context = [
+        "indonesia",
+        "di indonesia",
+        "pekerja indonesia",
+        "buruh indonesia",
+        "bpjs ketenagakerjaan",
+        "bpjamsostek",
+        "kemnaker",
+        "disnaker"
+    ]
+
+    if any(g in text for g in global_only_keywords) and not any(k in text for k in strong_id_context):
+        konteks_list.append("LUAR NEGERI / TIDAK RELEVAN")
+        hasil.append({
+            "Topik_Utama": "Tidak Relevan Indonesia",
+            "Score": 0,
+            "Dampak_Program": "",
+            "Dampak_Kepesertaan": "",
+            "Potensi_Klaim": "",
+            "Alasan_Prioritas": "Berita perusahaan global yang tidak berkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
+        })
+        continue
         konteks = get_context_label(text)
         konteks_list.append(konteks)
 

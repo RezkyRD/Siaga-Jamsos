@@ -739,6 +739,13 @@ if "Konteks_Berita" in filtered_display.columns:
         filtered_display["Konteks_Berita"].astype(str).str.strip().eq("INDONESIA")
     ].copy()
 
+if "Topik_Utama" in filtered_display.columns:
+    filtered_display = filtered_display[
+        ~filtered_display["Topik_Utama"].astype(str).str.contains(
+            "Tidak Relevan Indonesia", case=False, na=False
+        )
+    ].copy()
+
 # gunakan Topik_Utama dari hasil analisis jika sudah ada
 if not filtered_display.empty:
     if "Topik_Utama" in filtered_display.columns:

@@ -1127,20 +1127,20 @@ with tab_data:
         prioritas = str(row.get("Prioritas", "PRIORITAS RENDAH")).strip()
 
         topik = escape(clean_label(row.get("Topik_Utama", row.get("Topik", ""))))
-dampak_program = escape(clean_label(row.get("Dampak_Program", "")))
-dampak_kepesertaan = escape(clean_label(row.get("Dampak_Kepesertaan", "")))
-potensi_klaim = escape(clean_label(row.get("Potensi_Klaim", "")))
-alasan = escape(clean_label(row.get("Alasan_Prioritas", "")))
+        dampak_program = escape(clean_label(row.get("Dampak_Program", "")))
+        dampak_kepesertaan = escape(clean_label(row.get("Dampak_Kepesertaan", "")))
+        potensi_klaim = escape(clean_label(row.get("Potensi_Klaim", "")))
+        alasan = escape(clean_label(row.get("Alasan_Prioritas", "")))
 
         chips = []
-if topik:
-    chips.append(f"<span class='news-chip'>Topik: {topik}</span>")
-if dampak_program:
-    chips.append(f"<span class='news-chip'>Program: {dampak_program}</span>")
-if dampak_kepesertaan:
-    chips.append(f"<span class='news-chip'>Kepesertaan: {dampak_kepesertaan}</span>")
-if potensi_klaim:
-    chips.append(f"<span class='news-chip'>Klaim: {potensi_klaim}</span>")
+        if topik:
+            chips.append(f"<span class='news-chip'>Topik: {topik}</span>")
+        if dampak_program:
+            chips.append(f"<span class='news-chip'>Program: {dampak_program}</span>")
+        if dampak_kepesertaan:
+            chips.append(f"<span class='news-chip'>Kepesertaan: {dampak_kepesertaan}</span>")
+        if potensi_klaim:
+            chips.append(f"<span class='news-chip'>Klaim: {potensi_klaim}</span>")
 
         link_html = ""
         if link:

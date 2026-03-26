@@ -99,7 +99,34 @@ def get_context_label(text: str) -> str:
     return "LUAR NEGERI / TIDAK RELEVAN"
 
 
+def is_service_education(text: str) -> bool:
+    return contains_any(text, [
+        r"cara klaim",
+        r"syarat klaim",
+        r"panduan",
+        r"tutorial",
+        r"begini cara",
+        r"cara mencairkan",
+        r"cara cairkan",
+        r"bisa cairkan saldo",
+        r"cek saldo",
+        r"saldo jht",
+        r"aplikasi jmo",
+        r"\bjmo\b",
+        r"prosedur",
+        r"alur klaim",
+        r"tips klaim",
+        r"simak caranya",
+        r"begini syarat",
+        r"ini syarat",
+        r"begini alurnya"
+    ])
+
+
 def detect_topic(text: str) -> str:
+    if is_service_education(text):
+        return "Layanan / Edukasi Klaim"
+
     topic_rules = [
         ("PHK", [
             r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b",
@@ -205,21 +232,37 @@ def analyze_jamsos(text: str) -> dict:
     klaim = []
     alasan = []
     topik = detect_topic(text)
+    is_edukasi_layanan = is_service_education(text)
 
+    # PHK
     if contains_any(text, [r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b"]):
-        score += 4
-        program.extend(["JKP", "JHT", "JP"])
-        kepesertaan.append("PU")
-        klaim.extend(["JKP", "JHT"])
-        alasan.append("Pemberitaan mengenai PHK berpotensi meningkatkan klaim JKP serta pencairan JHT bagi pekerja terdampak.")
+        if is_edukasi_layanan:
+            score += 1
+            program.extend(["JHT", "JKP"])
+            kepesertaan.append("PU")
+            klaim.extend(["JHT", "JKP"])
+            alasan.append(
+                "Berita memuat konteks PHK dalam bentuk informasi layanan atau panduan klaim, sehingga lebih bersifat edukatif daripada indikasi kejadian PHK baru."
+            )
+        else:
+            score += 4
+            program.extend(["JKP", "JHT", "JP"])
+            kepesertaan.append("PU")
+            klaim.extend(["JKP", "JHT"])
+            alasan.append(
+                "Pemberitaan mengenai PHK berpotensi meningkatkan klaim JKP serta pencairan JHT bagi pekerja terdampak."
+            )
 
     if contains_any(text, [
         r"phk.*massal", r"massal.*phk", r"gelombang phk", r"ribuan karyawan",
         r"ratusan karyawan", r"tutup pabrik", r"pabrik tutup", r"\bpailit\b", r"\bbangkrut\b"
     ]):
         score += 4
-        alasan.append("Skala isu yang besar menunjukkan potensi penurunan kepesertaan aktif serta peningkatan tekanan klaim manfaat.")
+        alasan.append(
+            "Skala isu yang besar menunjukkan potensi penurunan kepesertaan aktif serta peningkatan tekanan klaim manfaat."
+        )
 
+    # JKK / kecelakaan kerja
     if contains_any(text, [
         r"kecelakaan kerja", r"\bledakan\b", r"kebakaran pabrik",
         r"tertimbun", r"pekerja jatuh", r"alat berat", r"lokasi proyek"
@@ -237,14 +280,20 @@ def analyze_jamsos(text: str) -> dict:
         klaim.append("JKM")
         alasan.append("Kematian pekerja berpotensi menimbulkan klaim JKM bagi ahli waris.")
 
+    # Demo / konflik industrial
     if contains_any(text, [r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok", r"mogok kerja"]):
         score += 2
-        alasan.append("Aksi buruh menunjukkan potensi konflik hubungan industrial yang dapat berdampak pada stabilitas ketenagakerjaan.")
+        alasan.append(
+            "Aksi buruh menunjukkan potensi konflik hubungan industrial yang dapat berdampak pada stabilitas ketenagakerjaan."
+        )
 
     if contains_any(text, [r"perselisihan", r"sengketa", r"konflik buruh", r"mediasi hubungan industrial"]):
         score += 2
-        alasan.append("Perselisihan hubungan industrial dapat berkembang menjadi gangguan kepatuhan perusahaan dan keberlanjutan hubungan kerja.")
+        alasan.append(
+            "Perselisihan hubungan industrial dapat berkembang menjadi gangguan kepatuhan perusahaan dan keberlanjutan hubungan kerja."
+        )
 
+    # THR / upah
     if contains_any(text, [r"\bthr\b", r"tunjangan hari raya"]):
         score += 1
         kepesertaan.append("PU")
@@ -265,13 +314,19 @@ def analyze_jamsos(text: str) -> dict:
         kepesertaan.append("PU")
         alasan.append("Permasalahan upah/gaji berpotensi memicu instabilitas hubungan kerja dan menurunkan kepatuhan perusahaan.")
 
+    # Kepesertaan / kepatuhan
     if contains_any(text, [
         r"bpjs ketenagakerjaan", r"bpjamsostek", r"jamsostek",
         r"kepesertaan bpjs", r"peserta bpjs", r"terdaftar bpjs"
     ]):
-        score += 2
-        program.append("Kepesertaan")
-        alasan.append("Pemberitaan berkaitan langsung dengan cakupan perlindungan jaminan sosial ketenagakerjaan.")
+        if is_edukasi_layanan:
+            score += 1
+            program.append("Kepesertaan")
+            alasan.append("Pemberitaan berkaitan dengan informasi layanan dan akses manfaat BPJS Ketenagakerjaan.")
+        else:
+            score += 2
+            program.append("Kepesertaan")
+            alasan.append("Pemberitaan berkaitan langsung dengan cakupan perlindungan jaminan sosial ketenagakerjaan.")
 
     if contains_any(text, [
         r"tunggakan iuran", r"menunggak iuran", r"telat bayar iuran",
@@ -281,17 +336,30 @@ def analyze_jamsos(text: str) -> dict:
         program.append("Kepesertaan")
         alasan.append("Isu kepatuhan dan tunggakan iuran berpotensi mempengaruhi kesinambungan perlindungan peserta.")
 
+    # Manfaat spesifik
     if contains_any(text, [r"\bjht\b", r"jaminan hari tua", r"klaim jht", r"pencairan jht", r"saldo jht"]):
-        score += 2
-        program.append("JHT")
-        klaim.append("JHT")
-        alasan.append("Isu JHT berkaitan dengan manfaat yang paling sering diakses oleh peserta saat terjadi pemutusan kerja atau kebutuhan tertentu.")
+        if is_edukasi_layanan:
+            score += 1
+            program.append("JHT")
+            klaim.append("JHT")
+            alasan.append("Pemberitaan berkaitan dengan informasi layanan atau panduan akses manfaat JHT.")
+        else:
+            score += 2
+            program.append("JHT")
+            klaim.append("JHT")
+            alasan.append("Isu JHT berkaitan dengan manfaat yang paling sering diakses oleh peserta saat terjadi pemutusan kerja atau kebutuhan tertentu.")
 
     if contains_any(text, [r"\bjkp\b", r"jaminan kehilangan pekerjaan", r"klaim jkp", r"manfaat jkp"]):
-        score += 2
-        program.append("JKP")
-        klaim.append("JKP")
-        alasan.append("Isu JKP berkaitan langsung dengan perlindungan bagi pekerja yang kehilangan pekerjaan.")
+        if is_edukasi_layanan:
+            score += 1
+            program.append("JKP")
+            klaim.append("JKP")
+            alasan.append("Pemberitaan memuat informasi layanan atau penjelasan manfaat JKP.")
+        else:
+            score += 2
+            program.append("JKP")
+            klaim.append("JKP")
+            alasan.append("Isu JKP berkaitan langsung dengan perlindungan bagi pekerja yang kehilangan pekerjaan.")
 
     if contains_any(text, [r"\bjp\b", r"jaminan pensiun", r"iuran pensiun", r"usia pensiun"]):
         score += 1
@@ -304,6 +372,7 @@ def analyze_jamsos(text: str) -> dict:
         klaim.append("JKM")
         alasan.append("Isu JKM berkaitan dengan santunan bagi ahli waris peserta yang meninggal dunia.")
 
+    # PMI / konstruksi
     if contains_any(text, [r"\bpmi\b", r"pekerja migran", r"\btki\b"]):
         score += 2
         kepesertaan.append("PMI")
@@ -316,8 +385,14 @@ def analyze_jamsos(text: str) -> dict:
         program.append("JKK")
         alasan.append("Sektor konstruksi memiliki risiko kecelakaan kerja tinggi sehingga relevan dengan program JKK.")
 
+    # Penyesuaian untuk edukasi layanan
+    if is_edukasi_layanan:
+        score = max(score - 2, 1)
+
     if not alasan:
-        alasan.append("Berita berkaitan dengan isu ketenagakerjaan yang perlu dipantau karena berpotensi mempengaruhi perlindungan jaminan sosial tenaga kerja.")
+        alasan.append(
+            "Berita berkaitan dengan isu ketenagakerjaan yang perlu dipantau karena berpotensi mempengaruhi perlindungan jaminan sosial tenaga kerja."
+        )
 
     return {
         "Topik_Utama": topik,

@@ -573,9 +573,9 @@ def run_priority(sheet_key=None):
             skor_hukum = safe_int(regulasi_match.get("bobot_hukum", 0), 0)
 
         # pakai skor terbesar antara regex lama dan master
-        skor_isu_final = max(score_lama, skor_master)
+        skor_isu_final = score_lama
         skor_tambahan = extra_score_from_text(text)
-        skor_akhir = skor_isu_final + skor_hukum + skor_tambahan
+        skor_akhir = skor_isu_final + skor_tambahan
 
         prioritas = finalize_priority(text, skor_akhir, konteks_berita)
 

@@ -733,10 +733,42 @@ filtered_display = filtered[
     (filtered["Tanggal_Hari"] <= end_date)
 ].copy()
 
-# hanya ambil berita yang relevan Indonesia
+# hanya berita relevan Indonesia
 if "Konteks_Berita" in filtered_display.columns:
     filtered_display = filtered_display[
         filtered_display["Konteks_Berita"].astype(str).str.strip().eq("INDONESIA")
+    ].copy()
+
+# pagar kedua: buang berita global yang masih lolos
+GLOBAL_APP_FILTER = [
+    "facebook", "meta", "instagram", "amazon", "google", "tesla",
+    "microsoft", "apple", "netflix", "nvidia", "warner bros",
+    "ubisoft", "epic games", "zuckerberg",
+    "raksasa teknologi", "raksasa e-commerce", "startup global", "big tech"
+]
+
+STRONG_ID_APP = [
+    "di indonesia", "indonesia", "pekerja indonesia", "buruh indonesia",
+    "karyawan di indonesia", "operasi di indonesia", "anak usaha di indonesia",
+    "anak usaha indonesia", "pabrik di indonesia", "kantor di indonesia",
+    "kemnaker", "disnaker", "bpjs ketenagakerjaan", "bpjamsostek",
+    "phk di indonesia", "buruh indonesia terdampak", "pekerja indonesia terdampak"
+]
+
+def is_global_non_id(row):
+    text = (
+        str(row.get("Judul", "")) + " " +
+        str(row.get("Ringkasan", ""))
+    ).lower()
+
+    has_global = any(k in text for k in GLOBAL_APP_FILTER)
+    has_id = any(k in text for k in STRONG_ID_APP)
+
+    return has_global and not has_id
+
+if not filtered_display.empty:
+    filtered_display = filtered_display[
+        ~filtered_display.apply(is_global_non_id, axis=1)
     ].copy()
 
 if "Topik_Utama" in filtered_display.columns:

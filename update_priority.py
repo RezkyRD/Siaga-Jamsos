@@ -25,14 +25,14 @@ INDONESIA_CONTEXT = [
 
 GLOBAL_COMPANY = [
     "amazon", "google", "alphabet", "morgan stanley", "meta", "facebook",
-    "apple", "tesla", "microsoft", "intel", "nvidia", "tiktok",
+    "instagram", "apple", "tesla", "microsoft", "intel", "nvidia", "tiktok",
     "netflix", "warner bros", "ubisoft", "sony", "samsung", "epic games"
 ]
 
 GLOBAL_STRICT = [
-    "facebook", "meta", "amazon", "google", "tesla",
-    "microsoft", "apple", "netflix", "nvidia",
-    "warner bros", "ubisoft", "epic games",
+    "facebook", "meta", "instagram", "amazon", "google", "tesla",
+    "microsoft", "apple", "netflix", "nvidia", "warner bros",
+    "ubisoft", "epic games", "zuckerberg",
     "startup global", "perusahaan global", "raksasa teknologi",
     "raksasa e-commerce", "big tech"
 ]
@@ -80,21 +80,24 @@ def classify_priority(score: int, context_label: str, topic: str) -> str:
 
 
 # =====================================
-# CEK RELEVANSI INDONESIA
+# RELEVANSI INDONESIA
 # =====================================
 
 def is_indonesia_related(text: str) -> bool:
     text = clean_text(text)
 
+    # PMI / WNI tetap relevan
     if any(k in text for k in [
         "pekerja migran indonesia",
         "buruh migran indonesia",
         "pmi indonesia",
         "tki indonesia",
-        "wni"
+        "wni",
+        "warga negara indonesia"
     ]):
         return True
 
+    # kalau ada perusahaan global, wajib ada konteks Indonesia yang kuat
     if any(g in text for g in GLOBAL_COMPANY):
         strong_id_context = [
             "di indonesia",
@@ -110,7 +113,10 @@ def is_indonesia_related(text: str) -> bool:
             "kemnaker",
             "disnaker",
             "bpjs ketenagakerjaan",
-            "bpjamsostek"
+            "bpjamsostek",
+            "phk di indonesia",
+            "buruh indonesia terdampak",
+            "pekerja indonesia terdampak"
         ]
         return any(k in text for k in strong_id_context)
 
@@ -126,7 +132,7 @@ def get_context_label(text: str) -> str:
 
 
 # =====================================
-# DETEKSI EDUKASI LAYANAN
+# EDUKASI LAYANAN
 # =====================================
 
 def is_service_education(text: str) -> bool:
@@ -427,7 +433,7 @@ def analyze_jamsos(text: str) -> dict:
         program.append("JKK")
         alasan.append("Sektor konstruksi memiliki risiko kecelakaan kerja tinggi sehingga relevan dengan program JKK.")
 
-    # Penyesuaian edukasi layanan
+    # Penyesuaian edukasi
     if edukasi:
         score = max(score - 2, 1)
 
@@ -469,14 +475,15 @@ def run_priority(sheet_key=None):
     konteks_list = []
 
     strong_id_context = [
-        "indonesia", "di indonesia", "pekerja indonesia", "buruh indonesia",
-        "pabrik di indonesia", "operasi di indonesia", "anak usaha di indonesia",
-        "anak usaha indonesia", "kemnaker", "disnaker",
-        "bpjs ketenagakerjaan", "bpjamsostek"
+        "di indonesia", "indonesia", "pekerja indonesia", "buruh indonesia",
+        "karyawan di indonesia", "operasi di indonesia", "anak usaha di indonesia",
+        "anak usaha indonesia", "pabrik di indonesia", "kantor di indonesia",
+        "kemnaker", "disnaker", "bpjs ketenagakerjaan", "bpjamsostek",
+        "phk di indonesia", "buruh indonesia terdampak", "pekerja indonesia terdampak"
     ]
 
     for text in text_series:
-        # filter keras untuk berita global
+        # filter keras berita global
         if any(g in text for g in GLOBAL_STRICT) and not any(k in text for k in strong_id_context):
             konteks = "LUAR NEGERI / TIDAK RELEVAN"
             konteks_list.append(konteks)

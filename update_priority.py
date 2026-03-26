@@ -611,32 +611,19 @@ def run_priority(sheet_key=None):
     konteks_list = []
 
     for text in text_series:
+
     global_only_keywords = [
-        "epic games",
-        "warner bros",
-        "ubisoft",
-        "amazon",
-        "google",
-        "meta",
-        "tesla",
-        "microsoft",
-        "netflix",
-        "apple",
-        "intel",
-        "nvidia"
+        "epic games", "warner bros", "ubisoft", "amazon", "google",
+        "meta", "tesla", "microsoft", "netflix", "apple", "intel", "nvidia"
     ]
 
     strong_id_context = [
-        "indonesia",
-        "di indonesia",
-        "pekerja indonesia",
-        "buruh indonesia",
-        "bpjs ketenagakerjaan",
-        "bpjamsostek",
-        "kemnaker",
-        "disnaker"
+        "indonesia", "di indonesia", "pekerja indonesia",
+        "buruh indonesia", "bpjs ketenagakerjaan",
+        "bpjamsostek", "kemnaker", "disnaker"
     ]
 
+    # 🔴 FILTER GLOBAL KERAS
     if any(g in text for g in global_only_keywords) and not any(k in text for k in strong_id_context):
         konteks_list.append("LUAR NEGERI / TIDAK RELEVAN")
         hasil.append({
@@ -648,21 +635,28 @@ def run_priority(sheet_key=None):
             "Alasan_Prioritas": "Berita perusahaan global yang tidak berkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
         })
         continue
-        konteks = get_context_label(text)
-        konteks_list.append(konteks)
 
-        if konteks != "INDONESIA":
-            hasil.append({
-                "Topik_Utama": "Tidak Relevan Indonesia",
-                "Score": 0,
-                "Dampak_Program": "",
-                "Dampak_Kepesertaan": "",
-                "Potensi_Klaim": "",
-                "Alasan_Prioritas": "Berita ketenagakerjaan global yang tidak berkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
-            })
-            continue
+    # =========================
+    # CEK KONTEKS NORMAL
+    # =========================
+    konteks = get_context_label(text)
+    konteks_list.append(konteks)
 
-        hasil.append(analyze_jamsos(text))
+    if konteks != "INDONESIA":
+        hasil.append({
+            "Topik_Utama": "Tidak Relevan Indonesia",
+            "Score": 0,
+            "Dampak_Program": "",
+            "Dampak_Kepesertaan": "",
+            "Potensi_Klaim": "",
+            "Alasan_Prioritas": "Berita ketenagakerjaan global yang tidak berkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
+        })
+        continue
+
+    # =========================
+    # ANALISIS NORMAL
+    # =========================
+    hasil.append(analyze_jamsos(text))
 
     hasil_df = pd.DataFrame(hasil)
 

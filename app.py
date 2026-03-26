@@ -733,12 +733,27 @@ filtered_display = filtered[
     (filtered["Tanggal_Hari"] <= end_date)
 ].copy()
 
+# hanya ambil berita yang relevan Indonesia
+if "Konteks_Berita" in filtered_display.columns:
+    filtered_display = filtered_display[
+        filtered_display["Konteks_Berita"].astype(str).str.strip().eq("INDONESIA")
+    ].copy()
+
+# gunakan Topik_Utama dari hasil analisis jika sudah ada
 if not filtered_display.empty:
-    combo = (
-        filtered_display.get("Judul", "").astype(str) + " " +
-        filtered_display.get("Ringkasan", "").astype(str)
-    )
-    filtered_display["Topik"] = combo.apply(detect_topic)
+    if "Topik_Utama" in filtered_display.columns:
+        filtered_display["Topik"] = (
+            filtered_display["Topik_Utama"]
+            .astype(str)
+            .fillna("")
+            .replace("", "Lainnya")
+        )
+    else:
+        combo = (
+            filtered_display.get("Judul", "").astype(str) + " " +
+            filtered_display.get("Ringkasan", "").astype(str)
+        )
+        filtered_display["Topik"] = combo.apply(detect_topic)
 
 filtered_for_table = filtered_display.copy()
 if filter_option != "SEMUA" and "Prioritas" in filtered_for_table.columns:
@@ -1111,21 +1126,21 @@ with tab_data:
         waktu = escape(clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal", "-"))))
         prioritas = str(row.get("Prioritas", "PRIORITAS RENDAH")).strip()
 
-        topik = escape(clean_label(row.get("Topik", "")))
-        dampak_program = escape(clean_label(row.get("Dampak_Program", "")))
-        dampak_kepesertaan = escape(clean_label(row.get("Dampak_Kepesertaan", "")))
-        potensi_klaim = escape(clean_label(row.get("Potensi_Klaim", "")))
-        alasan = escape(clean_label(row.get("Alasan_Prioritas", "")))
+        topik = escape(clean_label(row.get("Topik_Utama", row.get("Topik", ""))))
+dampak_program = escape(clean_label(row.get("Dampak_Program", "")))
+dampak_kepesertaan = escape(clean_label(row.get("Dampak_Kepesertaan", "")))
+potensi_klaim = escape(clean_label(row.get("Potensi_Klaim", "")))
+alasan = escape(clean_label(row.get("Alasan_Prioritas", "")))
 
         chips = []
-        if topik:
-            chips.append(f"<span class='news-chip'>{topik}</span>")
-        if dampak_program:
-            chips.append(f"<span class='news-chip'>{dampak_program}</span>")
-        if dampak_kepesertaan:
-            chips.append(f"<span class='news-chip'>{dampak_kepesertaan}</span>")
-        if potensi_klaim:
-            chips.append(f"<span class='news-chip'>Klaim: {potensi_klaim}</span>")
+if topik:
+    chips.append(f"<span class='news-chip'>Topik: {topik}</span>")
+if dampak_program:
+    chips.append(f"<span class='news-chip'>Program: {dampak_program}</span>")
+if dampak_kepesertaan:
+    chips.append(f"<span class='news-chip'>Kepesertaan: {dampak_kepesertaan}</span>")
+if potensi_klaim:
+    chips.append(f"<span class='news-chip'>Klaim: {potensi_klaim}</span>")
 
         link_html = ""
         if link:

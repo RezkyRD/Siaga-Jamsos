@@ -185,6 +185,27 @@ html, body, [class*="css"] {
     margin-bottom: .65rem;
 }
 
+.chart-card,
+.analysis-card {
+    background: var(--card-light);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line-light);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+    padding: 16px 18px;
+    height: 100%;
+}
+
+@media (prefers-color-scheme: dark) {
+    .chart-card,
+    .analysis-card {
+        background: var(--card-dark);
+        border: 1px solid var(--line-dark);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+    }
+}
+
 .chart-caption {
     font-size: 12px;
     color: #667085;
@@ -204,6 +225,33 @@ html, body, [class*="css"] {
 
 @media (prefers-color-scheme: dark) {
     .chart-caption { color: #94a3b8; }
+}
+
+.top5-card {
+    background: var(--card-light);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line-light);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+    padding: 16px 18px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .top5-card {
+        background: var(--card-dark);
+        border: 1px solid var(--line-dark);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+    }
+}
+
+.top5-item {
+    padding: 10px 0;
+    border-bottom: 1px dashed rgba(102, 112, 133, 0.25);
+}
+.top5-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
 .top5-link a {
@@ -239,7 +287,6 @@ html, body, [class*="css"] {
 .badge-high { background: linear-gradient(135deg, #ef4444, #dc2626); }
 .badge-mid { background: linear-gradient(135deg, #f59e0b, #d97706); }
 .badge-low { background: linear-gradient(135deg, #22c55e, #16a34a); }
-
 .badge-cat {
     background: rgba(79,70,229,.12);
     color: #4338ca;
@@ -409,56 +456,6 @@ def badge_html(prioritas: str) -> str:
     elif prioritas == "PRIORITAS SEDANG":
         return "<span class='badge badge-mid'>Prioritas Sedang</span>"
     return "<span class='badge badge-low'>Prioritas Rendah</span>"
-
-def normalize_datetime_col(df: pd.DataFrame, col: str) -> pd.Series:
-    s = pd.to_datetime(df[col], errors="coerce")
-    try:
-        if getattr(s.dt, "tz", None) is not None:
-            s = s.dt.tz_localize(None)
-    except Exception:
-        pass
-    return s
-
-def build_alerts(df: pd.DataFrame) -> list[str]:
-    alerts = []
-    if df.empty:
-        return ["Belum ada isu signifikan pada periode terpilih."]
-
-    df_alert = df.copy()
-
-    # Prioritas tinggi
-    if "Prioritas" in df_alert.columns:
-        tinggi_count = int((df_alert["Prioritas"] == "PRIORITAS TINGGI").sum())
-        if tinggi_count >= 3:
-            alerts.append("🚨 Terjadi peningkatan isu prioritas tinggi yang memerlukan perhatian segera.")
-        elif tinggi_count > 0:
-            alerts.append("🟡 Terdapat isu prioritas tinggi yang perlu dipantau lebih dekat.")
-
-    # Topik dominan
-    if "Topik" in df_alert.columns and not df_alert["Topik"].empty:
-        topik_counts = df_alert["Topik"].value_counts()
-        if not topik_counts.empty and int(topik_counts.iloc[0]) >= 5:
-            alerts.append(f"📈 Isu didominasi oleh topik {clean_label(topik_counts.index[0])}.")
-
-    # Wilayah dominan
-    if "Provinsi" in df_alert.columns:
-        prov_counts = df_alert["Provinsi"].astype(str).str.strip()
-        prov_counts = prov_counts[prov_counts != ""].value_counts()
-        if not prov_counts.empty and int(prov_counts.iloc[0]) >= 3:
-            alerts.append(f"🌍 Konsentrasi isu terpantau di wilayah {prov_counts.index[0]}.")
-
-    # Lonjakan 6 jam terakhir
-    if "Waktu_Publish_WIB" in df_alert.columns:
-        try:
-            publish_dt = normalize_datetime_col(df_alert, "Waktu_Publish_WIB")
-            now = pd.Timestamp.now()
-            recent = df_alert[publish_dt >= (now - pd.Timedelta(hours=6))]
-            if len(recent) >= 3:
-                alerts.append("⏱ Terjadi lonjakan isu dalam 6 jam terakhir.")
-        except Exception:
-            pass
-
-    return alerts if alerts else ["Belum ada eskalasi signifikan pada periode terpilih."]
 
 # ===============================
 # LOAD DATA
@@ -753,16 +750,9 @@ with tab_dash:
     df_critical = filtered_display.copy()
     if "Score" in df_critical.columns:
         df_critical["Score_num"] = pd.to_numeric(df_critical["Score"], errors="coerce").fillna(0)
-        sort_cols = ["Score_num"]
-        ascending = [False]
-        if "Waktu_Publish_WIB" in df_critical.columns:
-            df_critical["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_critical, "Waktu_Publish_WIB")
-            sort_cols.append("Waktu_Publish_WIB_dt")
-            ascending.append(False)
-        df_critical = df_critical.sort_values(sort_cols, ascending=ascending)
+        df_critical = df_critical.sort_values(["Score_num", "Waktu_Publish_WIB"], ascending=[False, False])
     elif "Waktu_Publish_WIB" in df_critical.columns:
-        df_critical["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_critical, "Waktu_Publish_WIB")
-        df_critical = df_critical.sort_values("Waktu_Publish_WIB_dt", ascending=False)
+        df_critical = df_critical.sort_values("Waktu_Publish_WIB", ascending=False)
 
     if not df_critical.empty:
         top_issue = df_critical.iloc[0]
@@ -905,8 +895,7 @@ with tab_dash:
 
         if not df_high.empty:
             if "Waktu_Publish_WIB" in df_high.columns:
-                df_high["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_high, "Waktu_Publish_WIB")
-                df_high = df_high.sort_values("Waktu_Publish_WIB_dt", ascending=False)
+                df_high = df_high.sort_values("Waktu_Publish_WIB", ascending=False)
 
             top5 = df_high.head(5)
 
@@ -1037,16 +1026,34 @@ Topik dominan pada periode ini:
         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
         st.markdown('<div class="section-title">🔥 Alert Eskalasi</div>', unsafe_allow_html=True)
 
-        alerts = build_alerts(filtered_display)
-        for msg in alerts:
-            st.markdown(
-                f"""
-                <div class="news-card">
-                    <div class="news-title">{escape(msg)}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+        df_alert = filtered_display.copy()
+        if "Score" in df_alert.columns:
+            df_alert["Score_num"] = pd.to_numeric(df_alert["Score"], errors="coerce").fillna(0)
+            df_alert = df_alert.sort_values(["Score_num", "Waktu_Publish_WIB"], ascending=[False, False])
+        elif "Waktu_Publish_WIB" in df_alert.columns:
+            df_alert = df_alert.sort_values("Waktu_Publish_WIB", ascending=False)
+
+        top_alert = df_alert.head(3)
+
+        if not top_alert.empty:
+            for _, row in top_alert.iterrows():
+                st.markdown(
+                    f"""
+                    <div class="news-card">
+                        <div class="news-title">{escape(str(row.get("Topik_Utama", "-")))}</div>
+                        <div class="news-meta">
+                            {escape(str(row.get("Kategori_Berita", "-")))} •
+                            Score {escape(str(row.get("Score", "0")))}
+                        </div>
+                        <div style="font-size:.95rem; line-height:1.65;">
+                            {escape(str(row.get("Alasan_Prioritas", "-")))}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+        else:
+            st.info("Belum ada alert eskalasi.")
 
 # ===============================
 # TAB: DATA BERITA
@@ -1069,16 +1076,11 @@ with tab_data:
     df_display["Urutan"] = df_display["Prioritas"].map(priority_order).fillna(99)
 
     sort_col = None
-    if "Waktu_Publish_WIB" in df_display.columns:
-        df_display["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_display, "Waktu_Publish_WIB")
-        sort_col = "Waktu_Publish_WIB_dt"
-    elif "Tanggal_Publish" in df_display.columns:
-        df_display["Tanggal_Publish_dt"] = pd.to_datetime(df_display["Tanggal_Publish"], errors="coerce")
-        sort_col = "Tanggal_Publish_dt"
-    elif "Tanggal_Ambil" in df_display.columns:
-        df_display["Tanggal_Ambil_dt"] = pd.to_datetime(df_display["Tanggal_Ambil"], errors="coerce")
-        sort_col = "Tanggal_Ambil_dt"
-    else:
+    for c in ["Waktu_Publish_WIB", "Tanggal_Publish", "Tanggal_Ambil", "Tanggal_Hari"]:
+        if c in df_display.columns:
+            sort_col = c
+            break
+    if sort_col is None:
         sort_col = "Urutan"
 
     df_display = df_display.sort_values(["Urutan", sort_col], ascending=[True, False]).drop(columns=["Urutan"])
@@ -1185,7 +1187,7 @@ with tab_data:
         df_ews["Topik"] = combo.apply(detect_topic)
 
     if "Waktu_Publish_WIB" in df_ews.columns:
-        df_ews["publish_dt"] = normalize_datetime_col(df_ews, "Waktu_Publish_WIB")
+        df_ews["publish_dt"] = pd.to_datetime(df_ews["Waktu_Publish_WIB"], errors="coerce")
     elif "Tanggal_Publish" in df_ews.columns:
         df_ews["publish_dt"] = pd.to_datetime(df_ews["Tanggal_Publish"], errors="coerce")
     else:
@@ -1193,7 +1195,7 @@ with tab_data:
 
     df_ews = df_ews.dropna(subset=["publish_dt"]).copy()
 
-    now = pd.Timestamp.now()
+    now = pd.Timestamp.now(tz="Asia/Jakarta").tz_localize(None)
     w1_start = now - pd.Timedelta(hours=24)
     w0_start = now - pd.Timedelta(hours=48)
 
@@ -1385,14 +1387,9 @@ with tab_region:
             df_region = df_region.copy()
             if "Score" in df_region.columns:
                 df_region["Score_num"] = pd.to_numeric(df_region["Score"], errors="coerce").fillna(0)
-                if "Waktu_Publish_WIB" in df_region.columns:
-                    df_region["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_region, "Waktu_Publish_WIB")
-                    df_region = df_region.sort_values(["Score_num", "Waktu_Publish_WIB_dt"], ascending=[False, False])
-                else:
-                    df_region = df_region.sort_values(["Score_num"], ascending=[False])
+                df_region = df_region.sort_values(["Score_num", "Waktu_Publish_WIB"], ascending=[False, False])
             elif "Waktu_Publish_WIB" in df_region.columns:
-                df_region["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_region, "Waktu_Publish_WIB")
-                df_region = df_region.sort_values("Waktu_Publish_WIB_dt", ascending=False)
+                df_region = df_region.sort_values("Waktu_Publish_WIB", ascending=False)
 
             for _, row in df_region.head(20).iterrows():
                 judul = escape(clean_label(row.get("Judul", "-")))

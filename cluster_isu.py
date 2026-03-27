@@ -15,6 +15,8 @@ OUTPUT_COLUMNS = [
     "Kabupaten_Kota",
     "Lokasi_Utama",
     "Tanggal_Isu",
+    "Window_Tanggal",
+    "Entity_Key",
     "Jumlah_Berita",
     "Jumlah_Media",
     "Daftar_Media",
@@ -33,26 +35,57 @@ STOPWORDS = {
     "dan", "di", "ke", "dari", "untuk", "pada", "dengan", "karena", "akibat",
     "yang", "ini", "itu", "atau", "oleh", "dalam", "soal", "terkait", "usai",
     "saat", "bikin", "jadi", "hingga", "kian", "bakal", "masih", "sudah",
-    "para", "sejumlah", "seorang", "orang", "tahun", "hari", "bulan", "jakarta",
-    "indonesia", "nasional", "media", "berita", "update", "terbaru"
+    "para", "sejumlah", "seorang", "orang", "tahun", "hari", "bulan",
+    "indonesia", "nasional", "media", "berita", "update", "terbaru",
+    "menteri", "pemerintah", "tegaskan", "ternyata", "ancaman", "isu",
+    "katanya", "bakal", "resmi", "soal", "begini", "bikin", "jadi",
+    "buruh", "pekerja", "karyawan", "pegawai", "perusahaan", "industri",
+    "jakarta", "jawa", "barat", "timur", "tengah", "sumatera", "sulawesi",
+    "bali", "papua", "kalimantan", "kepulauan", "provinsi", "kabupaten", "kota"
 }
 
 
 TOPIC_HINT_WORDS = {
-    "PHK": {"phk", "dirumahkan", "pesangon", "kontrak", "karyawan", "buruh", "pekerja"},
+    "PHK": {"phk", "dirumahkan", "pesangon", "kontrak", "pabrik", "efisiensi", "gelombang"},
     "Kecelakaan Kerja (JKK)": {"kecelakaan", "ledakan", "kebakaran", "tewas", "korban", "proyek"},
-    "THR / Kesejahteraan Pekerja": {"thr", "tunjangan", "hari", "raya"},
+    "THR / Kesejahteraan Pekerja": {"thr", "tunjangan", "raya"},
     "Upah / Gaji": {"upah", "gaji", "ump", "umk"},
-    "Aksi / Demo Buruh": {"demo", "mogok", "unjuk", "rasa", "buruh"},
+    "Aksi / Demo Buruh": {"demo", "mogok", "unjuk", "rasa", "aksi"},
     "Konflik Hubungan Industrial": {"perselisihan", "sengketa", "konflik", "tripartit", "mediasi"},
     "Kepesertaan BPJS": {"bpjs", "bpjamsostek", "jamsostek", "kepesertaan", "iuran"},
-    "Klaim JHT": {"jht", "hari", "tua", "klaim", "saldo"},
-    "Manfaat JKP": {"jkp", "kehilangan", "pekerjaan", "klaim"},
+    "Klaim JHT": {"jht", "klaim", "saldo"},
+    "Manfaat JKP": {"jkp", "klaim", "kehilangan"},
     "Jaminan Pensiun (JP)": {"jp", "pensiun", "iuran"},
-    "Santunan Kematian (JKM)": {"jkm", "kematian", "ahli", "waris"},
+    "Santunan Kematian (JKM)": {"jkm", "kematian", "waris"},
     "Tunggakan Iuran": {"tunggakan", "iuran", "denda"},
     "Pekerja Migran Indonesia (PMI)": {"pmi", "migran", "tki"},
     "Jasa Konstruksi": {"konstruksi", "proyek", "pembangunan"},
+}
+
+TOPIC_GENERIC_KEYS = {
+    "PHK": "gelombang_phk",
+    "THR / Kesejahteraan Pekerja": "isu_thr",
+    "Upah / Gaji": "isu_upah",
+    "Aksi / Demo Buruh": "aksi_buruh",
+    "Konflik Hubungan Industrial": "konflik_hubungan_industrial",
+    "Kepesertaan BPJS": "kepesertaan_bpjs",
+    "Klaim JHT": "klaim_jht",
+    "Manfaat JKP": "manfaat_jkp",
+    "Jaminan Pensiun (JP)": "jaminan_pensiun",
+    "Santunan Kematian (JKM)": "santunan_kematian",
+    "Tunggakan Iuran": "tunggakan_iuran",
+    "Pekerja Migran Indonesia (PMI)": "isu_pmi",
+    "Jasa Konstruksi": "isu_konstruksi",
+}
+
+NATIONAL_TOPICS = {
+    "PHK",
+    "THR / Kesejahteraan Pekerja",
+    "Upah / Gaji",
+    "Aksi / Demo Buruh",
+    "Konflik Hubungan Industrial",
+    "Kepesertaan BPJS",
+    "Tunggakan Iuran",
 }
 
 
@@ -83,12 +116,44 @@ def get_lokasi_utama(row) -> str:
     return "Nasional / Tidak Diketahui"
 
 
+def is_national_like_location(lokasi: str) -> bool:
+    lokasi = str(lokasi or "").strip().lower()
+    return lokasi in {"nasional", "nasional / tidak spesifik", "nasional / tidak diketahui", "tidak diketahui", ""}
+
+
+def normalize_entity_word(tok: str) -> str:
+    tok = str(tok or "").strip().lower()
+
+    replacements = {
+        "pppk": "pppk",
+        "asn": "asn",
+        "bpjs": "bpjs",
+        "bpjamsostek": "bpjs",
+        "jamsostek": "bpjs",
+        "jkp": "jkp",
+        "jht": "jht",
+        "jkk": "jkk",
+        "jkm": "jkm",
+        "jp": "jp",
+        "thr": "thr",
+        "umk": "umk",
+        "ump": "ump",
+        "phk": "phk",
+        "sritex": "sritex",
+        "prabowo": "prabowo",
+        "pns": "asn",
+        "honorer": "honorer",
+    }
+    return replacements.get(tok, tok)
+
+
 def tokenize_title(title: str) -> list[str]:
     text = clean_text(title)
     tokens = text.split()
 
     hasil = []
     for tok in tokens:
+        tok = normalize_entity_word(tok)
         if tok in STOPWORDS:
             continue
         if tok.isdigit():
@@ -100,44 +165,70 @@ def tokenize_title(title: str) -> list[str]:
     return hasil
 
 
-def build_signature(title: str, topic: str = "") -> str:
+def extract_entity_candidates(title: str, topic: str = "") -> list[str]:
     tokens = tokenize_title(title)
-
     if not tokens:
-        return "umum"
+        return []
 
     topic_hints = TOPIC_HINT_WORDS.get(str(topic or "").strip(), set())
 
-    preferred = []
-    others = []
+    priority = []
+    secondary = []
 
     for tok in tokens:
         if tok in topic_hints:
-            preferred.append(tok)
+            priority.append(tok)
         else:
-            others.append(tok)
+            secondary.append(tok)
 
     chosen = []
-    for tok in preferred:
+    for tok in priority:
         if tok not in chosen:
             chosen.append(tok)
-        if len(chosen) >= 3:
-            break
 
-    for tok in others:
+    for tok in secondary:
         if tok not in chosen:
             chosen.append(tok)
-        if len(chosen) >= 3:
+
+    return chosen[:5]
+
+
+def build_entity_key(title: str, topic: str = "", lokasi: str = "") -> str:
+    candidates = extract_entity_candidates(title, topic)
+    lokasi = str(lokasi or "").strip()
+
+    # ambil 2 kata inti pertama kalau ada
+    core = []
+    for tok in candidates:
+        if tok not in core:
+            core.append(tok)
+        if len(core) >= 2:
             break
 
-    if not chosen:
-        chosen = tokens[:3]
+    # fallback nasional untuk topik besar bila judul terlalu generik
+    if len(core) == 0:
+        return TOPIC_GENERIC_KEYS.get(str(topic or "").strip(), "isu_umum")
 
-    return " ".join(chosen)
+    # bila lokasi nasional/tidak jelas dan topik besar, longgarkan cluster
+    if is_national_like_location(lokasi) and str(topic or "").strip() in NATIONAL_TOPICS:
+        return TOPIC_GENERIC_KEYS.get(str(topic or "").strip(), "isu_umum")
+
+    return "_".join(core)
 
 
-def make_cluster_id(topic: str, lokasi: str, tanggal: str, signature: str) -> str:
-    raw = f"{topic}|{lokasi}|{tanggal}|{signature}"
+def get_time_window_key(date_value) -> str:
+    dt = pd.to_datetime(date_value, errors="coerce")
+    if pd.isna(dt):
+        return "unknown"
+
+    # bucket 3 harian
+    day = int(dt.day)
+    bucket = ((day - 1) // 3) + 1
+    return f"{dt.year}-{dt.month:02d}-W{bucket:02d}"
+
+
+def make_cluster_id(topic: str, lokasi: str, window_tanggal: str, entity_key: str) -> str:
+    raw = f"{topic}|{lokasi}|{window_tanggal}|{entity_key}"
     digest = hashlib.md5(raw.encode("utf-8")).hexdigest()[:10].upper()
     return f"ISU-{digest}"
 
@@ -153,7 +244,7 @@ def classify_cluster_priority(score: float) -> str:
 def get_cluster_scale(jumlah_media: int, jumlah_berita: int) -> str:
     if jumlah_media >= 6 or jumlah_berita >= 10:
         return "BESAR"
-    if jumlah_media >= 3 or jumlah_berita >= 5:
+    if jumlah_media >= 3 or jumlah_berita >= 4:
         return "MENENGAH"
     return "KECIL"
 
@@ -234,7 +325,8 @@ def run_cluster_isu(sheet_key=None):
 
     for col in [
         "Judul", "Media", "Link", "Topik_Utama", "Kategori_Berita",
-        "Provinsi", "Kabupaten_Kota", "Tanggal_Publish", "Prioritas", "Score"
+        "Provinsi", "Kabupaten_Kota", "Tanggal_Publish", "Prioritas", "Score",
+        "Waktu_Publish_WIB", "Jumlah_Media_Serupa"
     ]:
         if col not in df.columns:
             df[col] = ""
@@ -249,6 +341,7 @@ def run_cluster_isu(sheet_key=None):
     df["Tanggal_Publish"] = df["Tanggal_Publish"].astype(str).fillna("")
     df["Prioritas"] = df["Prioritas"].astype(str).fillna("")
     df["Score"] = pd.to_numeric(df["Score"], errors="coerce").fillna(0)
+    df["Jumlah_Media_Serupa"] = pd.to_numeric(df["Jumlah_Media_Serupa"], errors="coerce").fillna(0)
 
     df = df[df["Topik_Utama"].str.strip() != ""].copy()
 
@@ -258,17 +351,23 @@ def run_cluster_isu(sheet_key=None):
         return empty_df
 
     df["Lokasi_Utama"] = df.apply(get_lokasi_utama, axis=1)
-    df["Signature_Judul"] = df.apply(
-        lambda r: build_signature(r.get("Judul", ""), r.get("Topik_Utama", "")),
+    df["Window_Tanggal"] = df["Tanggal_Publish"].apply(get_time_window_key)
+    df["Entity_Key"] = df.apply(
+        lambda r: build_entity_key(
+            r.get("Judul", ""),
+            r.get("Topik_Utama", ""),
+            r.get("Lokasi_Utama", "")
+        ),
         axis=1
     )
 
     cluster_rows = []
 
-    group_cols = ["Topik_Utama", "Lokasi_Utama", "Tanggal_Publish", "Signature_Judul"]
+    # cluster lebih longgar: topik + lokasi + window tanggal + entity key
+    group_cols = ["Topik_Utama", "Lokasi_Utama", "Window_Tanggal", "Entity_Key"]
 
     for keys, group in df.groupby(group_cols, dropna=False):
-        topik, lokasi, tanggal, signature = keys
+        topik, lokasi, window_tanggal, entity_key = keys
         rep = pick_representative(group)
 
         jumlah_berita = int(len(group))
@@ -288,12 +387,17 @@ def run_cluster_isu(sheet_key=None):
 
         if jumlah_berita >= 6:
             boost += 1
+        elif jumlah_berita >= 3:
+            boost += 0.5
 
         score_cluster = score_maks + boost
         prioritas_cluster = classify_cluster_priority(score_cluster)
         skala_cluster = get_cluster_scale(jumlah_media, jumlah_berita)
 
-        cluster_id = make_cluster_id(topik, lokasi, tanggal, signature)
+        # ambil tanggal isu dari berita representatif
+        tanggal_isu = str(rep.get("Tanggal_Publish", "") or "").strip()
+
+        cluster_id = make_cluster_id(topik, lokasi, window_tanggal, entity_key)
 
         row_out = {
             "Cluster_ID": cluster_id,
@@ -303,7 +407,9 @@ def run_cluster_isu(sheet_key=None):
             "Provinsi": str(rep.get("Provinsi", "") or "").strip(),
             "Kabupaten_Kota": str(rep.get("Kabupaten_Kota", "") or "").strip(),
             "Lokasi_Utama": str(lokasi or "").strip(),
-            "Tanggal_Isu": str(tanggal or "").strip(),
+            "Tanggal_Isu": tanggal_isu,
+            "Window_Tanggal": str(window_tanggal or "").strip(),
+            "Entity_Key": str(entity_key or "").strip(),
             "Jumlah_Berita": jumlah_berita,
             "Jumlah_Media": jumlah_media,
             "Daftar_Media": daftar_media,
@@ -335,6 +441,9 @@ def run_cluster_isu(sheet_key=None):
     }
     cluster_df["__prio_order"] = cluster_df["Prioritas_Cluster"].map(priority_order).fillna(99)
     cluster_df["__score"] = pd.to_numeric(cluster_df["Score_Maks"], errors="coerce").fillna(0)
+    cluster_df["Jumlah_Media"] = pd.to_numeric(cluster_df["Jumlah_Media"], errors="coerce").fillna(0)
+    cluster_df["Jumlah_Berita"] = pd.to_numeric(cluster_df["Jumlah_Berita"], errors="coerce").fillna(0)
+
     cluster_df = cluster_df.sort_values(
         ["__prio_order", "__score", "Jumlah_Media", "Jumlah_Berita"],
         ascending=[True, False, False, False]

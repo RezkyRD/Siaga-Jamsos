@@ -46,7 +46,7 @@ def read_sheet(sheet_key: str, worksheet_name: str) -> pd.DataFrame:
     return df
 
 
-def clear_and_write(sheet_key: str, worksheet_name: str, df: pd.DataFrame):
+def clear_and_write(sheet_key: str, worksheet_name: str, df: pd.DataFrame, chunk_size: int = 500):
     sh = open_by_key(sheet_key)
     ws = sh.worksheet(worksheet_name)
     ws.clear()
@@ -56,13 +56,33 @@ def clear_and_write(sheet_key: str, worksheet_name: str, df: pd.DataFrame):
         return
 
     if df.empty:
-        # tulis header saja bila ada
         if len(df.columns) > 0:
-            ws.update([df.columns.tolist()])
+            ws.update("A1", [df.columns.tolist()])
         else:
-            ws.update([[""]])
+            ws.update("A1", [[""]])
         read_sheet.clear()
         return
 
-    ws.update([df.columns.tolist()] + df.astype(str).values.tolist())
+    # pastikan semua string dan tidak ada NaN
+    df = df.fillna("").astype(str)
+
+    headers = df.columns.tolist()
+    rows = df.values.tolist()
+
+    # tulis header dulu
+    ws.update("A1", [headers])
+
+    # tulis isi per chunk
+    start_row = 2
+    for i in range(0, len(rows), chunk_size):
+        chunk = rows[i:i + chunk_size]
+        end_row = start_row + len(chunk) - 1
+
+        start_col_letter = "A"
+        end_col_letter = gspread.utils.rowcol_to_a1(1, len(headers)).rstrip("1")
+        cell_range = f"{start_col_letter}{start_row}:{end_col_letter}{end_row}"
+
+        ws.update(cell_range, chunk)
+        start_row = end_row + 1
+
     read_sheet.clear()

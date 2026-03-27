@@ -39,6 +39,96 @@ GLOBAL_STRICT = [
 
 
 # =====================================
+# PETA LOKASI
+# =====================================
+
+PROVINCE_ALIASES = {
+    "aceh": "Aceh",
+    "sumatera utara": "Sumatera Utara",
+    "sumut": "Sumatera Utara",
+    "sumatera barat": "Sumatera Barat",
+    "sumbar": "Sumatera Barat",
+    "riau": "Riau",
+    "kepulauan riau": "Kepulauan Riau",
+    "kepri": "Kepulauan Riau",
+    "jambi": "Jambi",
+    "sumatera selatan": "Sumatera Selatan",
+    "sumsel": "Sumatera Selatan",
+    "kepulauan bangka belitung": "Kepulauan Bangka Belitung",
+    "bangka belitung": "Kepulauan Bangka Belitung",
+    "babel": "Kepulauan Bangka Belitung",
+    "bengkulu": "Bengkulu",
+    "lampung": "Lampung",
+    "banten": "Banten",
+    "dki jakarta": "DKI Jakarta",
+    "jakarta": "DKI Jakarta",
+    "dki": "DKI Jakarta",
+    "jawa barat": "Jawa Barat",
+    "jabar": "Jawa Barat",
+    "jawa tengah": "Jawa Tengah",
+    "jateng": "Jawa Tengah",
+    "di yogyakarta": "DI Yogyakarta",
+    "diy": "DI Yogyakarta",
+    "yogyakarta": "DI Yogyakarta",
+    "jawa timur": "Jawa Timur",
+    "jatim": "Jawa Timur",
+    "bali": "Bali",
+    "nusa tenggara barat": "Nusa Tenggara Barat",
+    "ntb": "Nusa Tenggara Barat",
+    "nusa tenggara timur": "Nusa Tenggara Timur",
+    "ntt": "Nusa Tenggara Timur",
+    "kalimantan barat": "Kalimantan Barat",
+    "kalbar": "Kalimantan Barat",
+    "kalimantan tengah": "Kalimantan Tengah",
+    "kalteng": "Kalimantan Tengah",
+    "kalimantan selatan": "Kalimantan Selatan",
+    "kalsel": "Kalimantan Selatan",
+    "kalimantan timur": "Kalimantan Timur",
+    "kaltim": "Kalimantan Timur",
+    "kalimantan utara": "Kalimantan Utara",
+    "kaltara": "Kalimantan Utara",
+    "sulawesi utara": "Sulawesi Utara",
+    "sulut": "Sulawesi Utara",
+    "gorontalo": "Gorontalo",
+    "sulawesi tengah": "Sulawesi Tengah",
+    "sulteng": "Sulawesi Tengah",
+    "sulawesi barat": "Sulawesi Barat",
+    "sulbar": "Sulawesi Barat",
+    "sulawesi selatan": "Sulawesi Selatan",
+    "sulsel": "Sulawesi Selatan",
+    "sulawesi tenggara": "Sulawesi Tenggara",
+    "sultra": "Sulawesi Tenggara",
+    "maluku": "Maluku",
+    "maluku utara": "Maluku Utara",
+    "malut": "Maluku Utara",
+    "papua": "Papua",
+    "papua barat": "Papua Barat",
+}
+
+CITY_TO_PROVINCE = {
+    "bekasi": ("Bekasi", "Jawa Barat"),
+    "kabupaten bekasi": ("Kabupaten Bekasi", "Jawa Barat"),
+    "kota bekasi": ("Kota Bekasi", "Jawa Barat"),
+    "karawang": ("Karawang", "Jawa Barat"),
+    "bandung": ("Bandung", "Jawa Barat"),
+    "bogor": ("Bogor", "Jawa Barat"),
+    "depok": ("Depok", "Jawa Barat"),
+    "cikarang": ("Cikarang", "Jawa Barat"),
+    "jakarta": ("DKI Jakarta", "DKI Jakarta"),
+    "surabaya": ("Surabaya", "Jawa Timur"),
+    "sidoarjo": ("Sidoarjo", "Jawa Timur"),
+    "gresik": ("Gresik", "Jawa Timur"),
+    "semarang": ("Semarang", "Jawa Tengah"),
+    "batam": ("Batam", "Kepulauan Riau"),
+    "medan": ("Medan", "Sumatera Utara"),
+    "makassar": ("Makassar", "Sulawesi Selatan"),
+    "tangerang": ("Tangerang", "Banten"),
+    "kabupaten tangerang": ("Kabupaten Tangerang", "Banten"),
+    "kota tangerang": ("Kota Tangerang", "Banten"),
+}
+
+
+# =====================================
 # HELPERS
 # =====================================
 
@@ -48,7 +138,7 @@ def clean_text(text: str) -> str:
     return text
 
 
-def unique_join(items: list[str]) -> str:
+def unique_join(items) -> str:
     out = []
     seen = set()
     for item in items:
@@ -59,34 +149,49 @@ def unique_join(items: list[str]) -> str:
     return ", ".join(out)
 
 
-def contains_any(text: str, patterns: list[str]) -> bool:
+def contains_any(text: str, patterns) -> bool:
     return any(re.search(p, text) for p in patterns)
 
 
-def classify_priority(score: int, context_label: str, topic: str) -> str:
-    if context_label != "INDONESIA":
-        return "PRIORITAS RENDAH"
+def detect_location(text: str) -> dict:
+    text = clean_text(text)
 
-    if topic == "Layanan / Edukasi Klaim":
-        if score >= 6:
-            return "PRIORITAS SEDANG"
-        return "PRIORITAS RENDAH"
+    # cari kabupaten/kota dulu
+    for key, (city_name, province_name) in CITY_TO_PROVINCE.items():
+        if re.search(rf"\b{re.escape(key)}\b", text):
+            return {
+                "Provinsi": province_name,
+                "Kabupaten_Kota": city_name,
+                "Status_Lokasi": "Spesifik"
+            }
 
-    if score >= 8:
-        return "PRIORITAS TINGGI"
-    if score >= 4:
-        return "PRIORITAS SEDANG"
-    return "PRIORITAS RENDAH"
+    # lalu provinsi
+    for alias, province_name in PROVINCE_ALIASES.items():
+        if re.search(rf"\b{re.escape(alias)}\b", text):
+            return {
+                "Provinsi": province_name,
+                "Kabupaten_Kota": "",
+                "Status_Lokasi": "Provinsi"
+            }
 
+    # konteks nasional umum
+    if "indonesia" in text or "nasional" in text or "kemnaker" in text or "bpjs ketenagakerjaan" in text:
+        return {
+            "Provinsi": "Nasional",
+            "Kabupaten_Kota": "",
+            "Status_Lokasi": "Nasional / Tidak Spesifik"
+        }
 
-# =====================================
-# RELEVANSI INDONESIA
-# =====================================
+    return {
+        "Provinsi": "",
+        "Kabupaten_Kota": "",
+        "Status_Lokasi": "Tidak Diketahui"
+    }
+
 
 def is_indonesia_related(text: str) -> bool:
     text = clean_text(text)
 
-    # PMI / WNI tetap relevan
     if any(k in text for k in [
         "pekerja migran indonesia",
         "buruh migran indonesia",
@@ -97,26 +202,13 @@ def is_indonesia_related(text: str) -> bool:
     ]):
         return True
 
-    # kalau ada perusahaan global, wajib ada konteks Indonesia yang kuat
     if any(g in text for g in GLOBAL_COMPANY):
         strong_id_context = [
-            "di indonesia",
-            "indonesia",
-            "pekerja indonesia",
-            "buruh indonesia",
-            "karyawan di indonesia",
-            "operasi di indonesia",
-            "anak usaha di indonesia",
-            "anak usaha indonesia",
-            "pabrik di indonesia",
-            "kantor di indonesia",
-            "kemnaker",
-            "disnaker",
-            "bpjs ketenagakerjaan",
-            "bpjamsostek",
-            "phk di indonesia",
-            "buruh indonesia terdampak",
-            "pekerja indonesia terdampak"
+            "di indonesia", "indonesia", "pekerja indonesia", "buruh indonesia",
+            "karyawan di indonesia", "operasi di indonesia", "anak usaha di indonesia",
+            "anak usaha indonesia", "pabrik di indonesia", "kantor di indonesia",
+            "kemnaker", "disnaker", "bpjs ketenagakerjaan", "bpjamsostek",
+            "phk di indonesia", "buruh indonesia terdampak", "pekerja indonesia terdampak"
         ]
         return any(k in text for k in strong_id_context)
 
@@ -130,10 +222,6 @@ def get_context_label(text: str) -> str:
         return "PMI"
     return "LUAR NEGERI / TIDAK RELEVAN"
 
-
-# =====================================
-# EDUKASI LAYANAN
-# =====================================
 
 def is_service_education(text: str) -> bool:
     return contains_any(text, [
@@ -159,9 +247,13 @@ def is_service_education(text: str) -> bool:
     ])
 
 
-# =====================================
-# IDENTIFIKASI TOPIK
-# =====================================
+def detect_category(text: str) -> str:
+    if is_service_education(text):
+        return "EDUKASI"
+    if is_indonesia_related(text):
+        return "NASIONAL"
+    return "GLOBAL"
+
 
 def detect_topic(text: str) -> str:
     if is_service_education(text):
@@ -234,11 +326,7 @@ def detect_topic(text: str) -> str:
     return "Lainnya"
 
 
-# =====================================
-# KLASIFIKASI KEPESERTAAN
-# =====================================
-
-def detect_kepesertaan(text: str) -> list[str]:
+def detect_kepesertaan(text: str):
     hasil = []
 
     if contains_any(text, [
@@ -267,50 +355,102 @@ def detect_kepesertaan(text: str) -> list[str]:
     return hasil
 
 
-# =====================================
-# ANALISIS RISIKO / PRIORITAS
-# =====================================
+def classify_priority(score: int, category: str, topic: str) -> str:
+    if category == "EDUKASI":
+        return "PRIORITAS RENDAH"
 
-def analyze_jamsos(text: str) -> dict:
+    if category == "GLOBAL":
+        if score >= 6:
+            return "PRIORITAS SEDANG"
+        return "PRIORITAS RENDAH"
+
+    if score >= 7:
+        return "PRIORITAS TINGGI"
+    if score >= 4:
+        return "PRIORITAS SEDANG"
+    return "PRIORITAS RENDAH"
+
+
+def build_short_reason(topic: str, programs: str, claims: str, category: str) -> str:
+    if category == "EDUKASI":
+        return "Berita bersifat edukasi layanan dan tidak memerlukan penanganan prioritas."
+
+    reasons = {
+        "PHK": "PHK berpotensi meningkatkan klaim JKP dan pencairan JHT.",
+        "Kecelakaan Kerja (JKK)": "Kecelakaan kerja berpotensi menimbulkan klaim JKK.",
+        "THR / Kesejahteraan Pekerja": "Permasalahan THR berpotensi memicu konflik hubungan industrial.",
+        "Upah / Gaji": "Isu upah berpotensi memicu perselisihan dan mempengaruhi stabilitas hubungan kerja.",
+        "Kepesertaan BPJS": "Isu kepesertaan berdampak pada cakupan perlindungan tenaga kerja.",
+        "Tunggakan Iuran": "Tunggakan iuran berdampak pada kepatuhan dan kesinambungan perlindungan peserta.",
+        "Manfaat JKP": "Isu JKP berkaitan langsung dengan perlindungan pekerja terdampak PHK.",
+        "Klaim JHT": "Isu JHT berkaitan dengan pencairan manfaat peserta.",
+        "Santunan Kematian (JKM)": "Kasus kematian pekerja berpotensi menimbulkan klaim JKM.",
+        "Jaminan Pensiun (JP)": "Isu JP berkaitan dengan kesinambungan manfaat jangka panjang peserta.",
+        "Aksi / Demo Buruh": "Aksi buruh berpotensi meningkatkan tensi hubungan industrial.",
+        "Konflik Hubungan Industrial": "Konflik hubungan industrial perlu dipantau karena dapat berkembang menjadi gangguan yang lebih besar.",
+        "Pekerja Migran Indonesia (PMI)": "Isu PMI berkaitan dengan perlindungan jaminan sosial pekerja migran Indonesia.",
+        "Jasa Konstruksi": "Sektor konstruksi memiliki risiko tinggi terhadap kecelakaan kerja."
+    }
+
+    if topic in reasons:
+        return reasons[topic]
+
+    if claims:
+        return f"Isu ini berpotensi mempengaruhi klaim {claims}."
+    if programs:
+        return f"Isu ini berdampak pada program {programs}."
+    return "Isu ini perlu dipantau karena dapat mempengaruhi jaminan sosial ketenagakerjaan."
+
+
+def get_time_boost(row) -> int:
+    try:
+        publish_str = str(row.get("Waktu_Publish_WIB", "")).strip()
+        if not publish_str:
+            return 0
+
+        publish_dt = pd.to_datetime(publish_str, errors="coerce")
+        if pd.isna(publish_dt):
+            return 0
+
+        now = pd.Timestamp.now(tz="Asia/Jakarta").tz_localize(None)
+        diff_hours = (now - publish_dt).total_seconds() / 3600
+
+        if diff_hours <= 6:
+            return 3
+        if diff_hours <= 24:
+            return 2
+        if diff_hours <= 48:
+            return 1
+        return 0
+    except Exception:
+        return 0
+
+
+def analyze_jamsos(text: str, row=None) -> dict:
     text = clean_text(text)
 
     score = 0
     program = []
     kepesertaan = detect_kepesertaan(text)
     klaim = []
-    alasan = []
     topik = detect_topic(text)
-    edukasi = is_service_education(text)
+    kategori = detect_category(text)
+    edukasi = (kategori == "EDUKASI")
 
     # PHK
     if contains_any(text, [r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b"]):
-        if edukasi:
-            score += 1
-            program.extend(["JHT", "JKP"])
-            kepesertaan.append("PU")
-            klaim.extend(["JHT", "JKP"])
-            alasan.append(
-                "Berita memuat konteks PHK dalam bentuk informasi layanan atau panduan klaim, sehingga lebih bersifat edukatif daripada indikasi kejadian PHK baru."
-            )
-        else:
-            score += 4
-            program.extend(["JKP", "JHT", "JP"])
-            kepesertaan.append("PU")
-            klaim.extend(["JKP", "JHT"])
-            alasan.append(
-                "Pemberitaan mengenai PHK berpotensi meningkatkan klaim JKP serta pencairan JHT bagi pekerja terdampak."
-            )
+        score += 4
+        program.extend(["JKP", "JHT", "JP"])
+        kepesertaan.append("PU")
+        klaim.extend(["JKP", "JHT"])
 
     if contains_any(text, [
         r"phk.*massal", r"massal.*phk", r"gelombang phk", r"ribuan karyawan",
         r"ratusan karyawan", r"tutup pabrik", r"pabrik tutup", r"\bpailit\b", r"\bbangkrut\b"
     ]):
-        score += 4
-        alasan.append(
-            "Skala isu yang besar menunjukkan potensi penurunan kepesertaan aktif serta peningkatan tekanan klaim manfaat."
-        )
+        score += 3
 
-    # JKK / kecelakaan kerja
+    # JKK
     if contains_any(text, [
         r"kecelakaan kerja", r"\bledakan\b", r"kebakaran pabrik",
         r"tertimbun", r"pekerja jatuh", r"alat berat", r"lokasi proyek"
@@ -318,7 +458,6 @@ def analyze_jamsos(text: str) -> dict:
         score += 4
         program.append("JKK")
         klaim.append("JKK")
-        alasan.append("Peristiwa kecelakaan kerja berpotensi menimbulkan klaim JKK.")
 
     if contains_any(text, [
         r"meninggal dunia", r"pekerja tewas", r"buruh tewas", r"korban jiwa"
@@ -326,33 +465,24 @@ def analyze_jamsos(text: str) -> dict:
         score += 3
         program.append("JKM")
         klaim.append("JKM")
-        alasan.append("Kematian pekerja berpotensi menimbulkan klaim JKM bagi ahli waris.")
 
-    # Demo / konflik industrial
+    # demo / konflik
     if contains_any(text, [r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok", r"mogok kerja"]):
-        score += 2
-        alasan.append(
-            "Aksi buruh menunjukkan potensi konflik hubungan industrial yang dapat berdampak pada stabilitas ketenagakerjaan."
-        )
+        score += 3
 
     if contains_any(text, [r"perselisihan", r"sengketa", r"konflik buruh", r"mediasi hubungan industrial"]):
         score += 2
-        alasan.append(
-            "Perselisihan hubungan industrial dapat berkembang menjadi gangguan kepatuhan perusahaan dan keberlanjutan hubungan kerja."
-        )
 
     # THR / upah
     if contains_any(text, [r"\bthr\b", r"tunjangan hari raya"]):
-        score += 1
+        score += 2
         kepesertaan.append("PU")
-        alasan.append("Isu THR menunjukkan potensi persoalan kesejahteraan pekerja dan kepatuhan perusahaan.")
 
     if contains_any(text, [
         r"thr.*tidak dibayar", r"tidak dibayar.*thr", r"thr.*terlambat",
         r"terlambat.*thr", r"thr.*dicicil", r"thr.*dipotong", r"pengaduan thr", r"posko thr"
     ]):
-        score += 3
-        alasan.append("Permasalahan pembayaran THR dapat memicu pengaduan pekerja dan perselisihan hubungan industrial.")
+        score += 2
 
     if contains_any(text, [
         r"\bupah\b", r"\bgaji\b", r"\bump\b", r"\bumk\b",
@@ -360,21 +490,14 @@ def analyze_jamsos(text: str) -> dict:
     ]):
         score += 2
         kepesertaan.append("PU")
-        alasan.append("Permasalahan upah/gaji berpotensi memicu instabilitas hubungan kerja dan menurunkan kepatuhan perusahaan.")
 
     # Kepesertaan / kepatuhan
     if contains_any(text, [
         r"bpjs ketenagakerjaan", r"bpjamsostek", r"jamsostek",
         r"kepesertaan bpjs", r"peserta bpjs", r"terdaftar bpjs"
     ]):
-        if edukasi:
-            score += 1
-            program.append("Kepesertaan")
-            alasan.append("Pemberitaan berkaitan dengan informasi layanan dan akses manfaat BPJS Ketenagakerjaan.")
-        else:
-            score += 2
-            program.append("Kepesertaan")
-            alasan.append("Pemberitaan berkaitan langsung dengan cakupan perlindungan jaminan sosial ketenagakerjaan.")
+        score += 2
+        program.append("Kepesertaan")
 
     if contains_any(text, [
         r"tunggakan iuran", r"menunggak iuran", r"telat bayar iuran",
@@ -382,73 +505,62 @@ def analyze_jamsos(text: str) -> dict:
     ]):
         score += 3
         program.append("Kepesertaan")
-        alasan.append("Isu kepatuhan dan tunggakan iuran berpotensi mempengaruhi kesinambungan perlindungan peserta.")
 
     # Manfaat spesifik
     if contains_any(text, [r"\bjht\b", r"jaminan hari tua", r"klaim jht", r"pencairan jht", r"saldo jht"]):
-        if edukasi:
-            score += 1
-            program.append("JHT")
-            klaim.append("JHT")
-            alasan.append("Pemberitaan berkaitan dengan informasi layanan atau panduan akses manfaat JHT.")
-        else:
-            score += 2
-            program.append("JHT")
-            klaim.append("JHT")
-            alasan.append("Isu JHT berkaitan dengan manfaat yang paling sering diakses oleh peserta saat terjadi pemutusan kerja atau kebutuhan tertentu.")
+        score += 2
+        program.append("JHT")
+        klaim.append("JHT")
 
     if contains_any(text, [r"\bjkp\b", r"jaminan kehilangan pekerjaan", r"klaim jkp", r"manfaat jkp"]):
-        if edukasi:
-            score += 1
-            program.append("JKP")
-            klaim.append("JKP")
-            alasan.append("Pemberitaan memuat informasi layanan atau penjelasan manfaat JKP.")
-        else:
-            score += 2
-            program.append("JKP")
-            klaim.append("JKP")
-            alasan.append("Isu JKP berkaitan langsung dengan perlindungan bagi pekerja yang kehilangan pekerjaan.")
+        score += 2
+        program.append("JKP")
+        klaim.append("JKP")
 
     if contains_any(text, [r"\bjp\b", r"jaminan pensiun", r"iuran pensiun", r"usia pensiun"]):
         score += 1
         program.append("JP")
-        alasan.append("Isu JP dapat berdampak pada persepsi manfaat jangka panjang dan kepatuhan iuran.")
 
     if contains_any(text, [r"\bjkm\b", r"jaminan kematian", r"santunan kematian", r"ahli waris"]):
         score += 1
         program.append("JKM")
         klaim.append("JKM")
-        alasan.append("Isu JKM berkaitan dengan santunan bagi ahli waris peserta yang meninggal dunia.")
 
     # PMI / konstruksi
     if contains_any(text, [r"\bpmi\b", r"pekerja migran", r"\btki\b"]):
         score += 2
         kepesertaan.append("PMI")
         program.append("Kepesertaan")
-        alasan.append("Isu PMI berkaitan dengan perlindungan jaminan sosial ketenagakerjaan bagi pekerja migran Indonesia.")
 
     if contains_any(text, [r"konstruksi", r"proyek", r"pembangunan", r"jasa konstruksi"]):
         score += 1
         kepesertaan.append("Jasa Konstruksi")
         program.append("JKK")
-        alasan.append("Sektor konstruksi memiliki risiko kecelakaan kerja tinggi sehingga relevan dengan program JKK.")
 
-    # Penyesuaian edukasi
+    # waktu
+    if row is not None:
+        score += get_time_boost(row)
+
+    # penalti kategori
+    if kategori == "GLOBAL":
+        score = max(score - 3, 0)
+
     if edukasi:
-        score = max(score - 2, 1)
+        score = min(score, 2)
 
-    if not alasan:
-        alasan.append(
-            "Berita berkaitan dengan isu ketenagakerjaan yang perlu dipantau karena berpotensi mempengaruhi perlindungan jaminan sosial tenaga kerja."
-        )
+    program = unique_join(program)
+    kepesertaan = unique_join(kepesertaan)
+    klaim = unique_join(klaim)
+    alasan = build_short_reason(topik, program, klaim, kategori)
 
     return {
         "Topik_Utama": topik,
+        "Kategori_Berita": kategori,
         "Score": int(score),
-        "Dampak_Program": unique_join(program),
-        "Dampak_Kepesertaan": unique_join(kepesertaan),
-        "Potensi_Klaim": unique_join(klaim),
-        "Alasan_Prioritas": " ".join(alasan),
+        "Dampak_Program": program,
+        "Dampak_Kepesertaan": kepesertaan,
+        "Potensi_Klaim": klaim,
+        "Alasan_Prioritas": alasan,
     }
 
 
@@ -473,65 +585,47 @@ def run_priority(sheet_key=None):
 
     hasil = []
     konteks_list = []
+    provinsi_list = []
+    kabkota_list = []
+    status_lokasi_list = []
 
-    strong_id_context = [
-        "di indonesia", "indonesia", "pekerja indonesia", "buruh indonesia",
-        "karyawan di indonesia", "operasi di indonesia", "anak usaha di indonesia",
-        "anak usaha indonesia", "pabrik di indonesia", "kantor di indonesia",
-        "kemnaker", "disnaker", "bpjs ketenagakerjaan", "bpjamsostek",
-        "phk di indonesia", "buruh indonesia terdampak", "pekerja indonesia terdampak"
-    ]
-
-    for text in text_series:
-        # filter keras berita global
-        if any(g in text for g in GLOBAL_STRICT) and not any(k in text for k in strong_id_context):
-            konteks = "LUAR NEGERI / TIDAK RELEVAN"
-            konteks_list.append(konteks)
-            hasil.append({
-                "Topik_Utama": "Tidak Relevan Indonesia",
-                "Score": 0,
-                "Dampak_Program": "",
-                "Dampak_Kepesertaan": "",
-                "Potensi_Klaim": "",
-                "Alasan_Prioritas": "PHK atau isu ketenagakerjaan terjadi pada perusahaan global dan tidak berkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
-            })
-            continue
+    for idx, text in enumerate(text_series):
+        row = df.iloc[idx].to_dict()
 
         konteks = get_context_label(text)
         konteks_list.append(konteks)
 
-        if konteks != "INDONESIA":
-            hasil.append({
-                "Topik_Utama": "Tidak Relevan Indonesia",
-                "Score": 0,
-                "Dampak_Program": "",
-                "Dampak_Kepesertaan": "",
-                "Potensi_Klaim": "",
-                "Alasan_Prioritas": "Berita ketenagakerjaan global yang tidak berkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
-            })
-            continue
+        lokasi = detect_location(text)
+        provinsi_list.append(lokasi["Provinsi"])
+        kabkota_list.append(lokasi["Kabupaten_Kota"])
+        status_lokasi_list.append(lokasi["Status_Lokasi"])
 
-        hasil.append(analyze_jamsos(text))
+        hasil.append(analyze_jamsos(text, row=row))
 
     hasil_df = pd.DataFrame(hasil)
 
     df["Konteks_Berita"] = konteks_list
+    df["Kategori_Berita"] = hasil_df["Kategori_Berita"]
+    df["Provinsi"] = provinsi_list
+    df["Kabupaten_Kota"] = kabkota_list
+    df["Status_Lokasi"] = status_lokasi_list
     df["Topik_Utama"] = hasil_df["Topik_Utama"]
     df["Score"] = hasil_df["Score"]
     df["Dampak_Program"] = hasil_df["Dampak_Program"]
     df["Dampak_Kepesertaan"] = hasil_df["Dampak_Kepesertaan"]
     df["Potensi_Klaim"] = hasil_df["Potensi_Klaim"]
     df["Alasan_Prioritas"] = hasil_df["Alasan_Prioritas"]
+
     df["Prioritas"] = df.apply(
         lambda r: classify_priority(
             int(r["Score"]),
-            str(r["Konteks_Berita"]),
+            str(r["Kategori_Berita"]),
             str(r["Topik_Utama"])
         ),
         axis=1
     )
 
-    clear_and_write(sheet_key, "FILTERED", df)
+    clear_and_write(sheet_key, "ANALYZED", df)
     return df
 
 

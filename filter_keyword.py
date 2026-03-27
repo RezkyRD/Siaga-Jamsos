@@ -19,6 +19,10 @@ KEYWORD_PATTERNS = [
     r"pengurangan karyawan",
     r"efisiensi tenaga kerja",
     r"pesangon",
+    r"kontrak kerja",
+    r"outsourcing",
+    r"perusahaan tutup",
+    r"pabrik tutup",
 
     # THR / kesejahteraan
     r"\bthr\b",
@@ -42,6 +46,7 @@ KEYWORD_PATTERNS = [
     # buruh / pekerja / industrial
     r"\bburuh\b",
     r"\bpekerja\b",
+    r"\bkaryawan\b",
     r"tenaga kerja",
     r"hubungan industrial",
     r"perselisihan industrial",
@@ -49,6 +54,10 @@ KEYWORD_PATTERNS = [
     r"sengketa industrial",
     r"mediasi hubungan industrial",
     r"tripartit",
+    r"serikat pekerja",
+    r"serikat buruh",
+    r"disnaker",
+    r"kemnaker",
 
     # aksi buruh
     r"demo buruh",
@@ -81,6 +90,10 @@ KEYWORD_PATTERNS = [
     r"kepesertaan bpjs",
     r"peserta bpjs",
     r"terdaftar bpjs",
+    r"jaminan sosial",
+    r"santunan",
+    r"manfaat pekerja",
+    r"kepatuhan perusahaan",
 
     # edukasi layanan / JMO
     r"cara klaim",
@@ -112,6 +125,12 @@ KEYWORD_PATTERNS = [
     r"jasa konstruksi",
     r"konstruksi",
     r"proyek",
+    r"pekerja informal",
+    r"\bbpu\b",
+    r"umkm",
+    r"nelayan",
+    r"petani",
+    r"driver",
 ]
 
 
@@ -145,7 +164,9 @@ def run_filter(sheet_key=None):
 
     if df is None or df.empty:
         print("Sheet RAW kosong.")
-        return pd.DataFrame()
+        empty_df = pd.DataFrame()
+        clear_and_write(sheet_key, "FILTERED", empty_df)
+        return empty_df
 
     df = df.copy()
     df.columns = df.columns.astype(str).str.strip()
@@ -159,7 +180,14 @@ def run_filter(sheet_key=None):
 
     if "Link" in df_filtered.columns:
         df_filtered["Link"] = df_filtered["Link"].astype(str).str.strip()
-        df_filtered = df_filtered.drop_duplicates(subset=["Link"], keep="last")
+
+        df_blank = df_filtered[df_filtered["Link"] == ""].copy()
+        df_link = df_filtered[df_filtered["Link"] != ""].copy()
+
+        if not df_link.empty:
+            df_link = df_link.drop_duplicates(subset=["Link"], keep="last")
+
+        df_filtered = pd.concat([df_link, df_blank], ignore_index=True)
 
     clear_and_write(sheet_key, "FILTERED", df_filtered)
 

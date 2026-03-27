@@ -222,7 +222,7 @@ def detect_location(text: str) -> dict:
 
 
 # =====================================
-# KONTEXT / CATEGORY
+# KONTEKS / CATEGORY
 # =====================================
 
 def is_indonesia_related(text: str) -> bool:
@@ -404,11 +404,11 @@ def classify_priority(score: int, category: str, topic: str) -> str:
         return "PRIORITAS RENDAH"
 
     if category == "GLOBAL":
-        if score >= 6:
+        if score >= 5:
             return "PRIORITAS SEDANG"
         return "PRIORITAS RENDAH"
 
-    if score >= 8:
+    if score >= 7:
         return "PRIORITAS TINGGI"
     if score >= 4:
         return "PRIORITAS SEDANG"
@@ -490,29 +490,27 @@ def analyze_jamsos(text: str, row=None) -> dict:
             "Dampak_Program": "",
             "Dampak_Kepesertaan": "",
             "Potensi_Klaim": "",
-            "Alasan_Prioritas": "Berita global tidak relevan dengan konteks Indonesia.",
+            "Alasan_Prioritas": "Berita global tidak relevan dengan konteks Indonesia."
         }
 
     score = 0
     program = []
     kepesertaan = detect_kepesertaan(text)
     klaim = []
+    edukasi = is_service_education(text)
 
-    # PHK
     if contains_any(text, [r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b"]):
-        score += 4
+        score += 4 if not edukasi else 1
         program.extend(["JKP", "JHT", "JP"])
         kepesertaan.append("PU")
         klaim.extend(["JKP", "JHT"])
 
     if contains_any(text, [
-        r"phk.*massal", r"massal.*phk", r"gelombang phk",
-        r"ribuan karyawan", r"ratusan karyawan", r"tutup pabrik",
-        r"pabrik tutup", r"\bpailit\b", r"\bbangkrut\b"
+        r"phk.*massal", r"massal.*phk", r"gelombang phk", r"ribuan karyawan",
+        r"ratusan karyawan", r"tutup pabrik", r"pabrik tutup", r"\bpailit\b", r"\bbangkrut\b"
     ]):
-        score += 3
+        score += 4
 
-    # JKK
     if contains_any(text, [
         r"kecelakaan kerja", r"\bledakan\b", r"kebakaran pabrik",
         r"tertimbun", r"pekerja jatuh", r"alat berat", r"lokasi proyek"
@@ -521,21 +519,17 @@ def analyze_jamsos(text: str, row=None) -> dict:
         program.append("JKK")
         klaim.append("JKK")
 
-    if contains_any(text, [
-        r"meninggal dunia", r"pekerja tewas", r"buruh tewas", r"korban jiwa"
-    ]):
+    if contains_any(text, [r"meninggal dunia", r"pekerja tewas", r"buruh tewas", r"korban jiwa"]):
         score += 3
         program.append("JKM")
         klaim.append("JKM")
 
-    # Demo / konflik
     if contains_any(text, [r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok", r"mogok kerja"]):
         score += 3
 
     if contains_any(text, [r"perselisihan", r"sengketa", r"konflik buruh", r"mediasi hubungan industrial"]):
         score += 2
 
-    # THR / upah
     if contains_any(text, [r"\bthr\b", r"tunjangan hari raya"]):
         score += 2
         kepesertaan.append("PU")
@@ -553,12 +547,11 @@ def analyze_jamsos(text: str, row=None) -> dict:
         score += 2
         kepesertaan.append("PU")
 
-    # Kepesertaan / kepatuhan
     if contains_any(text, [
         r"bpjs ketenagakerjaan", r"bpjamsostek", r"jamsostek",
         r"kepesertaan bpjs", r"peserta bpjs", r"terdaftar bpjs"
     ]):
-        score += 2
+        score += 2 if not edukasi else 1
         program.append("Kepesertaan")
 
     if contains_any(text, [
@@ -568,14 +561,13 @@ def analyze_jamsos(text: str, row=None) -> dict:
         score += 3
         program.append("Kepesertaan")
 
-    # Manfaat spesifik
     if contains_any(text, [r"\bjht\b", r"jaminan hari tua", r"klaim jht", r"pencairan jht", r"saldo jht"]):
-        score += 2
+        score += 2 if not edukasi else 1
         program.append("JHT")
         klaim.append("JHT")
 
     if contains_any(text, [r"\bjkp\b", r"jaminan kehilangan pekerjaan", r"klaim jkp", r"manfaat jkp"]):
-        score += 2
+        score += 2 if not edukasi else 1
         program.append("JKP")
         klaim.append("JKP")
 
@@ -588,7 +580,6 @@ def analyze_jamsos(text: str, row=None) -> dict:
         program.append("JKM")
         klaim.append("JKM")
 
-    # PMI / konstruksi
     if contains_any(text, [r"\bpmi\b", r"pekerja migran", r"\btki\b"]):
         score += 2
         kepesertaan.append("PMI")
@@ -599,11 +590,9 @@ def analyze_jamsos(text: str, row=None) -> dict:
         kepesertaan.append("Jasa Konstruksi")
         program.append("JKK")
 
-    # waktu
     if row is not None:
         score += get_time_boost(row)
 
-    # penalti kategori
     if kategori == "GLOBAL":
         score = max(score - 2, 0)
 
@@ -630,7 +619,7 @@ def analyze_jamsos(text: str, row=None) -> dict:
 
 
 # =====================================
-# RUN PRIORITY
+# RUN
 # =====================================
 
 def run_priority(sheet_key=None):
@@ -696,17 +685,16 @@ def run_priority(sheet_key=None):
         axis=1
     )
 
-    # final tuning output: lebih longgar
+    # buang hanya berita global yang benar-benar tidak relevan dan skor nol
     df = df[
         ~(
             (df["Kategori_Berita"].astype(str) == "GLOBAL") &
             (df["Konteks_Berita"].astype(str) == "LUAR NEGERI / TIDAK RELEVAN") &
-            (df["Score"] <= 1)
+            (df["Score"] <= 0)
         )
     ].copy()
 
-    df = df[df["Score"] >= 1].copy()
-
+    # jangan filter keras Score >= 1, agar tanggal tipis tidak kosong total
     df = ensure_columns(df)
 
     priority_order = {

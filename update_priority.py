@@ -404,7 +404,7 @@ def run_priority(sheet_key=None):
     if sheet_key is None:
         sheet_key = st.secrets["SHEET_KEY"]
 
-    df = read_sheet(sheet_key, "FILTERED_AWAL")
+    df = read_sheet(sheet_key, "FILTERED")
     if df is None or df.empty:
         return df
 

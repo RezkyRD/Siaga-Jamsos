@@ -29,14 +29,6 @@ GLOBAL_COMPANY = [
     "netflix", "warner bros", "ubisoft", "sony", "samsung", "epic games"
 ]
 
-GLOBAL_STRICT = [
-    "facebook", "meta", "instagram", "amazon", "google", "tesla",
-    "microsoft", "apple", "netflix", "nvidia", "warner bros",
-    "ubisoft", "epic games", "zuckerberg",
-    "startup global", "perusahaan global", "raksasa teknologi",
-    "raksasa e-commerce", "big tech"
-]
-
 
 # =====================================
 # PETA LOKASI
@@ -106,9 +98,9 @@ PROVINCE_ALIASES = {
 }
 
 CITY_TO_PROVINCE = {
-    "bekasi": ("Bekasi", "Jawa Barat"),
     "kabupaten bekasi": ("Kabupaten Bekasi", "Jawa Barat"),
     "kota bekasi": ("Kota Bekasi", "Jawa Barat"),
+    "bekasi": ("Bekasi", "Jawa Barat"),
     "karawang": ("Karawang", "Jawa Barat"),
     "bandung": ("Bandung", "Jawa Barat"),
     "bogor": ("Bogor", "Jawa Barat"),
@@ -122,15 +114,41 @@ CITY_TO_PROVINCE = {
     "batam": ("Batam", "Kepulauan Riau"),
     "medan": ("Medan", "Sumatera Utara"),
     "makassar": ("Makassar", "Sulawesi Selatan"),
-    "tangerang": ("Tangerang", "Banten"),
     "kabupaten tangerang": ("Kabupaten Tangerang", "Banten"),
     "kota tangerang": ("Kota Tangerang", "Banten"),
+    "tangerang": ("Tangerang", "Banten"),
 }
 
 
 # =====================================
 # HELPERS
 # =====================================
+
+OUTPUT_COLUMNS = [
+    "Media",
+    "Judul",
+    "Tanggal",
+    "Link",
+    "Ringkasan",
+    "Waktu_Publish_WIB",
+    "Tanggal_Publish",
+    "Waktu_Ambil_UTC",
+    "Waktu_Ambil_WIB",
+    "Tanggal_Ambil",
+    "UID",
+    "Konteks_Berita",
+    "Kategori_Berita",
+    "Provinsi",
+    "Kabupaten_Kota",
+    "Status_Lokasi",
+    "Topik_Utama",
+    "Score",
+    "Dampak_Program",
+    "Dampak_Kepesertaan",
+    "Potensi_Klaim",
+    "Alasan_Prioritas",
+    "Prioritas",
+]
 
 def clean_text(text: str) -> str:
     text = str(text or "").lower()
@@ -153,10 +171,17 @@ def contains_any(text: str, patterns) -> bool:
     return any(re.search(p, text) for p in patterns)
 
 
+def ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    for col in OUTPUT_COLUMNS:
+        if col not in df.columns:
+            df[col] = ""
+    return df[OUTPUT_COLUMNS]
+
+
 def detect_location(text: str) -> dict:
     text = clean_text(text)
 
-    # cari kabupaten/kota dulu
     for key, (city_name, province_name) in CITY_TO_PROVINCE.items():
         if re.search(rf"\b{re.escape(key)}\b", text):
             return {
@@ -165,7 +190,6 @@ def detect_location(text: str) -> dict:
                 "Status_Lokasi": "Spesifik"
             }
 
-    # lalu provinsi
     for alias, province_name in PROVINCE_ALIASES.items():
         if re.search(rf"\b{re.escape(alias)}\b", text):
             return {
@@ -174,8 +198,7 @@ def detect_location(text: str) -> dict:
                 "Status_Lokasi": "Provinsi"
             }
 
-    # konteks nasional umum
-    if "indonesia" in text or "nasional" in text or "kemnaker" in text or "bpjs ketenagakerjaan" in text:
+    if any(k in text for k in ["indonesia", "nasional", "kemnaker", "bpjs ketenagakerjaan", "bpjamsostek"]):
         return {
             "Provinsi": "Nasional",
             "Kabupaten_Kota": "",
@@ -437,7 +460,6 @@ def analyze_jamsos(text: str, row=None) -> dict:
     kategori = detect_category(text)
     edukasi = (kategori == "EDUKASI")
 
-    # PHK
     if contains_any(text, [r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b"]):
         score += 4
         program.extend(["JKP", "JHT", "JP"])
@@ -450,7 +472,6 @@ def analyze_jamsos(text: str, row=None) -> dict:
     ]):
         score += 3
 
-    # JKK
     if contains_any(text, [
         r"kecelakaan kerja", r"\bledakan\b", r"kebakaran pabrik",
         r"tertimbun", r"pekerja jatuh", r"alat berat", r"lokasi proyek"
@@ -466,14 +487,12 @@ def analyze_jamsos(text: str, row=None) -> dict:
         program.append("JKM")
         klaim.append("JKM")
 
-    # demo / konflik
     if contains_any(text, [r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok", r"mogok kerja"]):
         score += 3
 
     if contains_any(text, [r"perselisihan", r"sengketa", r"konflik buruh", r"mediasi hubungan industrial"]):
         score += 2
 
-    # THR / upah
     if contains_any(text, [r"\bthr\b", r"tunjangan hari raya"]):
         score += 2
         kepesertaan.append("PU")
@@ -491,7 +510,6 @@ def analyze_jamsos(text: str, row=None) -> dict:
         score += 2
         kepesertaan.append("PU")
 
-    # Kepesertaan / kepatuhan
     if contains_any(text, [
         r"bpjs ketenagakerjaan", r"bpjamsostek", r"jamsostek",
         r"kepesertaan bpjs", r"peserta bpjs", r"terdaftar bpjs"
@@ -506,7 +524,6 @@ def analyze_jamsos(text: str, row=None) -> dict:
         score += 3
         program.append("Kepesertaan")
 
-    # Manfaat spesifik
     if contains_any(text, [r"\bjht\b", r"jaminan hari tua", r"klaim jht", r"pencairan jht", r"saldo jht"]):
         score += 2
         program.append("JHT")
@@ -526,7 +543,6 @@ def analyze_jamsos(text: str, row=None) -> dict:
         program.append("JKM")
         klaim.append("JKM")
 
-    # PMI / konstruksi
     if contains_any(text, [r"\bpmi\b", r"pekerja migran", r"\btki\b"]):
         score += 2
         kepesertaan.append("PMI")
@@ -537,11 +553,9 @@ def analyze_jamsos(text: str, row=None) -> dict:
         kepesertaan.append("Jasa Konstruksi")
         program.append("JKK")
 
-    # waktu
     if row is not None:
         score += get_time_boost(row)
 
-    # penalti kategori
     if kategori == "GLOBAL":
         score = max(score - 3, 0)
 
@@ -572,15 +586,22 @@ def run_priority(sheet_key=None):
     if sheet_key is None:
         sheet_key = st.secrets["SHEET_KEY"]
 
-    df = read_sheet(sheet_key, "FILTERED")
+    try:
+        df = read_sheet(sheet_key, "FILTERED")
+    except Exception:
+        df = pd.DataFrame()
+
+    # Kalau FILTERED kosong, tetap buat ANALYZED dengan header
     if df is None or df.empty:
-        return df
+        empty_df = pd.DataFrame(columns=OUTPUT_COLUMNS)
+        clear_and_write(sheet_key, "ANALYZED", empty_df)
+        return empty_df
 
     df = df.copy()
     df.columns = df.columns.astype(str).str.strip()
 
-    judul = df.get("Judul", pd.Series([""] * len(df))).astype(str).fillna("")
-    ringkasan = df.get("Ringkasan", pd.Series([""] * len(df))).astype(str).fillna("")
+    judul = df.get("Judul", pd.Series([""] * len(df), index=df.index)).astype(str).fillna("")
+    ringkasan = df.get("Ringkasan", pd.Series([""] * len(df), index=df.index)).astype(str).fillna("")
     text_series = (judul + " " + ringkasan).apply(clean_text)
 
     hasil = []
@@ -618,13 +639,14 @@ def run_priority(sheet_key=None):
 
     df["Prioritas"] = df.apply(
         lambda r: classify_priority(
-            int(r["Score"]),
-            str(r["Kategori_Berita"]),
-            str(r["Topik_Utama"])
+            int(pd.to_numeric(r.get("Score", 0), errors="coerce") if str(r.get("Score", "")).strip() != "" else 0),
+            str(r.get("Kategori_Berita", "")),
+            str(r.get("Topik_Utama", ""))
         ),
         axis=1
     )
 
+    df = ensure_columns(df)
     clear_and_write(sheet_key, "ANALYZED", df)
     return df
 

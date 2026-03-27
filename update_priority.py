@@ -185,47 +185,113 @@ def classify(score, kategori):
 # =====================================
 
 def run_priority(sheet_key=None):
-
     if sheet_key is None:
         sheet_key = st.secrets["SHEET_KEY"]
 
-    df = read_sheet(sheet_key, "FILTERED")
+    try:
+        df = read_sheet(sheet_key, "FILTERED")
+    except Exception:
+        df = pd.DataFrame()
 
     if df is None or df.empty:
-        clear_and_write(sheet_key, "ANALYZED", pd.DataFrame())
-        return
+        empty_df = pd.DataFrame(columns=OUTPUT_COLUMNS)
+        clear_and_write(sheet_key, "ANALYZED", empty_df)
+        return empty_df
 
     df = df.copy()
+    df.columns = df.columns.astype(str).str.strip()
 
-    results = []
+    judul = df.get("Judul", pd.Series([""] * len(df), index=df.index)).astype(str).fillna("")
+    ringkasan = df.get("Ringkasan", pd.Series([""] * len(df), index=df.index)).astype(str).fillna("")
+    text_series = (judul + " " + ringkasan).apply(clean_text)
 
-    for _, row in df.iterrows():
+    hasil = []
+    konteks_list = []
+    provinsi_list = []
+    kabkota_list = []
+    status_lokasi_list = []
 
-        text = clean_text(
-            str(row.get("Judul","")) + " " + str(row.get("Ringkasan",""))
+    for idx, text in enumerate(text_series):
+        row = df.iloc[idx].to_dict()
+
+        konteks = get_context_label(text)
+        konteks_list.append(konteks)
+
+        lokasi = detect_location(text)
+        provinsi_list.append(lokasi["Provinsi"])
+        kabkota_list.append(lokasi["Kabupaten_Kota"])
+        status_lokasi_list.append(lokasi["Status_Lokasi"])
+
+        hasil.append(analyze_jamsos(text, row=row))
+
+    hasil_df = pd.DataFrame(hasil)
+
+    df["Konteks_Berita"] = konteks_list
+    df["Kategori_Berita"] = hasil_df["Kategori_Berita"]
+    df["Provinsi"] = provinsi_list
+    df["Kabupaten_Kota"] = kabkota_list
+    df["Status_Lokasi"] = status_lokasi_list
+    df["Topik_Utama"] = hasil_df["Topik_Utama"]
+    df["Score"] = pd.to_numeric(hasil_df["Score"], errors="coerce").fillna(0).astype(int)
+    df["Dampak_Program"] = hasil_df["Dampak_Program"]
+    df["Dampak_Kepesertaan"] = hasil_df["Dampak_Kepesertaan"]
+    df["Potensi_Klaim"] = hasil_df["Potensi_Klaim"]
+    df["Alasan_Prioritas"] = hasil_df["Alasan_Prioritas"]
+
+    df["Prioritas"] = df.apply(
+        lambda r: classify_priority(
+            int(r["Score"]),
+            str(r["Kategori_Berita"]),
+            str(r["Topik_Utama"])
+        ),
+        axis=1
+    )
+
+    # =========================
+    # FINAL TUNING OUTPUT
+    # =========================
+
+    # 1. Buang berita global murni
+    df = df[
+        ~(
+            (df["Kategori_Berita"].astype(str) == "GLOBAL") &
+            (df["Konteks_Berita"].astype(str) == "LUAR NEGERI / TIDAK RELEVAN")
+        )
+    ].copy()
+
+    # 2. Buang berita dengan skor terlalu rendah
+    df = df[df["Score"] >= 2].copy()
+
+    # 3. Jika ingin edukasi tetap ada, biarkan.
+    # Kalau ingin lebih bersih lagi, aktifkan baris di bawah:
+    # df = df[df["Kategori_Berita"].astype(str) != "EDUKASI"].copy()
+
+    # 4. Rapikan kolom akhir
+    df = ensure_columns(df)
+
+    # 5. Sorting final: prioritas -> skor -> waktu
+    priority_order = {
+        "PRIORITAS TINGGI": 1,
+        "PRIORITAS SEDANG": 2,
+        "PRIORITAS RENDAH": 3
+    }
+    df["__prio_order"] = df["Prioritas"].map(priority_order).fillna(99)
+    if "Waktu_Publish_WIB" in df.columns:
+        df["__publish_dt"] = pd.to_datetime(df["Waktu_Publish_WIB"], errors="coerce")
+        df = df.sort_values(
+            ["__prio_order", "Score", "__publish_dt"],
+            ascending=[True, False, False]
+        )
+        df = df.drop(columns=["__publish_dt"], errors="ignore")
+    else:
+        df = df.sort_values(
+            ["__prio_order", "Score"],
+            ascending=[True, False]
         )
 
-        kategori = get_category(text)
-        score = scoring(text, row)
-        prioritas = classify(score, kategori)
-
-        results.append({
-            "Kategori_Berita": kategori,
-            "Score": score,
-            "Prioritas": prioritas
-        })
-
-    res_df = pd.DataFrame(results)
-
-    df["Kategori_Berita"] = res_df["Kategori_Berita"]
-    df["Score"] = res_df["Score"]
-    df["Prioritas"] = res_df["Prioritas"]
-
-    # 🔥 FILTER NOISE
-    df = df[df["Score"] > 1]
+    df = df.drop(columns=["__prio_order"], errors="ignore")
 
     clear_and_write(sheet_key, "ANALYZED", df)
-
     return df
 
 

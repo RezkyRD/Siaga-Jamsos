@@ -5,6 +5,10 @@ import streamlit as st
 from gsheet_utils import read_sheet, clear_and_write
 
 
+# =====================================
+# KONTEKS INDONESIA
+# =====================================
+
 INDONESIA_CONTEXT = [
     "indonesia", "jakarta", "jawa", "sumatera", "kalimantan", "sulawesi", "papua", "bali",
     "aceh", "sumut", "sumbar", "riau", "kepri", "jambi", "sumsel", "babel", "bengkulu",
@@ -34,6 +38,10 @@ GLOBAL_STRICT = [
 ]
 
 
+# =====================================
+# HELPERS
+# =====================================
+
 def clean_text(text: str) -> str:
     text = str(text or "").lower()
     text = re.sub(r"\s+", " ", text).strip()
@@ -54,6 +62,78 @@ def unique_join(items: list[str]) -> str:
 def contains_any(text: str, patterns: list[str]) -> bool:
     return any(re.search(p, text) for p in patterns)
 
+
+def classify_priority(score: int, context_label: str, topic: str) -> str:
+    if context_label != "INDONESIA":
+        return "PRIORITAS RENDAH"
+
+    if topic == "Layanan / Edukasi Klaim":
+        if score >= 6:
+            return "PRIORITAS SEDANG"
+        return "PRIORITAS RENDAH"
+
+    if score >= 8:
+        return "PRIORITAS TINGGI"
+    if score >= 4:
+        return "PRIORITAS SEDANG"
+    return "PRIORITAS RENDAH"
+
+
+# =====================================
+# RELEVANSI INDONESIA
+# =====================================
+
+def is_indonesia_related(text: str) -> bool:
+    text = clean_text(text)
+
+    # PMI / WNI tetap relevan
+    if any(k in text for k in [
+        "pekerja migran indonesia",
+        "buruh migran indonesia",
+        "pmi indonesia",
+        "tki indonesia",
+        "wni",
+        "warga negara indonesia"
+    ]):
+        return True
+
+    # kalau ada perusahaan global, wajib ada konteks Indonesia yang kuat
+    if any(g in text for g in GLOBAL_COMPANY):
+        strong_id_context = [
+            "di indonesia",
+            "indonesia",
+            "pekerja indonesia",
+            "buruh indonesia",
+            "karyawan di indonesia",
+            "operasi di indonesia",
+            "anak usaha di indonesia",
+            "anak usaha indonesia",
+            "pabrik di indonesia",
+            "kantor di indonesia",
+            "kemnaker",
+            "disnaker",
+            "bpjs ketenagakerjaan",
+            "bpjamsostek",
+            "phk di indonesia",
+            "buruh indonesia terdampak",
+            "pekerja indonesia terdampak"
+        ]
+        return any(k in text for k in strong_id_context)
+
+    return any(k in text for k in INDONESIA_CONTEXT)
+
+
+def get_context_label(text: str) -> str:
+    if is_indonesia_related(text):
+        return "INDONESIA"
+    if re.search(r"\bpmi\b|pekerja migran|\btki\b", text):
+        return "PMI"
+    return "LUAR NEGERI / TIDAK RELEVAN"
+
+
+# =====================================
+# EDUKASI LAYANAN
+# =====================================
 
 def is_service_education(text: str) -> bool:
     return contains_any(text, [
@@ -78,6 +158,10 @@ def is_service_education(text: str) -> bool:
         r"begini alurnya"
     ])
 
+
+# =====================================
+# IDENTIFIKASI TOPIK
+# =====================================
 
 def detect_topic(text: str) -> str:
     if is_service_education(text):
@@ -150,6 +234,10 @@ def detect_topic(text: str) -> str:
     return "Lainnya"
 
 
+# =====================================
+# KLASIFIKASI KEPESERTAAN
+# =====================================
+
 def detect_kepesertaan(text: str) -> list[str]:
     hasil = []
 
@@ -179,55 +267,11 @@ def detect_kepesertaan(text: str) -> list[str]:
     return hasil
 
 
-def validate_context(text: str) -> tuple[str, int, str]:
-    text = clean_text(text)
+# =====================================
+# ANALISIS RISIKO / PRIORITAS
+# =====================================
 
-    # PMI / WNI tetap relevan
-    if any(k in text for k in [
-        "pekerja migran indonesia",
-        "buruh migran indonesia",
-        "pmi indonesia",
-        "tki indonesia",
-        "wni",
-        "warga negara indonesia"
-    ]):
-        return "PMI", 6, "Berita berkaitan dengan PMI/WNI sehingga tetap relevan dipantau."
-
-    strong_id_context = [
-        "di indonesia", "indonesia", "pekerja indonesia", "buruh indonesia",
-        "karyawan di indonesia", "operasi di indonesia", "anak usaha di indonesia",
-        "anak usaha indonesia", "pabrik di indonesia", "kantor di indonesia",
-        "kemnaker", "disnaker", "bpjs ketenagakerjaan", "bpjamsostek",
-        "phk di indonesia", "buruh indonesia terdampak", "pekerja indonesia terdampak"
-    ]
-
-    score = 0
-
-    for kw in INDONESIA_CONTEXT:
-        if kw in text:
-            score += 2
-
-    for kw in strong_id_context:
-        if kw in text:
-            score += 4
-
-    for kw in GLOBAL_STRICT:
-        if kw in text:
-            score -= 5
-
-    if any(g in text for g in GLOBAL_COMPANY) and not any(k in text for k in strong_id_context):
-        return "GLOBAL / TIDAK RELEVAN", score, "Berita terkait perusahaan global tanpa dampak langsung yang jelas pada Indonesia."
-
-    if score >= 4:
-        return "INDONESIA", score, "Berita memiliki indikator kuat keterkaitan dengan kondisi ketenagakerjaan di Indonesia."
-
-    if 1 <= score < 4:
-        return "REVIEW", score, "Berita mengandung isu ketenagakerjaan namun konteks Indonesia belum cukup kuat."
-
-    return "GLOBAL / TIDAK RELEVAN", score, "Berita tidak menunjukkan keterkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
-
-
-def analyze_priority(text: str) -> dict:
+def analyze_jamsos(text: str) -> dict:
     text = clean_text(text)
 
     score = 0
@@ -238,27 +282,35 @@ def analyze_priority(text: str) -> dict:
     topik = detect_topic(text)
     edukasi = is_service_education(text)
 
+    # PHK
     if contains_any(text, [r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b"]):
         if edukasi:
             score += 1
             program.extend(["JHT", "JKP"])
             kepesertaan.append("PU")
             klaim.extend(["JHT", "JKP"])
-            alasan.append("Berita memuat konteks PHK dalam bentuk informasi layanan atau panduan klaim.")
+            alasan.append(
+                "Berita memuat konteks PHK dalam bentuk informasi layanan atau panduan klaim, sehingga lebih bersifat edukatif daripada indikasi kejadian PHK baru."
+            )
         else:
             score += 4
             program.extend(["JKP", "JHT", "JP"])
             kepesertaan.append("PU")
             klaim.extend(["JKP", "JHT"])
-            alasan.append("Pemberitaan mengenai PHK berpotensi meningkatkan klaim JKP serta pencairan JHT bagi pekerja terdampak.")
+            alasan.append(
+                "Pemberitaan mengenai PHK berpotensi meningkatkan klaim JKP serta pencairan JHT bagi pekerja terdampak."
+            )
 
     if contains_any(text, [
         r"phk.*massal", r"massal.*phk", r"gelombang phk", r"ribuan karyawan",
         r"ratusan karyawan", r"tutup pabrik", r"pabrik tutup", r"\bpailit\b", r"\bbangkrut\b"
     ]):
         score += 4
-        alasan.append("Skala isu yang besar menunjukkan potensi penurunan kepesertaan aktif serta peningkatan tekanan klaim manfaat.")
+        alasan.append(
+            "Skala isu yang besar menunjukkan potensi penurunan kepesertaan aktif serta peningkatan tekanan klaim manfaat."
+        )
 
+    # JKK / kecelakaan kerja
     if contains_any(text, [
         r"kecelakaan kerja", r"\bledakan\b", r"kebakaran pabrik",
         r"tertimbun", r"pekerja jatuh", r"alat berat", r"lokasi proyek"
@@ -268,20 +320,28 @@ def analyze_priority(text: str) -> dict:
         klaim.append("JKK")
         alasan.append("Peristiwa kecelakaan kerja berpotensi menimbulkan klaim JKK.")
 
-    if contains_any(text, [r"meninggal dunia", r"pekerja tewas", r"buruh tewas", r"korban jiwa"]):
+    if contains_any(text, [
+        r"meninggal dunia", r"pekerja tewas", r"buruh tewas", r"korban jiwa"
+    ]):
         score += 3
         program.append("JKM")
         klaim.append("JKM")
         alasan.append("Kematian pekerja berpotensi menimbulkan klaim JKM bagi ahli waris.")
 
+    # Demo / konflik industrial
     if contains_any(text, [r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok", r"mogok kerja"]):
         score += 2
-        alasan.append("Aksi buruh menunjukkan potensi konflik hubungan industrial yang dapat berdampak pada stabilitas ketenagakerjaan.")
+        alasan.append(
+            "Aksi buruh menunjukkan potensi konflik hubungan industrial yang dapat berdampak pada stabilitas ketenagakerjaan."
+        )
 
     if contains_any(text, [r"perselisihan", r"sengketa", r"konflik buruh", r"mediasi hubungan industrial"]):
         score += 2
-        alasan.append("Perselisihan hubungan industrial dapat berkembang menjadi gangguan kepatuhan perusahaan dan keberlanjutan hubungan kerja.")
+        alasan.append(
+            "Perselisihan hubungan industrial dapat berkembang menjadi gangguan kepatuhan perusahaan dan keberlanjutan hubungan kerja."
+        )
 
+    # THR / upah
     if contains_any(text, [r"\bthr\b", r"tunjangan hari raya"]):
         score += 1
         kepesertaan.append("PU")
@@ -302,6 +362,7 @@ def analyze_priority(text: str) -> dict:
         kepesertaan.append("PU")
         alasan.append("Permasalahan upah/gaji berpotensi memicu instabilitas hubungan kerja dan menurunkan kepatuhan perusahaan.")
 
+    # Kepesertaan / kepatuhan
     if contains_any(text, [
         r"bpjs ketenagakerjaan", r"bpjamsostek", r"jamsostek",
         r"kepesertaan bpjs", r"peserta bpjs", r"terdaftar bpjs"
@@ -323,6 +384,7 @@ def analyze_priority(text: str) -> dict:
         program.append("Kepesertaan")
         alasan.append("Isu kepatuhan dan tunggakan iuran berpotensi mempengaruhi kesinambungan perlindungan peserta.")
 
+    # Manfaat spesifik
     if contains_any(text, [r"\bjht\b", r"jaminan hari tua", r"klaim jht", r"pencairan jht", r"saldo jht"]):
         if edukasi:
             score += 1
@@ -333,7 +395,7 @@ def analyze_priority(text: str) -> dict:
             score += 2
             program.append("JHT")
             klaim.append("JHT")
-            alasan.append("Isu JHT berkaitan dengan manfaat yang paling sering diakses oleh peserta.")
+            alasan.append("Isu JHT berkaitan dengan manfaat yang paling sering diakses oleh peserta saat terjadi pemutusan kerja atau kebutuhan tertentu.")
 
     if contains_any(text, [r"\bjkp\b", r"jaminan kehilangan pekerjaan", r"klaim jkp", r"manfaat jkp"]):
         if edukasi:
@@ -358,6 +420,7 @@ def analyze_priority(text: str) -> dict:
         klaim.append("JKM")
         alasan.append("Isu JKM berkaitan dengan santunan bagi ahli waris peserta yang meninggal dunia.")
 
+    # PMI / konstruksi
     if contains_any(text, [r"\bpmi\b", r"pekerja migran", r"\btki\b"]):
         score += 2
         kepesertaan.append("PMI")
@@ -370,24 +433,14 @@ def analyze_priority(text: str) -> dict:
         program.append("JKK")
         alasan.append("Sektor konstruksi memiliki risiko kecelakaan kerja tinggi sehingga relevan dengan program JKK.")
 
+    # Penyesuaian edukasi
     if edukasi:
         score = max(score - 2, 1)
 
-    if topik == "Layanan / Edukasi Klaim":
-        if score >= 6:
-            prioritas = "PRIORITAS SEDANG"
-        else:
-            prioritas = "PRIORITAS RENDAH"
-    else:
-        if score >= 8:
-            prioritas = "PRIORITAS TINGGI"
-        elif score >= 4:
-            prioritas = "PRIORITAS SEDANG"
-        else:
-            prioritas = "PRIORITAS RENDAH"
-
     if not alasan:
-        alasan.append("Berita berkaitan dengan isu ketenagakerjaan yang perlu dipantau.")
+        alasan.append(
+            "Berita berkaitan dengan isu ketenagakerjaan yang perlu dipantau karena berpotensi mempengaruhi perlindungan jaminan sosial tenaga kerja."
+        )
 
     return {
         "Topik_Utama": topik,
@@ -396,9 +449,12 @@ def analyze_priority(text: str) -> dict:
         "Dampak_Kepesertaan": unique_join(kepesertaan),
         "Potensi_Klaim": unique_join(klaim),
         "Alasan_Prioritas": " ".join(alasan),
-        "Prioritas": prioritas,
     }
 
+
+# =====================================
+# RUN PRIORITY
+# =====================================
 
 def run_priority(sheet_key=None):
     if sheet_key is None:
@@ -415,44 +471,68 @@ def run_priority(sheet_key=None):
     ringkasan = df.get("Ringkasan", pd.Series([""] * len(df))).astype(str).fillna("")
     text_series = (judul + " " + ringkasan).apply(clean_text)
 
-    konteks = []
-    skor_konteks = []
-    alasan_konteks = []
+    hasil = []
+    konteks_list = []
+
+    strong_id_context = [
+        "di indonesia", "indonesia", "pekerja indonesia", "buruh indonesia",
+        "karyawan di indonesia", "operasi di indonesia", "anak usaha di indonesia",
+        "anak usaha indonesia", "pabrik di indonesia", "kantor di indonesia",
+        "kemnaker", "disnaker", "bpjs ketenagakerjaan", "bpjamsostek",
+        "phk di indonesia", "buruh indonesia terdampak", "pekerja indonesia terdampak"
+    ]
 
     for text in text_series:
-        label, score, alasan = validate_context(text)
-        konteks.append(label)
-        skor_konteks.append(score)
-        alasan_konteks.append(alasan)
+        # filter keras berita global
+        if any(g in text for g in GLOBAL_STRICT) and not any(k in text for k in strong_id_context):
+            konteks = "LUAR NEGERI / TIDAK RELEVAN"
+            konteks_list.append(konteks)
+            hasil.append({
+                "Topik_Utama": "Tidak Relevan Indonesia",
+                "Score": 0,
+                "Dampak_Program": "",
+                "Dampak_Kepesertaan": "",
+                "Potensi_Klaim": "",
+                "Alasan_Prioritas": "PHK atau isu ketenagakerjaan terjadi pada perusahaan global dan tidak berkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
+            })
+            continue
 
-    df["Konteks_Berita"] = konteks
-    df["Skor_Konteks"] = skor_konteks
-    df["Alasan_Konteks"] = alasan_konteks
+        konteks = get_context_label(text)
+        konteks_list.append(konteks)
 
-    # hanya berita valid untuk analisis final
-    df_valid = df[df["Konteks_Berita"].isin(["INDONESIA", "PMI"])].copy()
+        if konteks != "INDONESIA":
+            hasil.append({
+                "Topik_Utama": "Tidak Relevan Indonesia",
+                "Score": 0,
+                "Dampak_Program": "",
+                "Dampak_Kepesertaan": "",
+                "Potensi_Klaim": "",
+                "Alasan_Prioritas": "Berita ketenagakerjaan global yang tidak berkaitan langsung dengan kondisi ketenagakerjaan di Indonesia."
+            })
+            continue
 
-    if df_valid.empty:
-        clear_and_write(sheet_key, "HASIL_ANALISIS", df_valid)
-        return df_valid
+        hasil.append(analyze_jamsos(text))
 
-    valid_judul = df_valid.get("Judul", pd.Series([""] * len(df_valid))).astype(str).fillna("")
-    valid_ringkasan = df_valid.get("Ringkasan", pd.Series([""] * len(df_valid))).astype(str).fillna("")
-    valid_text = (valid_judul + " " + valid_ringkasan).apply(clean_text)
-
-    hasil = [analyze_priority(text) for text in valid_text]
     hasil_df = pd.DataFrame(hasil)
 
-    df_valid["Topik_Utama"] = hasil_df["Topik_Utama"]
-    df_valid["Score"] = hasil_df["Score"]
-    df_valid["Dampak_Program"] = hasil_df["Dampak_Program"]
-    df_valid["Dampak_Kepesertaan"] = hasil_df["Dampak_Kepesertaan"]
-    df_valid["Potensi_Klaim"] = hasil_df["Potensi_Klaim"]
-    df_valid["Alasan_Prioritas"] = hasil_df["Alasan_Prioritas"]
-    df_valid["Prioritas"] = hasil_df["Prioritas"]
+    df["Konteks_Berita"] = konteks_list
+    df["Topik_Utama"] = hasil_df["Topik_Utama"]
+    df["Score"] = hasil_df["Score"]
+    df["Dampak_Program"] = hasil_df["Dampak_Program"]
+    df["Dampak_Kepesertaan"] = hasil_df["Dampak_Kepesertaan"]
+    df["Potensi_Klaim"] = hasil_df["Potensi_Klaim"]
+    df["Alasan_Prioritas"] = hasil_df["Alasan_Prioritas"]
+    df["Prioritas"] = df.apply(
+        lambda r: classify_priority(
+            int(r["Score"]),
+            str(r["Konteks_Berita"]),
+            str(r["Topik_Utama"])
+        ),
+        axis=1
+    )
 
-    clear_and_write(sheet_key, "HASIL_ANALISIS", df_valid)
-    return df_valid
+    clear_and_write(sheet_key, "FILTERED", df)
+    return df
 
 
 if __name__ == "__main__":

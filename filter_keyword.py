@@ -5,10 +5,6 @@ import streamlit as st
 from gsheet_utils import read_sheet, clear_and_write
 
 
-# =====================================
-# POLA ISU KETENAGAKERJAAN / JAMSOS
-# =====================================
-
 KEYWORD_PATTERNS = [
     # PHK / hubungan kerja
     r"\bphk\b",
@@ -115,10 +111,6 @@ KEYWORD_PATTERNS = [
 ]
 
 
-# =====================================
-# HELPER
-# =====================================
-
 def clean_text(text: str) -> str:
     text = str(text or "").lower()
     text = re.sub(r"\s+", " ", text).strip()
@@ -129,13 +121,8 @@ def contains_keyword(row) -> bool:
     judul = clean_text(row.get("Judul", ""))
     ringkasan = clean_text(row.get("Ringkasan", ""))
     text = f"{judul} {ringkasan}"
-
     return any(re.search(pattern, text) for pattern in KEYWORD_PATTERNS)
 
-
-# =====================================
-# MAIN
-# =====================================
 
 def run_filter(sheet_key=None):
     if sheet_key is None:
@@ -150,10 +137,8 @@ def run_filter(sheet_key=None):
     df = df.copy()
     df.columns = df.columns.astype(str).str.strip()
 
-    # filter utama
     df_filtered = df[df.apply(contains_keyword, axis=1)].copy()
 
-    # dedup tambahan
     if "UID" in df_filtered.columns:
         df_filtered = df_filtered.drop_duplicates(subset=["UID"], keep="last")
 
@@ -161,7 +146,7 @@ def run_filter(sheet_key=None):
         df_filtered["Link"] = df_filtered["Link"].astype(str).str.strip()
         df_filtered = df_filtered.drop_duplicates(subset=["Link"], keep="last")
 
-    clear_and_write(sheet_key, "FILTERED", df_filtered)
+    clear_and_write(sheet_key, "FILTERED_AWAL", df_filtered)
 
     print("Total RAW:", len(df))
     print("Total Lolos Keyword:", len(df_filtered))

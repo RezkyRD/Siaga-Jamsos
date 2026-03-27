@@ -146,9 +146,6 @@ OUTPUT_COLUMNS = [
     "Dampak_Program",
     "Dampak_Kepesertaan",
     "Potensi_Klaim",
-    "Jumlah_Berita_Serupa",
-    "Jumlah_Media_Serupa",
-    "Skala_Isu",
     "Alasan_Prioritas",
     "Prioritas",
 ]
@@ -306,8 +303,7 @@ def detect_topic(text: str) -> str:
         ("PHK", [
             r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b",
             r"phk massal", r"gelombang phk", r"efisiensi tenaga kerja",
-            r"pengurangan karyawan", r"kontrak tidak diperpanjang",
-            r"tutup pabrik", r"pabrik tutup", r"merumahkan pekerja"
+            r"pengurangan karyawan"
         ]),
         ("THR / Kesejahteraan Pekerja", [
             r"\bthr\b", r"tunjangan hari raya", r"pengaduan thr",
@@ -316,12 +312,10 @@ def detect_topic(text: str) -> str:
         ]),
         ("Upah / Gaji", [
             r"\bupah\b", r"\bgaji\b", r"\bump\b", r"\bumk\b",
-            r"upah minimum", r"tunggakan upah", r"gaji tidak dibayar",
-            r"potong gaji"
+            r"upah minimum", r"tunggakan upah", r"gaji tidak dibayar"
         ]),
         ("Aksi / Demo Buruh", [
-            r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok", r"mogok kerja",
-            r"protes pekerja", r"serikat pekerja menolak"
+            r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok", r"mogok kerja"
         ]),
         ("Konflik Hubungan Industrial", [
             r"perselisihan", r"sengketa", r"konflik buruh",
@@ -333,9 +327,7 @@ def detect_topic(text: str) -> str:
         ]),
         ("Kepesertaan BPJS", [
             r"bpjs ketenagakerjaan", r"bpjamsostek", r"jamsostek",
-            r"kepesertaan bpjs", r"peserta bpjs", r"terdaftar bpjs",
-            r"belum didaftarkan", r"tidak didaftarkan", r"perusahaan wajib daftar",
-            r"kepatuhan perusahaan"
+            r"kepesertaan bpjs", r"peserta bpjs", r"terdaftar bpjs"
         ]),
         ("Klaim JHT", [
             r"\bjht\b", r"jaminan hari tua", r"klaim jht",
@@ -412,7 +404,7 @@ def classify_priority(score: int, category: str, topic: str) -> str:
         return "PRIORITAS RENDAH"
 
     if category == "GLOBAL":
-        if score >= 7:
+        if score >= 6:
             return "PRIORITAS SEDANG"
         return "PRIORITAS RENDAH"
 
@@ -423,18 +415,11 @@ def classify_priority(score: int, category: str, topic: str) -> str:
     return "PRIORITAS RENDAH"
 
 
-def build_short_reason(topic: str, programs: str, claims: str, category: str, row=None) -> str:
+def build_short_reason(topic: str, programs: str, claims: str, category: str) -> str:
     if category == "EDUKASI":
         return "Berita bersifat edukasi layanan dan tidak memerlukan penanganan prioritas."
     if category == "GLOBAL":
         return "Berita global dipantau sebagai referensi dan bukan fokus utama analisis."
-
-    skala = ""
-    if row is not None:
-        media_count = int(row.get("Jumlah_Media_Serupa", 0) or 0)
-        berita_count = int(row.get("Jumlah_Berita_Serupa", 0) or 0)
-        if media_count >= 2 or berita_count >= 2:
-            skala = f" Isu ini juga muncul pada {media_count} media dan {berita_count} berita serupa."
 
     reasons = {
         "PHK": "PHK berpotensi meningkatkan klaim JKP dan pencairan JHT.",
@@ -454,13 +439,13 @@ def build_short_reason(topic: str, programs: str, claims: str, category: str, ro
     }
 
     if topic in reasons:
-        return reasons[topic] + skala
+        return reasons[topic]
 
     if claims:
-        return f"Isu ini berpotensi mempengaruhi klaim {claims}.{skala}"
+        return f"Isu ini berpotensi mempengaruhi klaim {claims}."
     if programs:
-        return f"Isu ini berdampak pada program {programs}.{skala}"
-    return f'Isu ini perlu dipantau karena dapat mempengaruhi jaminan sosial ketenagakerjaan.{skala}'
+        return f"Isu ini berdampak pada program {programs}."
+    return "Isu ini perlu dipantau karena dapat mempengaruhi jaminan sosial ketenagakerjaan."
 
 
 def get_time_boost(row) -> int:
@@ -485,45 +470,6 @@ def get_time_boost(row) -> int:
         return 0
     except Exception:
         return 0
-
-
-def get_impact_boost(text: str) -> int:
-    score = 0
-
-    if contains_any(text, [
-        r"ribuan", r"ribuan pekerja", r"phk massal", r"gelombang phk", r"massal"
-    ]):
-        score += 3
-    elif contains_any(text, [
-        r"ratusan", r"ratusan pekerja"
-    ]):
-        score += 2
-    elif contains_any(text, [
-        r"puluhan", r"puluhan pekerja"
-    ]):
-        score += 1
-
-    return score
-
-
-def hitung_skala(media_count: int, berita_count: int) -> int:
-    score = 0
-
-    # media lebih kuat bobotnya
-    if media_count >= 6:
-        score += 3
-    elif media_count >= 4:
-        score += 2
-    elif media_count >= 2:
-        score += 1
-
-    # jumlah berita serupa
-    if berita_count >= 10:
-        score += 2
-    elif berita_count >= 5:
-        score += 1
-
-    return score
 
 
 # =====================================
@@ -562,7 +508,7 @@ def analyze_jamsos(text: str, row=None) -> dict:
     if contains_any(text, [
         r"phk.*massal", r"massal.*phk", r"gelombang phk",
         r"ribuan karyawan", r"ratusan karyawan", r"tutup pabrik",
-        r"pabrik tutup", r"\bpailit\b", r"\bbangkrut\b", r"kontrak tidak diperpanjang"
+        r"pabrik tutup", r"\bpailit\b", r"\bbangkrut\b"
     ]):
         score += 3
 
@@ -602,7 +548,7 @@ def analyze_jamsos(text: str, row=None) -> dict:
 
     if contains_any(text, [
         r"\bupah\b", r"\bgaji\b", r"\bump\b", r"\bumk\b",
-        r"upah minimum", r"tunggakan upah", r"gaji tidak dibayar", r"potong gaji"
+        r"upah minimum", r"tunggakan upah", r"gaji tidak dibayar"
     ]):
         score += 2
         kepesertaan.append("PU")
@@ -617,8 +563,7 @@ def analyze_jamsos(text: str, row=None) -> dict:
 
     if contains_any(text, [
         r"tunggakan iuran", r"menunggak iuran", r"telat bayar iuran",
-        r"denda bpjs", r"tidak patuh", r"sanksi perusahaan", r"pemeriksaan",
-        r"pengawasan", r"belum didaftarkan", r"tidak didaftarkan", r"perusahaan wajib daftar"
+        r"denda bpjs", r"tidak patuh", r"sanksi perusahaan", r"pemeriksaan", r"pengawasan"
     ]):
         score += 3
         program.append("Kepesertaan")
@@ -654,9 +599,6 @@ def analyze_jamsos(text: str, row=None) -> dict:
         kepesertaan.append("Jasa Konstruksi")
         program.append("JKK")
 
-    # boost besaran dampak
-    score += get_impact_boost(text)
-
     # waktu
     if row is not None:
         score += get_time_boost(row)
@@ -674,6 +616,7 @@ def analyze_jamsos(text: str, row=None) -> dict:
     program = unique_join(program)
     kepesertaan = unique_join(kepesertaan)
     klaim = unique_join(klaim)
+    alasan = build_short_reason(topik, program, klaim, kategori)
 
     return {
         "Topik_Utama": topik,
@@ -682,7 +625,7 @@ def analyze_jamsos(text: str, row=None) -> dict:
         "Dampak_Program": program,
         "Dampak_Kepesertaan": kepesertaan,
         "Potensi_Klaim": klaim,
-        "Alasan_Prioritas": "",
+        "Alasan_Prioritas": alasan,
     }
 
 
@@ -742,50 +685,8 @@ def run_priority(sheet_key=None):
     df["Dampak_Program"] = hasil_df["Dampak_Program"]
     df["Dampak_Kepesertaan"] = hasil_df["Dampak_Kepesertaan"]
     df["Potensi_Klaim"] = hasil_df["Potensi_Klaim"]
+    df["Alasan_Prioritas"] = hasil_df["Alasan_Prioritas"]
 
-    # =====================================
-    # SKALA ISU (TOPIK + TANGGAL)
-    # =====================================
-
-    if "Tanggal_Publish" not in df.columns:
-        df["Tanggal_Publish"] = ""
-
-    df["Topik_Utama"] = df["Topik_Utama"].astype(str).fillna("")
-    df["Tanggal_Publish"] = df["Tanggal_Publish"].astype(str).fillna("")
-    df["Media"] = df.get("Media", pd.Series([""] * len(df), index=df.index)).astype(str).fillna("")
-    df["Judul"] = df.get("Judul", pd.Series([""] * len(df), index=df.index)).astype(str).fillna("")
-
-    group_cols = ["Topik_Utama", "Tanggal_Publish"]
-
-    df["Jumlah_Berita_Serupa"] = df.groupby(group_cols)["Judul"].transform("count")
-    df["Jumlah_Media_Serupa"] = df.groupby(group_cols)["Media"].transform("nunique")
-
-    df["Skala_Isu"] = df.apply(
-        lambda r: hitung_skala(
-            int(r.get("Jumlah_Media_Serupa", 0) or 0),
-            int(r.get("Jumlah_Berita_Serupa", 0) or 0)
-        ),
-        axis=1
-    )
-
-    # tambahkan skala ke score akhir
-    df["Score"] = pd.to_numeric(df["Score"], errors="coerce").fillna(0).astype(int)
-    df["Skala_Isu"] = pd.to_numeric(df["Skala_Isu"], errors="coerce").fillna(0).astype(int)
-    df["Score"] = df["Score"] + df["Skala_Isu"]
-
-    # alasan prioritas dibuat setelah skala dihitung
-    df["Alasan_Prioritas"] = df.apply(
-        lambda r: build_short_reason(
-            str(r.get("Topik_Utama", "")),
-            str(r.get("Dampak_Program", "")),
-            str(r.get("Potensi_Klaim", "")),
-            str(r.get("Kategori_Berita", "")),
-            row=r
-        ),
-        axis=1
-    )
-
-    # hitung prioritas final
     df["Prioritas"] = df.apply(
         lambda r: classify_priority(
             int(r["Score"]),
@@ -795,16 +696,16 @@ def run_priority(sheet_key=None):
         axis=1
     )
 
-    # final tuning output
+    # final tuning output: lebih longgar
     df = df[
         ~(
             (df["Kategori_Berita"].astype(str) == "GLOBAL") &
             (df["Konteks_Berita"].astype(str) == "LUAR NEGERI / TIDAK RELEVAN") &
-            (pd.to_numeric(df["Score"], errors="coerce").fillna(0) <= 3)
+            (df["Score"] <= 1)
         )
     ].copy()
 
-    df = df[pd.to_numeric(df["Score"], errors="coerce").fillna(0) >= 1].copy()
+    df = df[df["Score"] >= 1].copy()
 
     df = ensure_columns(df)
 

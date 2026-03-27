@@ -426,7 +426,6 @@ def build_alerts(df: pd.DataFrame) -> list[str]:
 
     df_alert = df.copy()
 
-    # Prioritas tinggi
     if "Prioritas" in df_alert.columns:
         tinggi_count = int((df_alert["Prioritas"] == "PRIORITAS TINGGI").sum())
         if tinggi_count >= 3:
@@ -434,20 +433,17 @@ def build_alerts(df: pd.DataFrame) -> list[str]:
         elif tinggi_count > 0:
             alerts.append("🟡 Terdapat isu prioritas tinggi yang perlu dipantau lebih dekat.")
 
-    # Topik dominan
     if "Topik" in df_alert.columns and not df_alert["Topik"].empty:
         topik_counts = df_alert["Topik"].value_counts()
         if not topik_counts.empty and int(topik_counts.iloc[0]) >= 5:
             alerts.append(f"📈 Isu didominasi oleh topik {clean_label(topik_counts.index[0])}.")
 
-    # Wilayah dominan
     if "Provinsi" in df_alert.columns:
         prov_counts = df_alert["Provinsi"].astype(str).str.strip()
         prov_counts = prov_counts[prov_counts != ""].value_counts()
         if not prov_counts.empty and int(prov_counts.iloc[0]) >= 3:
             alerts.append(f"🌍 Konsentrasi isu terpantau di wilayah {prov_counts.index[0]}.")
 
-    # Lonjakan 6 jam terakhir
     if "Waktu_Publish_WIB" in df_alert.columns:
         try:
             publish_dt = normalize_datetime_col(df_alert, "Waktu_Publish_WIB")
@@ -459,6 +455,93 @@ def build_alerts(df: pd.DataFrame) -> list[str]:
             pass
 
     return alerts if alerts else ["Belum ada eskalasi signifikan pada periode terpilih."]
+
+def build_exec_narrative(df: pd.DataFrame) -> str:
+    if df.empty:
+        return (
+            "Pada periode pemantauan ini belum terdapat isu ketenagakerjaan yang menonjol. "
+            "Pemantauan rutin tetap perlu dilakukan untuk mendeteksi perkembangan isu secara dini."
+        )
+
+    total = len(df)
+    tinggi = int((df["Prioritas"] == "PRIORITAS TINGGI").sum()) if "Prioritas" in df.columns else 0
+    sedang = int((df["Prioritas"] == "PRIORITAS SEDANG").sum()) if "Prioritas" in df.columns else 0
+    rendah = int((df["Prioritas"] == "PRIORITAS RENDAH").sum()) if "Prioritas" in df.columns else 0
+
+    if "Topik" in df.columns and not df["Topik"].empty:
+        topik_counts = df["Topik"].value_counts().head(3)
+        topik_list = [str(x) for x in topik_counts.index.tolist()]
+    else:
+        topik_list = []
+
+    wilayah_text = ""
+    if "Provinsi" in df.columns:
+        prov = df["Provinsi"].astype(str).str.strip()
+        prov = prov[prov != ""]
+        if not prov.empty:
+            prov_counts = prov.value_counts()
+            wilayah_utama = str(prov_counts.index[0])
+            wilayah_jumlah = int(prov_counts.iloc[0])
+            if wilayah_jumlah >= 3:
+                wilayah_text = f"Konsentrasi isu paling banyak terpantau di wilayah {wilayah_utama}. "
+
+    dampak_parts = []
+    if "PHK" in topik_list:
+        dampak_parts.append("PHK berpotensi meningkatkan klaim JKP dan pencairan JHT")
+    if "THR / Kesejahteraan Pekerja" in topik_list:
+        dampak_parts.append("isu THR berpotensi memicu pengaduan dan perselisihan hubungan industrial")
+    if "Kepesertaan BPJS" in topik_list:
+        dampak_parts.append("isu kepesertaan berkaitan dengan cakupan perlindungan tenaga kerja")
+    if "Kecelakaan Kerja (JKK)" in topik_list:
+        dampak_parts.append("kasus kecelakaan kerja berpotensi meningkatkan klaim JKK")
+    if "Upah / Gaji" in topik_list:
+        dampak_parts.append("isu upah dapat mempengaruhi stabilitas hubungan kerja")
+
+    if not dampak_parts:
+        dampak_text = (
+            "Secara umum, perkembangan isu perlu dicermati karena dapat mempengaruhi kepesertaan, "
+            "kepatuhan, dan potensi klaim manfaat."
+        )
+    else:
+        dampak_text = "Dampak utama yang perlu dicermati adalah " + "; ".join(dampak_parts[:3]) + "."
+
+    if tinggi >= 10:
+        status_text = "Pada periode pemantauan ini, kondisi isu ketenagakerjaan berada pada tingkat perhatian tinggi. "
+    elif tinggi > 0:
+        status_text = "Pada periode pemantauan ini, terdapat isu ketenagakerjaan yang memerlukan perhatian. "
+    else:
+        status_text = "Pada periode pemantauan ini, kondisi isu ketenagakerjaan relatif terkendali. "
+
+    if topik_list:
+        if len(topik_list) == 1:
+            topik_text = f"Isu didominasi oleh topik {topik_list[0]}. "
+        elif len(topik_list) == 2:
+            topik_text = f"Isu didominasi oleh topik {topik_list[0]} dan {topik_list[1]}. "
+        else:
+            topik_text = f"Isu didominasi oleh topik {topik_list[0]}, {topik_list[1]}, dan {topik_list[2]}. "
+    else:
+        topik_text = ""
+
+    prioritas_text = (
+        f"Dari total {total:,} berita teranalisis, terdapat {tinggi:,} berita prioritas tinggi, "
+        f"{sedang:,} berita prioritas sedang, dan {rendah:,} berita prioritas rendah. "
+    )
+
+    if tinggi >= 10:
+        rekom_text = (
+            "Diperlukan pemantauan intensif, pendalaman terhadap isu prioritas tinggi, "
+            "serta koordinasi lintas unit pada topik yang paling dominan."
+        )
+    elif tinggi > 0:
+        rekom_text = (
+            "Perlu dilakukan pemantauan berkala dan klarifikasi lebih lanjut terhadap isu yang berkembang."
+        )
+    else:
+        rekom_text = (
+            "Pemantauan rutin tetap diperlukan sebagai langkah antisipatif terhadap perubahan eskalasi isu."
+        )
+
+    return (status_text + prioritas_text + topik_text + wilayah_text + dampak_text + " " + rekom_text).strip()
 
 # ===============================
 # LOAD DATA
@@ -747,7 +830,6 @@ with tab_dash:
 
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
 
-    # Isu paling kritis
     st.markdown('<div class="section-title">🚨 Isu Paling Kritis Hari Ini</div>', unsafe_allow_html=True)
 
     df_critical = filtered_display.copy()
@@ -1031,6 +1113,20 @@ Topik dominan pada periode ini:
 **Rekomendasi:** {rekomendasi}
 </div>
 """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+        st.markdown('<div class="section-title">📝 Narasi Pimpinan</div>', unsafe_allow_html=True)
+
+        narasi_pimpinan = build_exec_narrative(filtered_display)
+
+        st.markdown(
+            f"""
+            <div class="news-card analysis-body">
+                {escape(narasi_pimpinan)}
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
@@ -1489,6 +1585,7 @@ Dashboard menampilkan:
 <li>topik dominan</li>
 <li>isu paling kritis hari ini</li>
 <li>alert eskalasi</li>
+<li>narasi pimpinan</li>
 </ul>
 
 <br>

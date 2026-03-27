@@ -1,12 +1,13 @@
 import re
-import streamlit as st
 import pandas as pd
+import streamlit as st
 from html import escape
 import plotly.graph_objects as go
 
 from scraper import run_scraper
 from filter_keyword import run_filter
 from update_priority import run_priority
+from cluster_isu import run_cluster_isu
 from gsheet_utils import read_sheet
 
 SHEET_KEY = st.secrets["SHEET_KEY"]
@@ -357,6 +358,10 @@ thead tr th {
 }
 .info-text li { margin-bottom: 6px; }
 
+.cluster-highlight {
+    border-left: 4px solid #4f46e5;
+}
+
 @media (max-width: 768px) {
     .block-container {
         padding-top: 1.2rem;
@@ -426,7 +431,6 @@ def build_alerts(df: pd.DataFrame) -> list[str]:
 
     df_alert = df.copy()
 
-    # Prioritas tinggi
     if "Prioritas" in df_alert.columns:
         tinggi_count = int((df_alert["Prioritas"] == "PRIORITAS TINGGI").sum())
         if tinggi_count >= 3:
@@ -434,20 +438,17 @@ def build_alerts(df: pd.DataFrame) -> list[str]:
         elif tinggi_count > 0:
             alerts.append("🟡 Terdapat isu prioritas tinggi yang perlu dipantau lebih dekat.")
 
-    # Topik dominan
     if "Topik" in df_alert.columns and not df_alert["Topik"].empty:
         topik_counts = df_alert["Topik"].value_counts()
         if not topik_counts.empty and int(topik_counts.iloc[0]) >= 5:
             alerts.append(f"📈 Isu didominasi oleh topik {clean_label(topik_counts.index[0])}.")
 
-    # Wilayah dominan
     if "Provinsi" in df_alert.columns:
         prov_counts = df_alert["Provinsi"].astype(str).str.strip()
         prov_counts = prov_counts[prov_counts != ""].value_counts()
         if not prov_counts.empty and int(prov_counts.iloc[0]) >= 3:
             alerts.append(f"🌍 Konsentrasi isu terpantau di wilayah {prov_counts.index[0]}.")
 
-    # Lonjakan 6 jam terakhir
     if "Waktu_Publish_WIB" in df_alert.columns:
         try:
             publish_dt = normalize_datetime_col(df_alert, "Waktu_Publish_WIB")
@@ -460,30 +461,10 @@ def build_alerts(df: pd.DataFrame) -> list[str]:
 
     return alerts if alerts else ["Belum ada eskalasi signifikan pada periode terpilih."]
 
-# ===============================
-# LOAD DATA
-# ===============================
 @st.cache_data(ttl=300, show_spinner=False)
 def load_sheet(key: str, tab: str) -> pd.DataFrame:
     return read_sheet(key, tab)
 
-raw = load_sheet(SHEET_KEY, "RAW")
-analyzed = load_sheet(SHEET_KEY, "ANALYZED")
-
-if raw is None or raw.empty:
-    st.warning("Data RAW belum tersedia.")
-    st.stop()
-
-if analyzed is None:
-    analyzed = pd.DataFrame()
-
-raw.columns = raw.columns.astype(str).str.strip()
-if not analyzed.empty:
-    analyzed.columns = analyzed.columns.astype(str).str.strip()
-
-# ===============================
-# FIX TANGGAL
-# ===============================
 def ensure_publish_date(df: pd.DataFrame) -> pd.DataFrame:
     if df is None or df.empty:
         return pd.DataFrame()
@@ -509,8 +490,48 @@ def ensure_publish_date(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=["Tanggal_Hari"]).copy()
     return df
 
+def ensure_cluster_date(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    df = df.copy()
+    if "Tanggal_Isu" in df.columns:
+        s = pd.to_datetime(df["Tanggal_Isu"], errors="coerce")
+    elif "Tanggal_Publish" in df.columns:
+        s = pd.to_datetime(df["Tanggal_Publish"], errors="coerce")
+    else:
+        s = pd.Series([pd.NaT] * len(df), index=df.index)
+
+    df["Tanggal_Hari"] = s.dt.date
+    df = df.dropna(subset=["Tanggal_Hari"]).copy()
+    return df
+
+# ===============================
+# LOAD DATA
+# ===============================
+raw = load_sheet(SHEET_KEY, "RAW")
+analyzed = load_sheet(SHEET_KEY, "ANALYZED")
+clustered = load_sheet(SHEET_KEY, "CLUSTERED")
+
+if raw is None or raw.empty:
+    st.warning("Data RAW belum tersedia.")
+    st.stop()
+
+if analyzed is None:
+    analyzed = pd.DataFrame()
+
+if clustered is None:
+    clustered = pd.DataFrame()
+
+raw.columns = raw.columns.astype(str).str.strip()
+if not analyzed.empty:
+    analyzed.columns = analyzed.columns.astype(str).str.strip()
+if not clustered.empty:
+    clustered.columns = clustered.columns.astype(str).str.strip()
+
 raw = ensure_publish_date(raw)
 analyzed = ensure_publish_date(analyzed)
+clustered = ensure_cluster_date(clustered)
 
 if raw.empty:
     st.warning("Data RAW belum tersedia.")
@@ -532,6 +553,7 @@ with c_ctrl1:
             run_scraper()
             run_filter()
             run_priority()
+            run_cluster_isu()
             safe_clear_caches()
         st.success("Update selesai!")
         st.rerun()
@@ -640,9 +662,19 @@ filtered_display = analyzed[
     (analyzed["Tanggal_Hari"] <= end_date)
 ].copy() if not analyzed.empty else pd.DataFrame()
 
+clustered_display = clustered[
+    (clustered["Tanggal_Hari"] >= start_date) &
+    (clustered["Tanggal_Hari"] <= end_date)
+].copy() if not clustered.empty else pd.DataFrame()
+
 if not filtered_display.empty and kategori_option != "SEMUA" and "Kategori_Berita" in filtered_display.columns:
     filtered_display = filtered_display[
         filtered_display["Kategori_Berita"].astype(str).str.upper().eq(kategori_option)
+    ].copy()
+
+if not clustered_display.empty and kategori_option != "SEMUA" and "Kategori_Berita" in clustered_display.columns:
+    clustered_display = clustered_display[
+        clustered_display["Kategori_Berita"].astype(str).str.upper().eq(kategori_option)
     ].copy()
 
 if not filtered_display.empty:
@@ -660,11 +692,17 @@ if not filtered_for_table.empty and filter_option != "SEMUA" and "Prioritas" in 
         filtered_for_table["Prioritas"].astype(str).eq(filter_option)
     ].copy()
 
+clustered_for_view = clustered_display.copy()
+if not clustered_for_view.empty and filter_option != "SEMUA" and "Prioritas_Cluster" in clustered_for_view.columns:
+    clustered_for_view = clustered_for_view[
+        clustered_for_view["Prioritas_Cluster"].astype(str).eq(filter_option)
+    ].copy()
+
 # ===============================
 # TABS
 # ===============================
-tab_dash, tab_data, tab_region, tab_info = st.tabs(
-    ["📊 Dashboard", "📰 Data Berita", "📍 Analisis Daerah", "📘 Panduan"]
+tab_dash, tab_cluster, tab_data, tab_region, tab_info = st.tabs(
+    ["📊 Dashboard", "🧩 Isu Utama", "📰 Data Berita", "📍 Analisis Daerah", "📘 Panduan"]
 )
 
 # ===============================
@@ -734,12 +772,13 @@ with tab_dash:
         )
 
     with c5:
+        cluster_tinggi = int((safe_series(clustered_display, "Prioritas_Cluster") == "PRIORITAS TINGGI").sum()) if not clustered_display.empty else 0
         st.markdown(
             f"""
             <div class="kpi-card">
-              <div class="kpi-title">Prioritas Rendah</div>
-              <div class="kpi-value">{rendah:,}</div>
-              <div class="kpi-sub"><span class="badge badge-low">LOW</span></div>
+              <div class="kpi-title">Cluster Isu Tinggi</div>
+              <div class="kpi-value">{cluster_tinggi:,}</div>
+              <div class="kpi-sub">Isu utama hasil pengelompokan</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -747,55 +786,96 @@ with tab_dash:
 
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
 
-    # Isu paling kritis
     st.markdown('<div class="section-title">🚨 Isu Paling Kritis Hari Ini</div>', unsafe_allow_html=True)
 
-    df_critical = filtered_display.copy()
-    if "Score" in df_critical.columns:
-        df_critical["Score_num"] = pd.to_numeric(df_critical["Score"], errors="coerce").fillna(0)
-        sort_cols = ["Score_num"]
-        ascending = [False]
-        if "Waktu_Publish_WIB" in df_critical.columns:
-            df_critical["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_critical, "Waktu_Publish_WIB")
-            sort_cols.append("Waktu_Publish_WIB_dt")
-            ascending.append(False)
-        df_critical = df_critical.sort_values(sort_cols, ascending=ascending)
-    elif "Waktu_Publish_WIB" in df_critical.columns:
-        df_critical["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_critical, "Waktu_Publish_WIB")
-        df_critical = df_critical.sort_values("Waktu_Publish_WIB_dt", ascending=False)
+    if not clustered_display.empty and "Prioritas_Cluster" in clustered_display.columns:
+        df_cluster_critical = clustered_display.copy()
+        priority_order_cluster = {
+            "PRIORITAS TINGGI": 1,
+            "PRIORITAS SEDANG": 2,
+            "PRIORITAS RENDAH": 3
+        }
+        df_cluster_critical["__prio"] = df_cluster_critical["Prioritas_Cluster"].map(priority_order_cluster).fillna(99)
+        df_cluster_critical["__score"] = pd.to_numeric(df_cluster_critical.get("Score_Maks", 0), errors="coerce").fillna(0)
+        df_cluster_critical = df_cluster_critical.sort_values(["__prio", "__score", "Jumlah_Media", "Jumlah_Berita"], ascending=[True, False, False, False])
 
-    if not df_critical.empty:
-        top_issue = df_critical.iloc[0]
-        judul = escape(str(top_issue.get("Judul", "-")))
-        topik = escape(clean_label(top_issue.get("Topik_Utama", "-")))
-        kategori = escape(clean_label(top_issue.get("Kategori_Berita", "-")))
-        lokasi = escape(clean_label(
-            str(top_issue.get("Kabupaten_Kota", "") or "").strip() or str(top_issue.get("Provinsi", "") or "").strip() or "-"
-        ))
-        dampak = escape(clean_label(top_issue.get("Dampak_Program", "-")))
-        alasan = escape(clean_label(top_issue.get("Alasan_Prioritas", "-")))
-        prioritas = str(top_issue.get("Prioritas", "PRIORITAS RENDAH")).strip()
+        top_cluster = df_cluster_critical.iloc[0]
+        nama_isu = escape(str(top_cluster.get("Nama_Isu", "-")))
+        topik = escape(clean_label(top_cluster.get("Topik_Utama", "-")))
+        lokasi = escape(clean_label(top_cluster.get("Lokasi_Utama", "-")))
+        prioritas = str(top_cluster.get("Prioritas_Cluster", "PRIORITAS RENDAH")).strip()
+        jumlah_media = escape(str(top_cluster.get("Jumlah_Media", "0")))
+        jumlah_berita = escape(str(top_cluster.get("Jumlah_Berita", "0")))
+        ringkasan = escape(str(top_cluster.get("Ringkasan_Cluster", "-")))
 
         st.markdown(
             f"""
-            <div class="news-card">
+            <div class="news-card cluster-highlight">
                 <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
                     <div style="flex:1; min-width:280px;">
-                        <div class="news-title">{judul}</div>
-                        <div class="news-meta">{lokasi} • {kategori} • {topik}</div>
+                        <div class="news-title">{nama_isu}</div>
+                        <div class="news-meta">{lokasi} • {topik}</div>
                     </div>
                     <div>{badge_html(prioritas)}</div>
                 </div>
                 <div style="margin-top:6px;">
-                    <span class='news-chip'>Dampak: {dampak}</span>
+                    <span class='news-chip'>Media: {jumlah_media}</span>
+                    <span class='news-chip'>Berita: {jumlah_berita}</span>
                 </div>
                 <div style="font-size:.96rem; line-height:1.7; margin-top:10px;">
-                    {alasan}
+                    {ringkasan}
                 </div>
             </div>
             """,
             unsafe_allow_html=True
         )
+    else:
+        df_critical = filtered_display.copy()
+        if "Score" in df_critical.columns:
+            df_critical["Score_num"] = pd.to_numeric(df_critical["Score"], errors="coerce").fillna(0)
+            sort_cols = ["Score_num"]
+            ascending = [False]
+            if "Waktu_Publish_WIB" in df_critical.columns:
+                df_critical["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_critical, "Waktu_Publish_WIB")
+                sort_cols.append("Waktu_Publish_WIB_dt")
+                ascending.append(False)
+            df_critical = df_critical.sort_values(sort_cols, ascending=ascending)
+        elif "Waktu_Publish_WIB" in df_critical.columns:
+            df_critical["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_critical, "Waktu_Publish_WIB")
+            df_critical = df_critical.sort_values("Waktu_Publish_WIB_dt", ascending=False)
+
+        if not df_critical.empty:
+            top_issue = df_critical.iloc[0]
+            judul = escape(str(top_issue.get("Judul", "-")))
+            topik = escape(clean_label(top_issue.get("Topik_Utama", "-")))
+            kategori = escape(clean_label(top_issue.get("Kategori_Berita", "-")))
+            lokasi = escape(clean_label(
+                str(top_issue.get("Kabupaten_Kota", "") or "").strip() or str(top_issue.get("Provinsi", "") or "").strip() or "-"
+            ))
+            dampak = escape(clean_label(top_issue.get("Dampak_Program", "-")))
+            alasan = escape(clean_label(top_issue.get("Alasan_Prioritas", "-")))
+            prioritas = str(top_issue.get("Prioritas", "PRIORITAS RENDAH")).strip()
+
+            st.markdown(
+                f"""
+                <div class="news-card">
+                    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+                        <div style="flex:1; min-width:280px;">
+                            <div class="news-title">{judul}</div>
+                            <div class="news-meta">{lokasi} • {kategori} • {topik}</div>
+                        </div>
+                        <div>{badge_html(prioritas)}</div>
+                    </div>
+                    <div style="margin-top:6px;">
+                        <span class='news-chip'>Dampak: {dampak}</span>
+                    </div>
+                    <div style="font-size:.96rem; line-height:1.7; margin-top:10px;">
+                        {alasan}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
     left, right = st.columns([1.05, 0.95], gap="large")
 
@@ -946,6 +1026,51 @@ with tab_dash:
             st.info("Belum ada berita prioritas tinggi.")
 
     with right:
+        st.markdown('<div class="section-title">🧩 Ringkasan Cluster Isu</div>', unsafe_allow_html=True)
+
+        if not clustered_display.empty:
+            cluster_show = clustered_display.copy()
+            priority_order_cluster = {
+                "PRIORITAS TINGGI": 1,
+                "PRIORITAS SEDANG": 2,
+                "PRIORITAS RENDAH": 3
+            }
+            cluster_show["__prio"] = cluster_show["Prioritas_Cluster"].map(priority_order_cluster).fillna(99)
+            cluster_show["__score"] = pd.to_numeric(cluster_show.get("Score_Maks", 0), errors="coerce").fillna(0)
+            cluster_show = cluster_show.sort_values(["__prio", "__score", "Jumlah_Media", "Jumlah_Berita"], ascending=[True, False, False, False])
+
+            for _, row in cluster_show.head(3).iterrows():
+                nama_isu = escape(str(row.get("Nama_Isu", "-")))
+                lokasi = escape(clean_label(row.get("Lokasi_Utama", "-")))
+                topik = escape(clean_label(row.get("Topik_Utama", "-")))
+                prioritas = str(row.get("Prioritas_Cluster", "PRIORITAS RENDAH")).strip()
+                media_ct = escape(str(row.get("Jumlah_Media", "0")))
+                berita_ct = escape(str(row.get("Jumlah_Berita", "0")))
+                ringkasan = escape(str(row.get("Ringkasan_Cluster", "-")))
+
+                st.markdown(
+                    f"""
+                    <div class="news-card">
+                        <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+                            <div style="flex:1; min-width:240px;">
+                                <div class="news-title">{nama_isu}</div>
+                                <div class="news-meta">{lokasi} • {topik}</div>
+                            </div>
+                            <div>{badge_html(prioritas)}</div>
+                        </div>
+                        <div style="margin:8px 0 10px 0;">
+                            <span class='news-chip'>Media: {media_ct}</span>
+                            <span class='news-chip'>Berita: {berita_ct}</span>
+                        </div>
+                        <div style="font-size:.95rem; line-height:1.65;">{ringkasan}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+        else:
+            st.info("Cluster isu belum tersedia. Klik update data untuk membentuk isu utama.")
+
+        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
         st.markdown('<div class="section-title">🧠 Analisis Situasi</div>', unsafe_allow_html=True)
 
         total = len(filtered_display)
@@ -1049,6 +1174,126 @@ Topik dominan pada periode ini:
             )
 
 # ===============================
+# TAB: ISU UTAMA / CLUSTER
+# ===============================
+with tab_cluster:
+    st.markdown('<div class="section-title">Isu Utama Hasil Pengelompokan</div>', unsafe_allow_html=True)
+    st.caption("Setiap isu merupakan gabungan beberapa berita serupa berdasarkan topik, lokasi, tanggal, dan kemiripan judul.")
+
+    if clustered_for_view.empty:
+        st.info("Belum ada data cluster isu. Klik 🔄 Update Data dulu.")
+    else:
+        df_cluster = clustered_for_view.copy()
+
+        priority_order = {
+            "PRIORITAS TINGGI": 1,
+            "PRIORITAS SEDANG": 2,
+            "PRIORITAS RENDAH": 3
+        }
+        df_cluster["Urutan"] = df_cluster["Prioritas_Cluster"].map(priority_order).fillna(99)
+        df_cluster["Score_Maks_num"] = pd.to_numeric(df_cluster.get("Score_Maks", 0), errors="coerce").fillna(0)
+        df_cluster["Jumlah_Media_num"] = pd.to_numeric(df_cluster.get("Jumlah_Media", 0), errors="coerce").fillna(0)
+        df_cluster["Jumlah_Berita_num"] = pd.to_numeric(df_cluster.get("Jumlah_Berita", 0), errors="coerce").fillna(0)
+
+        if "Tanggal_Isu" in df_cluster.columns:
+            df_cluster["Tanggal_Isu_dt"] = pd.to_datetime(df_cluster["Tanggal_Isu"], errors="coerce")
+            df_cluster = df_cluster.sort_values(
+                ["Urutan", "Score_Maks_num", "Jumlah_Media_num", "Jumlah_Berita_num", "Tanggal_Isu_dt"],
+                ascending=[True, False, False, False, False]
+            )
+        else:
+            df_cluster = df_cluster.sort_values(
+                ["Urutan", "Score_Maks_num", "Jumlah_Media_num", "Jumlah_Berita_num"],
+                ascending=[True, False, False, False]
+            )
+
+        items_per_page_cluster = 8
+        total_rows_cluster = len(df_cluster)
+        total_pages_cluster = max(1, (total_rows_cluster - 1) // items_per_page_cluster + 1)
+
+        if "page_cluster" not in st.session_state:
+            st.session_state.page_cluster = 1
+        if st.session_state.page_cluster > total_pages_cluster:
+            st.session_state.page_cluster = 1
+
+        start_idx = (st.session_state.page_cluster - 1) * items_per_page_cluster
+        end_idx = start_idx + items_per_page_cluster
+        df_page_cluster = df_cluster.iloc[start_idx:end_idx].copy()
+
+        for _, row in df_page_cluster.iterrows():
+            nama_isu = escape(clean_label(row.get("Nama_Isu", "-")))
+            topik = escape(clean_label(row.get("Topik_Utama", "-")))
+            lokasi = escape(clean_label(row.get("Lokasi_Utama", "-")))
+            tanggal_isu = escape(clean_label(row.get("Tanggal_Isu", "-")))
+            prioritas = str(row.get("Prioritas_Cluster", "PRIORITAS RENDAH")).strip()
+            jumlah_media = escape(str(row.get("Jumlah_Media", "0")))
+            jumlah_berita = escape(str(row.get("Jumlah_Berita", "0")))
+            skala_cluster = escape(clean_label(row.get("Skala_Cluster", "-")))
+            score_maks = escape(str(row.get("Score_Maks", "0")))
+            daftar_media = escape(clean_label(row.get("Daftar_Media", "")))
+            ringkasan = escape(clean_label(row.get("Ringkasan_Cluster", "")))
+            link = str(row.get("Link_Representatif", "")).strip()
+
+            chips = [
+                f"<span class='badge-cat'>{topik}</span>",
+                f"<span class='badge-cat'>{lokasi}</span>",
+                f"<span class='news-chip'>Media: {jumlah_media}</span>",
+                f"<span class='news-chip'>Berita: {jumlah_berita}</span>",
+                f"<span class='news-chip'>Skala: {skala_cluster}</span>",
+                f"<span class='news-chip'>Score: {score_maks}</span>",
+            ]
+
+            if daftar_media:
+                chips.append(f"<span class='news-chip'>Media Utama: {daftar_media}</span>")
+
+            link_html = ""
+            if link:
+                safe_link = escape(link, quote=True)
+                link_html = f"<div class='news-link'><a href='{safe_link}' target='_blank'>Baca berita representatif</a></div>"
+
+            st.markdown(
+                f"""
+                <div class="news-card cluster-highlight">
+                    <div style='display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;'>
+                        <div style='flex:1; min-width:260px;'>
+                            <div class='news-title'>{nama_isu}</div>
+                            <div class='news-meta'>{tanggal_isu} • {lokasi}</div>
+                        </div>
+                        <div>{badge_html(prioritas)}</div>
+                    </div>
+                    <div style='margin:8px 0 10px 0;'>{''.join(chips)}</div>
+                    <div style='font-size:.95rem; line-height:1.65; margin-bottom:10px;'>{ringkasan if ringkasan else 'Belum ada ringkasan cluster.'}</div>
+                    {link_html}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        st.markdown(
+            f"""
+            <div style='text-align:center; margin-top:10px; color:#667085;'>
+            Menampilkan {min(start_idx+1, total_rows_cluster)} - {min(end_idx, total_rows_cluster)} dari {total_rows_cluster} cluster isu
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        cc1, cc2, cc3 = st.columns([1, 2, 1])
+        with cc1:
+            if st.button("⬅ Sebelumnya", key="cluster_prev", disabled=(st.session_state.page_cluster <= 1)):
+                st.session_state.page_cluster -= 1
+                st.rerun()
+        with cc3:
+            if st.button("Berikutnya ➡", key="cluster_next", disabled=(st.session_state.page_cluster >= total_pages_cluster)):
+                st.session_state.page_cluster += 1
+                st.rerun()
+        with cc2:
+            st.markdown(
+                f"<div style='text-align:center; color:#667085;'>Halaman {st.session_state.page_cluster} dari {total_pages_cluster}</div>",
+                unsafe_allow_html=True
+            )
+
+# ===============================
 # TAB: DATA BERITA
 # ===============================
 with tab_data:
@@ -1059,207 +1304,215 @@ with tab_data:
 
     if df_display.empty:
         st.info("Tidak ada berita untuk filter yang dipilih.")
-        st.stop()
-
-    priority_order = {
-        "PRIORITAS TINGGI": 1,
-        "PRIORITAS SEDANG": 2,
-        "PRIORITAS RENDAH": 3
-    }
-    df_display["Urutan"] = df_display["Prioritas"].map(priority_order).fillna(99)
-
-    sort_col = None
-    if "Waktu_Publish_WIB" in df_display.columns:
-        df_display["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_display, "Waktu_Publish_WIB")
-        sort_col = "Waktu_Publish_WIB_dt"
-    elif "Tanggal_Publish" in df_display.columns:
-        df_display["Tanggal_Publish_dt"] = pd.to_datetime(df_display["Tanggal_Publish"], errors="coerce")
-        sort_col = "Tanggal_Publish_dt"
-    elif "Tanggal_Ambil" in df_display.columns:
-        df_display["Tanggal_Ambil_dt"] = pd.to_datetime(df_display["Tanggal_Ambil"], errors="coerce")
-        sort_col = "Tanggal_Ambil_dt"
     else:
-        sort_col = "Urutan"
+        priority_order = {
+            "PRIORITAS TINGGI": 1,
+            "PRIORITAS SEDANG": 2,
+            "PRIORITAS RENDAH": 3
+        }
+        df_display["Urutan"] = df_display["Prioritas"].map(priority_order).fillna(99)
 
-    df_display = df_display.sort_values(["Urutan", sort_col], ascending=[True, False]).drop(columns=["Urutan"])
-    df_display = df_display.reset_index(drop=True)
+        sort_col = None
+        if "Waktu_Publish_WIB" in df_display.columns:
+            df_display["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_display, "Waktu_Publish_WIB")
+            sort_col = "Waktu_Publish_WIB_dt"
+        elif "Tanggal_Publish" in df_display.columns:
+            df_display["Tanggal_Publish_dt"] = pd.to_datetime(df_display["Tanggal_Publish"], errors="coerce")
+            sort_col = "Tanggal_Publish_dt"
+        elif "Tanggal_Ambil" in df_display.columns:
+            df_display["Tanggal_Ambil_dt"] = pd.to_datetime(df_display["Tanggal_Ambil"], errors="coerce")
+            sort_col = "Tanggal_Ambil_dt"
+        else:
+            sort_col = "Urutan"
 
-    items_per_page = 10
-    total_rows = len(df_display)
-    total_pages = max(1, (total_rows - 1) // items_per_page + 1)
+        df_display = df_display.sort_values(["Urutan", sort_col], ascending=[True, False]).drop(columns=["Urutan"])
+        df_display = df_display.reset_index(drop=True)
 
-    if "page" not in st.session_state:
-        st.session_state.page = 1
-    if st.session_state.page > total_pages:
-        st.session_state.page = 1
+        items_per_page = 10
+        total_rows = len(df_display)
+        total_pages = max(1, (total_rows - 1) // items_per_page + 1)
 
-    start_idx = (st.session_state.page - 1) * items_per_page
-    end_idx = start_idx + items_per_page
-    df_page = df_display.iloc[start_idx:end_idx].copy()
+        if "page" not in st.session_state:
+            st.session_state.page = 1
+        if st.session_state.page > total_pages:
+            st.session_state.page = 1
 
-    for i, row in df_page.iterrows():
-        judul = escape(clean_label(row.get("Judul", "-")))
-        media = escape(clean_label(row.get("Media", "-")))
-        link = str(row.get("Link", "")).strip()
-        waktu = escape(clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal", "-"))))
-        prioritas = str(row.get("Prioritas", "PRIORITAS RENDAH")).strip()
+        start_idx = (st.session_state.page - 1) * items_per_page
+        end_idx = start_idx + items_per_page
+        df_page = df_display.iloc[start_idx:end_idx].copy()
 
-        topik = escape(clean_label(row.get("Topik_Utama", row.get("Topik", ""))))
-        dampak_program = escape(clean_label(row.get("Dampak_Program", "")))
-        dampak_kepesertaan = escape(clean_label(row.get("Dampak_Kepesertaan", "")))
-        potensi_klaim = escape(clean_label(row.get("Potensi_Klaim", "")))
-        alasan = escape(clean_label(row.get("Alasan_Prioritas", "")))
-        kategori = escape(clean_label(row.get("Kategori_Berita", "")))
-        provinsi = escape(clean_label(row.get("Provinsi", "")))
-        kabkota = escape(clean_label(row.get("Kabupaten_Kota", "")))
+        for i, row in df_page.iterrows():
+            judul = escape(clean_label(row.get("Judul", "-")))
+            media = escape(clean_label(row.get("Media", "-")))
+            link = str(row.get("Link", "")).strip()
+            waktu = escape(clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal", "-"))))
+            prioritas = str(row.get("Prioritas", "PRIORITAS RENDAH")).strip()
 
-        lokasi = kabkota if kabkota else (provinsi if provinsi else "-")
+            topik = escape(clean_label(row.get("Topik_Utama", row.get("Topik", ""))))
+            dampak_program = escape(clean_label(row.get("Dampak_Program", "")))
+            dampak_kepesertaan = escape(clean_label(row.get("Dampak_Kepesertaan", "")))
+            potensi_klaim = escape(clean_label(row.get("Potensi_Klaim", "")))
+            alasan = escape(clean_label(row.get("Alasan_Prioritas", "")))
+            kategori = escape(clean_label(row.get("Kategori_Berita", "")))
+            provinsi = escape(clean_label(row.get("Provinsi", "")))
+            kabkota = escape(clean_label(row.get("Kabupaten_Kota", "")))
+            media_serupa = escape(str(row.get("Jumlah_Media_Serupa", "")))
+            berita_serupa = escape(str(row.get("Jumlah_Berita_Serupa", "")))
+            skala_isu = escape(str(row.get("Skala_Isu", "")))
 
-        chips = []
-        if kategori:
-            chips.append(f"<span class='badge-cat'>{kategori}</span>")
-        if lokasi and lokasi != "-":
-            chips.append(f"<span class='badge-cat'>{lokasi}</span>")
-        if topik:
-            chips.append(f"<span class='news-chip'>Topik: {topik}</span>")
-        if dampak_program:
-            chips.append(f"<span class='news-chip'>Program: {dampak_program}</span>")
-        if dampak_kepesertaan:
-            chips.append(f"<span class='news-chip'>Kepesertaan: {dampak_kepesertaan}</span>")
-        if potensi_klaim:
-            chips.append(f"<span class='news-chip'>Klaim: {potensi_klaim}</span>")
+            lokasi = kabkota if kabkota else (provinsi if provinsi else "-")
 
-        link_html = ""
-        if link:
-            safe_link = escape(link, quote=True)
-            link_html = f"<div class='news-link'><a href='{safe_link}' target='_blank'>Baca berita</a></div>"
+            chips = []
+            if kategori:
+                chips.append(f"<span class='badge-cat'>{kategori}</span>")
+            if lokasi and lokasi != "-":
+                chips.append(f"<span class='badge-cat'>{lokasi}</span>")
+            if topik:
+                chips.append(f"<span class='news-chip'>Topik: {topik}</span>")
+            if dampak_program:
+                chips.append(f"<span class='news-chip'>Program: {dampak_program}</span>")
+            if dampak_kepesertaan:
+                chips.append(f"<span class='news-chip'>Kepesertaan: {dampak_kepesertaan}</span>")
+            if potensi_klaim:
+                chips.append(f"<span class='news-chip'>Klaim: {potensi_klaim}</span>")
+            if media_serupa:
+                chips.append(f"<span class='news-chip'>Media Serupa: {media_serupa}</span>")
+            if berita_serupa:
+                chips.append(f"<span class='news-chip'>Berita Serupa: {berita_serupa}</span>")
+            if skala_isu:
+                chips.append(f"<span class='news-chip'>Skala: {skala_isu}</span>")
 
-        card_html = (
-            f"<div class='news-card'>"
-            f"<div style='display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;'>"
-            f"<div style='flex:1; min-width:250px;'>"
-            f"<div class='news-title'>{i + 1}. {judul}</div>"
-            f"<div class='news-meta'>{media} • {waktu}</div>"
-            f"</div>"
-            f"<div>{badge_html(prioritas)}</div>"
-            f"</div>"
-            f"<div style='margin:8px 0 10px 0;'>{''.join(chips)}</div>"
-            f"<div style='font-size:.95rem; line-height:1.65; margin-bottom:10px;'>{alasan if alasan else 'Belum ada analisis prioritas.'}</div>"
-            f"{link_html}"
-            f"</div>"
-        )
+            link_html = ""
+            if link:
+                safe_link = escape(link, quote=True)
+                link_html = f"<div class='news-link'><a href='{safe_link}' target='_blank'>Baca berita</a></div>"
 
-        st.markdown(card_html, unsafe_allow_html=True)
+            card_html = (
+                f"<div class='news-card'>"
+                f"<div style='display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;'>"
+                f"<div style='flex:1; min-width:250px;'>"
+                f"<div class='news-title'>{i + 1}. {judul}</div>"
+                f"<div class='news-meta'>{media} • {waktu}</div>"
+                f"</div>"
+                f"<div>{badge_html(prioritas)}</div>"
+                f"</div>"
+                f"<div style='margin:8px 0 10px 0;'>{''.join(chips)}</div>"
+                f"<div style='font-size:.95rem; line-height:1.65; margin-bottom:10px;'>{alasan if alasan else 'Belum ada analisis prioritas.'}</div>"
+                f"{link_html}"
+                f"</div>"
+            )
 
-    st.markdown(
-        f"""
-        <div style='text-align:center; margin-top:10px; color:#667085;'>
-        Menampilkan {min(start_idx+1, total_rows)} - {min(end_idx, total_rows)} dari {total_rows} berita
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+            st.markdown(card_html, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col1:
-        if st.button("⬅ Sebelumnya", disabled=(st.session_state.page <= 1)):
-            st.session_state.page -= 1
-            st.rerun()
-    with col3:
-        if st.button("Berikutnya ➡", disabled=(st.session_state.page >= total_pages)):
-            st.session_state.page += 1
-            st.rerun()
-    with col2:
         st.markdown(
-            f"<div style='text-align:center; color:#667085;'>Halaman {st.session_state.page} dari {total_pages}</div>",
+            f"""
+            <div style='text-align:center; margin-top:10px; color:#667085;'>
+            Menampilkan {min(start_idx+1, total_rows)} - {min(end_idx, total_rows)} dari {total_rows} berita
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
-    st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="section-title">Indeks Eskalasi Isu</div>', unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col1:
+            if st.button("⬅ Sebelumnya", key="berita_prev", disabled=(st.session_state.page <= 1)):
+                st.session_state.page -= 1
+                st.rerun()
+        with col3:
+            if st.button("Berikutnya ➡", key="berita_next", disabled=(st.session_state.page >= total_pages)):
+                st.session_state.page += 1
+                st.rerun()
+        with col2:
+            st.markdown(
+                f"<div style='text-align:center; color:#667085;'>Halaman {st.session_state.page} dari {total_pages}</div>",
+                unsafe_allow_html=True
+            )
 
-    df_ews = filtered_display.copy()
+        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Indeks Eskalasi Isu</div>', unsafe_allow_html=True)
 
-    if "Topik" not in df_ews.columns:
-        combo = safe_series(df_ews, "Judul") + " " + safe_series(df_ews, "Ringkasan")
-        df_ews["Topik"] = combo.apply(detect_topic)
+        df_ews = filtered_display.copy()
 
-    if "Waktu_Publish_WIB" in df_ews.columns:
-        df_ews["publish_dt"] = normalize_datetime_col(df_ews, "Waktu_Publish_WIB")
-    elif "Tanggal_Publish" in df_ews.columns:
-        df_ews["publish_dt"] = pd.to_datetime(df_ews["Tanggal_Publish"], errors="coerce")
-    else:
-        df_ews["publish_dt"] = pd.to_datetime(df_ews["Tanggal_Hari"], errors="coerce")
+        if "Topik" not in df_ews.columns:
+            combo = safe_series(df_ews, "Judul") + " " + safe_series(df_ews, "Ringkasan")
+            df_ews["Topik"] = combo.apply(detect_topic)
 
-    df_ews = df_ews.dropna(subset=["publish_dt"]).copy()
+        if "Waktu_Publish_WIB" in df_ews.columns:
+            df_ews["publish_dt"] = normalize_datetime_col(df_ews, "Waktu_Publish_WIB")
+        elif "Tanggal_Publish" in df_ews.columns:
+            df_ews["publish_dt"] = pd.to_datetime(df_ews["Tanggal_Publish"], errors="coerce")
+        else:
+            df_ews["publish_dt"] = pd.to_datetime(df_ews["Tanggal_Hari"], errors="coerce")
 
-    now = pd.Timestamp.now()
-    w1_start = now - pd.Timedelta(hours=24)
-    w0_start = now - pd.Timedelta(hours=48)
+        df_ews = df_ews.dropna(subset=["publish_dt"]).copy()
 
-    w1 = df_ews[df_ews["publish_dt"] >= w1_start].copy()
-    w0 = df_ews[(df_ews["publish_dt"] >= w0_start) & (df_ews["publish_dt"] < w1_start)].copy()
+        now = pd.Timestamp.now()
+        w1_start = now - pd.Timedelta(hours=24)
+        w0_start = now - pd.Timedelta(hours=48)
 
-    def agg(df_recent):
-        if df_recent.empty:
-            return pd.DataFrame(columns=["Topik", "Berita 24 Jam", "Media 24 Jam", "Headline"])
+        w1 = df_ews[df_ews["publish_dt"] >= w1_start].copy()
+        w0 = df_ews[(df_ews["publish_dt"] >= w0_start) & (df_ews["publish_dt"] < w1_start)].copy()
 
-        out = df_recent.groupby("Topik", dropna=False).agg(
-            **{
-                "Berita 24 Jam": ("Judul", "count"),
-                "Media 24 Jam": ("Media", pd.Series.nunique)
-            }
-        ).reset_index()
+        def agg(df_recent):
+            if df_recent.empty:
+                return pd.DataFrame(columns=["Topik", "Berita 24 Jam", "Media 24 Jam", "Headline"])
 
-        head = (
-            df_recent.sort_values("publish_dt", ascending=False)
-            .groupby("Topik", dropna=False)
-            .head(1)[["Topik", "Judul"]]
-            .rename(columns={"Judul": "Headline"})
+            out = df_recent.groupby("Topik", dropna=False).agg(
+                **{
+                    "Berita 24 Jam": ("Judul", "count"),
+                    "Media 24 Jam": ("Media", pd.Series.nunique)
+                }
+            ).reset_index()
+
+            head = (
+                df_recent.sort_values("publish_dt", ascending=False)
+                .groupby("Topik", dropna=False)
+                .head(1)[["Topik", "Judul"]]
+                .rename(columns={"Judul": "Headline"})
+            )
+
+            return out.merge(head, on="Topik", how="left")
+
+        s1 = agg(w1)
+        s0 = agg(w0).rename(columns={
+            "Berita 24 Jam": "Berita 24-48 Jam",
+            "Media 24 Jam": "Media 24-48 Jam"
+        })
+
+        esk = s1.merge(
+            s0[["Topik", "Berita 24-48 Jam", "Media 24-48 Jam"]],
+            on="Topik",
+            how="left"
         )
 
-        return out.merge(head, on="Topik", how="left")
+        if not esk.empty:
+            esk[["Berita 24-48 Jam", "Media 24-48 Jam"]] = esk[
+                ["Berita 24-48 Jam", "Media 24-48 Jam"]
+            ].fillna(0).astype(int)
 
-    s1 = agg(w1)
-    s0 = agg(w0).rename(columns={
-        "Berita 24 Jam": "Berita 24-48 Jam",
-        "Media 24 Jam": "Media 24-48 Jam"
-    })
+            esk["Skor"] = esk["Media 24 Jam"] * 3 + esk["Berita 24 Jam"]
 
-    esk = s1.merge(
-        s0[["Topik", "Berita 24-48 Jam", "Media 24-48 Jam"]],
-        on="Topik",
-        how="left"
-    )
+            def trend(r):
+                if r["Media 24 Jam"] > r["Media 24-48 Jam"]:
+                    return "📈 Naik"
+                if r["Media 24 Jam"] < r["Media 24-48 Jam"]:
+                    return "📉 Turun"
+                return "➖ Stabil"
 
-    if not esk.empty:
-        esk[["Berita 24-48 Jam", "Media 24-48 Jam"]] = esk[
-            ["Berita 24-48 Jam", "Media 24-48 Jam"]
-        ].fillna(0).astype(int)
+            esk["Trend"] = esk.apply(trend, axis=1)
+            esk["Topik"] = esk["Topik"].astype(str).apply(clean_label)
+            esk = esk.sort_values(["Skor", "Media 24 Jam", "Berita 24 Jam"], ascending=False)
 
-        esk["Skor"] = esk["Media 24 Jam"] * 3 + esk["Berita 24 Jam"]
-
-        def trend(r):
-            if r["Media 24 Jam"] > r["Media 24-48 Jam"]:
-                return "📈 Naik"
-            if r["Media 24 Jam"] < r["Media 24-48 Jam"]:
-                return "📉 Turun"
-            return "➖ Stabil"
-
-        esk["Trend"] = esk.apply(trend, axis=1)
-        esk["Topik"] = esk["Topik"].astype(str).apply(clean_label)
-        esk = esk.sort_values(["Skor", "Media 24 Jam", "Berita 24 Jam"], ascending=False)
-
-        st.dataframe(
-            esk[
-                ["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam",
-                 "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline"]
-            ].head(10),
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.info("Belum ada data eskalasi isu.")
+            st.dataframe(
+                esk[
+                    ["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam",
+                     "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline"]
+                ].head(10),
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.info("Belum ada data eskalasi isu.")
 
 # ===============================
 # TAB: ANALISIS DAERAH
@@ -1476,11 +1729,16 @@ Berita diklasifikasikan menjadi:
 <li><b>Prioritas Rendah</b>: isu informatif atau berdampak terbatas</li>
 </ul>
 
-Berita edukasi ditempatkan sebagai prioritas rendah, sedangkan berita global tidak dijadikan fokus utama analisis.
+Penilaian prioritas mempertimbangkan substansi isu, kebaruan berita, serta skala isu berdasarkan jumlah media dan jumlah berita serupa.
 
 <br><br>
 
-<b>6. Dashboard Monitoring Isu</b><br>
+<b>6. Cluster Isu / Isu Utama</b><br>
+Sistem juga mengelompokkan beberapa berita serupa menjadi satu isu utama berdasarkan topik, lokasi, tanggal, dan kemiripan judul. Dengan demikian, dashboard tidak hanya membaca per artikel, tetapi juga per isu.
+
+<br><br>
+
+<b>7. Dashboard Monitoring Isu</b><br>
 Dashboard menampilkan:
 <ul>
 <li>total berita yang dikumpulkan</li>
@@ -1488,17 +1746,18 @@ Dashboard menampilkan:
 <li>distribusi prioritas</li>
 <li>topik dominan</li>
 <li>isu paling kritis hari ini</li>
+<li>ringkasan cluster isu</li>
 <li>alert eskalasi</li>
 </ul>
 
 <br>
 
-<b>7. Analisis Daerah</b><br>
+<b>8. Analisis Daerah</b><br>
 Tab <b>Analisis Daerah</b> menampilkan distribusi isu berdasarkan provinsi dan kabupaten/kota yang terdeteksi dari judul dan ringkasan berita. Fitur ini digunakan untuk melihat wilayah dengan isu yang paling menonjol.
 
 <br><br>
 
-<b>8. Indeks Eskalasi Isu</b><br>
+<b>9. Indeks Eskalasi Isu</b><br>
 Indeks eskalasi membandingkan jumlah berita dan jumlah media dalam 24 jam terakhir dengan periode 24–48 jam sebelumnya untuk melihat apakah isu:
 <ul>
 <li>📈 Naik</li>

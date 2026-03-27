@@ -1463,83 +1463,135 @@ with tab_info:
     st.markdown('<div class="section-title">Panduan Sistem Early Warning System</div>', unsafe_allow_html=True)
 
     st.markdown(
+        """
+Sistem **Early Warning System (EWS) Isu Ketenagakerjaan** digunakan untuk memantau perkembangan isu ketenagakerjaan di media online serta menganalisis potensi dampaknya terhadap program jaminan sosial ketenagakerjaan.
 """
-<div class="info-card">
-<div class="info-text">
-
-Sistem <b>Early Warning System (EWS) Isu Ketenagakerjaan</b> digunakan untuk memantau perkembangan isu ketenagakerjaan di media online serta menganalisis potensi dampaknya terhadap program jaminan sosial ketenagakerjaan.
-
-<br>
-
-<b>1. Pengumpulan Data Berita</b><br>
-Sistem mengambil berita dari berbagai media online yang memuat isu ketenagakerjaan. Data yang dikumpulkan meliputi judul, media, waktu publikasi, ringkasan, dan tautan berita.
-
-<br><br>
-
-<b>2. Penyaringan Isu Ketenagakerjaan</b><br>
-Berita yang terkumpul disaring menggunakan kata kunci ketenagakerjaan seperti PHK, upah, buruh, hubungan industrial, BPJS Ketenagakerjaan, kecelakaan kerja, dan jaminan sosial tenaga kerja.
-
-<br><br>
-
-<b>3. Identifikasi Topik dan Kategori Berita</b><br>
-Sistem mengidentifikasi topik utama berita seperti PHK, THR, upah, konflik hubungan industrial, kepesertaan BPJS, JKK, JHT, JKP, JP, JKM, dan lain-lain.
-
-Selain itu, berita juga dikelompokkan menjadi:
-<ul>
-<li><b>NASIONAL</b>: berita yang relevan langsung dengan Indonesia</li>
-<li><b>GLOBAL</b>: berita luar negeri yang dipantau sebagai referensi</li>
-<li><b>EDUKASI</b>: berita informatif layanan, panduan, atau prosedur klaim</li>
-</ul>
-
-<br>
-
-<b>4. Analisis Dampak terhadap Program</b><br>
-Setiap berita dianalisis untuk melihat potensi dampaknya terhadap program BPJS Ketenagakerjaan, antara lain JHT, JKK, JKM, JKP, dan JP.
-
-<br><br>
-
-<b>5. Penentuan Prioritas</b><br>
-Berita diklasifikasikan menjadi:
-<ul>
-<li><b>Prioritas Tinggi</b>: isu yang memerlukan perhatian segera</li>
-<li><b>Prioritas Sedang</b>: isu yang perlu dipantau</li>
-<li><b>Prioritas Rendah</b>: isu informatif atau berdampak terbatas</li>
-</ul>
-
-Berita edukasi ditempatkan sebagai prioritas rendah, sedangkan berita global tidak dijadikan fokus utama analisis.
-
-<br><br>
-
-<b>6. Dashboard Monitoring Isu</b><br>
-Dashboard menampilkan:
-<ul>
-<li>total berita yang dikumpulkan</li>
-<li>berita yang telah dianalisis</li>
-<li>distribusi prioritas</li>
-<li>topik dominan</li>
-<li>isu paling kritis hari ini</li>
-<li>alert eskalasi</li>
-</ul>
-
-<br>
-
-<b>7. Analisis Daerah</b><br>
-Tab <b>Analisis Daerah</b> menampilkan distribusi isu berdasarkan provinsi dan kabupaten/kota yang terdeteksi dari judul dan ringkasan berita. Fitur ini digunakan untuk melihat wilayah dengan isu yang paling menonjol.
-
-<br><br>
-
-<b>8. Indeks Eskalasi Isu</b><br>
-Indeks eskalasi membandingkan jumlah berita dan jumlah media dalam 24 jam terakhir dengan periode 24–48 jam sebelumnya untuk melihat apakah isu:
-<ul>
-<li>📈 Naik</li>
-<li>📉 Turun</li>
-<li>➖ Stabil</li>
-</ul>
-
-Semakin tinggi skor eskalasi, semakin besar kemungkinan isu berkembang dan memerlukan perhatian lebih lanjut.
-
-</div>
-</div>
-""",
-        unsafe_allow_html=True
     )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ===============================
+    # DASHBOARD
+    # ===============================
+    with st.expander("📊 Tab Dashboard", expanded=True):
+        st.markdown(
+            """
+Dashboard menampilkan gambaran umum kondisi isu ketenagakerjaan.
+
+**Komponen utama:**
+- Total Berita RAW  
+- Berita Teranalisis  
+- Prioritas Tinggi / Sedang / Rendah  
+- Isu Paling Kritis Hari Ini  
+- Distribusi Prioritas  
+- Topik Dominan  
+- Top 5 Berita Prioritas Tinggi  
+- Analisis Situasi  
+"""
+        )
+
+    # ===============================
+    # DATA BERITA
+    # ===============================
+    with st.expander("📰 Tab Data Berita"):
+        st.markdown(
+            """
+Menampilkan seluruh berita hasil analisis dalam bentuk tabel.
+
+**Fungsi utama:**
+- Melihat detail berita  
+- Filter berdasarkan prioritas  
+- Filter kategori berita  
+- Menelusuri sumber dan waktu berita  
+"""
+        )
+
+    # ===============================
+    # ANALISIS DAERAH
+    # ===============================
+    with st.expander("📍 Tab Analisis Daerah"):
+        st.markdown(
+            """
+Menampilkan distribusi isu berdasarkan wilayah.
+
+**Manfaat:**
+- Mengidentifikasi wilayah dengan isu tertinggi  
+- Melihat persebaran isu secara geografis  
+- Menentukan fokus pengawasan wilayah  
+"""
+        )
+
+    # ===============================
+    # CARA KERJA SISTEM
+    # ===============================
+    with st.expander("⚙️ Cara Kerja Sistem"):
+        st.markdown(
+            """
+**1. Scraping (RAW)**  
+Mengambil berita dari berbagai media online.
+
+**2. Filtering (FILTERED)**  
+Menyaring berita berdasarkan kata kunci ketenagakerjaan.
+
+**3. Analisis (ANALYZED)**  
+Menentukan:
+- Topik utama  
+- Lokasi  
+- Dampak program  
+- Skor  
+- Prioritas  
+
+**4. Visualisasi Dashboard**  
+Menampilkan hasil analisis dalam bentuk grafik dan ringkasan.
+"""
+        )
+
+    # ===============================
+    # PRIORITAS
+    # ===============================
+    with st.expander("🚨 Penentuan Prioritas"):
+        st.markdown(
+            """
+**Prioritas Tinggi**
+- PHK massal  
+- Kecelakaan kerja fatal  
+- Konflik besar  
+
+**Prioritas Sedang**
+- Isu berkembang  
+- Dampak terbatas  
+
+**Prioritas Rendah**
+- Edukasi layanan  
+- Informasi umum  
+- Berita global  
+"""
+        )
+
+    # ===============================
+    # ESKALASI
+    # ===============================
+    with st.expander("📈 Indeks Eskalasi Isu"):
+        st.markdown(
+            """
+Membandingkan kondisi 24 jam terakhir dengan periode sebelumnya:
+
+- 📈 Naik → isu meningkat  
+- 📉 Turun → isu menurun  
+- ➖ Stabil → tidak ada perubahan signifikan  
+
+Semakin tinggi eskalasi, semakin perlu perhatian lebih lanjut.
+"""
+        )
+
+    # ===============================
+    # CATATAN
+    # ===============================
+    with st.expander("📌 Catatan Penting"):
+        st.markdown(
+            """
+- Jika **RAW ada tetapi ANALYZED kosong**, berarti tidak ada berita yang lolos analisis  
+- Gunakan tombol **Update Data** untuk memperbarui data  
+- Sistem ini bersifat **early warning**, bukan keputusan final  
+"""
+        )

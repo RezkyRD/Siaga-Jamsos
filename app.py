@@ -8,6 +8,7 @@ from scraper import run_scraper
 from filter_keyword import run_filter
 from update_priority import run_priority
 from cluster_isu import run_cluster_isu
+from cluster_level2 import run_cluster_level2
 from gsheet_utils import read_sheet
 
 SHEET_KEY = st.secrets["SHEET_KEY"]
@@ -506,12 +507,36 @@ def ensure_cluster_date(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=["Tanggal_Hari"]).copy()
     return df
 
+def ensure_l2_date(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty:
+        return pd.DataFrame()
+
+    df = df.copy()
+    if "Window_Tanggal" not in df.columns:
+        df["Tanggal_Hari"] = pd.NaT
+        return df
+
+    def parse_window(val):
+        s = str(val or "").strip()
+        try:
+            year, month, week = s.split("-")
+            week_num = int(week.replace("W", ""))
+            day_start = (week_num - 1) * 3 + 1
+            return pd.Timestamp(year=int(year), month=int(month), day=min(day_start, 28))
+        except Exception:
+            return pd.NaT
+
+    df["Tanggal_Hari"] = df["Window_Tanggal"].apply(parse_window).dt.date
+    df = df.dropna(subset=["Tanggal_Hari"]).copy()
+    return df
+
 # ===============================
 # LOAD DATA
 # ===============================
 raw = load_sheet(SHEET_KEY, "RAW")
 analyzed = load_sheet(SHEET_KEY, "ANALYZED")
 clustered = load_sheet(SHEET_KEY, "CLUSTERED")
+clustered_l2 = load_sheet(SHEET_KEY, "CLUSTERED_L2")
 
 if raw is None or raw.empty:
     st.warning("Data RAW belum tersedia.")
@@ -523,15 +548,21 @@ if analyzed is None:
 if clustered is None:
     clustered = pd.DataFrame()
 
+if clustered_l2 is None:
+    clustered_l2 = pd.DataFrame()
+
 raw.columns = raw.columns.astype(str).str.strip()
 if not analyzed.empty:
     analyzed.columns = analyzed.columns.astype(str).str.strip()
 if not clustered.empty:
     clustered.columns = clustered.columns.astype(str).str.strip()
+if not clustered_l2.empty:
+    clustered_l2.columns = clustered_l2.columns.astype(str).str.strip()
 
 raw = ensure_publish_date(raw)
 analyzed = ensure_publish_date(analyzed)
 clustered = ensure_cluster_date(clustered)
+clustered_l2 = ensure_l2_date(clustered_l2)
 
 if raw.empty:
     st.warning("Data RAW belum tersedia.")
@@ -554,6 +585,7 @@ with c_ctrl1:
             run_filter()
             run_priority()
             run_cluster_isu()
+            run_cluster_level2()
             safe_clear_caches()
         st.success("Update selesai!")
         st.rerun()
@@ -667,6 +699,11 @@ clustered_display = clustered[
     (clustered["Tanggal_Hari"] <= end_date)
 ].copy() if not clustered.empty else pd.DataFrame()
 
+clustered_l2_display = clustered_l2[
+    (clustered_l2["Tanggal_Hari"] >= start_date) &
+    (clustered_l2["Tanggal_Hari"] <= end_date)
+].copy() if not clustered_l2.empty else pd.DataFrame()
+
 if not filtered_display.empty and kategori_option != "SEMUA" and "Kategori_Berita" in filtered_display.columns:
     filtered_display = filtered_display[
         filtered_display["Kategori_Berita"].astype(str).str.upper().eq(kategori_option)
@@ -675,6 +712,11 @@ if not filtered_display.empty and kategori_option != "SEMUA" and "Kategori_Berit
 if not clustered_display.empty and kategori_option != "SEMUA" and "Kategori_Berita" in clustered_display.columns:
     clustered_display = clustered_display[
         clustered_display["Kategori_Berita"].astype(str).str.upper().eq(kategori_option)
+    ].copy()
+
+if not clustered_l2_display.empty and kategori_option != "SEMUA" and "Kategori_Dominan" in clustered_l2_display.columns:
+    clustered_l2_display = clustered_l2_display[
+        clustered_l2_display["Kategori_Dominan"].astype(str).str.upper().eq(kategori_option)
     ].copy()
 
 if not filtered_display.empty:
@@ -698,11 +740,17 @@ if not clustered_for_view.empty and filter_option != "SEMUA" and "Prioritas_Clus
         clustered_for_view["Prioritas_Cluster"].astype(str).eq(filter_option)
     ].copy()
 
+clustered_l2_for_view = clustered_l2_display.copy()
+if not clustered_l2_for_view.empty and filter_option != "SEMUA" and "Prioritas_Strategis" in clustered_l2_for_view.columns:
+    clustered_l2_for_view = clustered_l2_for_view[
+        clustered_l2_for_view["Prioritas_Strategis"].astype(str).eq(filter_option)
+    ].copy()
+
 # ===============================
 # TABS
 # ===============================
-tab_dash, tab_cluster, tab_data, tab_region, tab_info = st.tabs(
-    ["📊 Dashboard", "🧩 Isu Utama", "📰 Data Berita", "📍 Analisis Daerah", "📘 Panduan"]
+tab_dash, tab_l2, tab_cluster, tab_data, tab_region, tab_info = st.tabs(
+    ["📊 Dashboard", "🔥 Isu Strategis", "🧩 Isu Utama", "📰 Data Berita", "📍 Analisis Daerah", "📘 Panduan"]
 )
 
 # ===============================
@@ -772,13 +820,13 @@ with tab_dash:
         )
 
     with c5:
-        cluster_tinggi = int((safe_series(clustered_display, "Prioritas_Cluster") == "PRIORITAS TINGGI").sum()) if not clustered_display.empty else 0
+        strategic_tinggi = int((safe_series(clustered_l2_display, "Prioritas_Strategis") == "PRIORITAS TINGGI").sum()) if not clustered_l2_display.empty else 0
         st.markdown(
             f"""
             <div class="kpi-card">
-              <div class="kpi-title">Cluster Isu Tinggi</div>
-              <div class="kpi-value">{cluster_tinggi:,}</div>
-              <div class="kpi-sub">Isu utama hasil pengelompokan</div>
+              <div class="kpi-title">Isu Strategis Tinggi</div>
+              <div class="kpi-value">{strategic_tinggi:,}</div>
+              <div class="kpi-sub">Arah situasi utama</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -1026,6 +1074,58 @@ with tab_dash:
             st.info("Belum ada berita prioritas tinggi.")
 
     with right:
+        st.markdown('<div class="section-title">🔥 Isu Strategis</div>', unsafe_allow_html=True)
+
+        if not clustered_l2_display.empty:
+            df_l2_show = clustered_l2_display.copy()
+            priority_order_l2 = {
+                "PRIORITAS TINGGI": 1,
+                "PRIORITAS SEDANG": 2,
+                "PRIORITAS RENDAH": 3
+            }
+            df_l2_show["__prio"] = df_l2_show["Prioritas_Strategis"].map(priority_order_l2).fillna(99)
+            df_l2_show["__score"] = pd.to_numeric(df_l2_show.get("Score_Maks", 0), errors="coerce").fillna(0)
+            df_l2_show["Jumlah_Media"] = pd.to_numeric(df_l2_show.get("Jumlah_Media", 0), errors="coerce").fillna(0)
+            df_l2_show["Jumlah_Berita"] = pd.to_numeric(df_l2_show.get("Jumlah_Berita", 0), errors="coerce").fillna(0)
+            df_l2_show["Jumlah_Cluster"] = pd.to_numeric(df_l2_show.get("Jumlah_Cluster", 0), errors="coerce").fillna(0)
+            df_l2_show = df_l2_show.sort_values(
+                ["__prio", "__score", "Jumlah_Media", "Jumlah_Berita", "Jumlah_Cluster"],
+                ascending=[True, False, False, False, False]
+            )
+
+            top_l2 = df_l2_show.iloc[0]
+            nama_l2 = escape(str(top_l2.get("Nama_Isu_Strategis", "-")))
+            cakupan_l2 = escape(str(top_l2.get("Cakupan_Wilayah", "-")))
+            prioritas_l2 = str(top_l2.get("Prioritas_Strategis", "PRIORITAS RENDAH")).strip()
+            ringkasan_l2 = escape(str(top_l2.get("Ringkasan_Strategis", "-")))
+            media_l2 = escape(str(top_l2.get("Jumlah_Media", "0")))
+            berita_l2 = escape(str(top_l2.get("Jumlah_Berita", "0")))
+            cluster_l2 = escape(str(top_l2.get("Jumlah_Cluster", "0")))
+
+            st.markdown(
+                f"""
+                <div class="news-card cluster-highlight">
+                    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+                        <div style="flex:1; min-width:240px;">
+                            <div class="news-title">{nama_l2}</div>
+                            <div class="news-meta">{cakupan_l2}</div>
+                        </div>
+                        <div>{badge_html(prioritas_l2)}</div>
+                    </div>
+                    <div style="margin:8px 0 10px 0;">
+                        <span class='news-chip'>Cluster: {cluster_l2}</span>
+                        <span class='news-chip'>Media: {media_l2}</span>
+                        <span class='news-chip'>Berita: {berita_l2}</span>
+                    </div>
+                    <div style="font-size:.95rem; line-height:1.65;">{ringkasan_l2}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            st.info("Belum ada isu strategis.")
+
+        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
         st.markdown('<div class="section-title">🧩 Ringkasan Cluster Isu</div>', unsafe_allow_html=True)
 
         if not clustered_display.empty:
@@ -1174,11 +1274,80 @@ Topik dominan pada periode ini:
             )
 
 # ===============================
+# TAB: ISU STRATEGIS
+# ===============================
+with tab_l2:
+    st.markdown('<div class="section-title">Isu Strategis</div>', unsafe_allow_html=True)
+    st.caption("Agregasi isu besar berdasarkan topik utama dan window waktu, untuk membaca arah situasi secara strategis.")
+
+    if clustered_l2_for_view.empty:
+        st.info("Belum ada data isu strategis. Klik 🔄 Update Data dulu.")
+    else:
+        df_l2 = clustered_l2_for_view.copy()
+
+        priority_order = {
+            "PRIORITAS TINGGI": 1,
+            "PRIORITAS SEDANG": 2,
+            "PRIORITAS RENDAH": 3
+        }
+        df_l2["Urutan"] = df_l2["Prioritas_Strategis"].map(priority_order).fillna(99)
+        df_l2["Score_Maks_num"] = pd.to_numeric(df_l2.get("Score_Maks", 0), errors="coerce").fillna(0)
+        df_l2["Jumlah_Media_num"] = pd.to_numeric(df_l2.get("Jumlah_Media", 0), errors="coerce").fillna(0)
+        df_l2["Jumlah_Berita_num"] = pd.to_numeric(df_l2.get("Jumlah_Berita", 0), errors="coerce").fillna(0)
+        df_l2["Jumlah_Cluster_num"] = pd.to_numeric(df_l2.get("Jumlah_Cluster", 0), errors="coerce").fillna(0)
+
+        df_l2 = df_l2.sort_values(
+            ["Urutan", "Score_Maks_num", "Jumlah_Media_num", "Jumlah_Berita_num", "Jumlah_Cluster_num"],
+            ascending=[True, False, False, False, False]
+        )
+
+        for _, row in df_l2.iterrows():
+            nama = escape(clean_label(row.get("Nama_Isu_Strategis", "-")))
+            topik = escape(clean_label(row.get("Topik_Utama", "-")))
+            cakupan = escape(clean_label(row.get("Cakupan_Wilayah", "-")))
+            window_tanggal = escape(clean_label(row.get("Window_Tanggal", "-")))
+            prioritas = str(row.get("Prioritas_Strategis", "PRIORITAS RENDAH")).strip()
+            jumlah_cluster = escape(str(row.get("Jumlah_Cluster", "0")))
+            jumlah_berita = escape(str(row.get("Jumlah_Berita", "0")))
+            jumlah_media = escape(str(row.get("Jumlah_Media", "0")))
+            skala = escape(clean_label(row.get("Skala_Strategis", "-")))
+            contoh = escape(clean_label(row.get("Contoh_Isu", "-")))
+            ringkasan = escape(clean_label(row.get("Ringkasan_Strategis", "")))
+
+            chips = [
+                f"<span class='badge-cat'>{topik}</span>",
+                f"<span class='badge-cat'>{cakupan}</span>",
+                f"<span class='news-chip'>Window: {window_tanggal}</span>",
+                f"<span class='news-chip'>Cluster: {jumlah_cluster}</span>",
+                f"<span class='news-chip'>Berita: {jumlah_berita}</span>",
+                f"<span class='news-chip'>Media: {jumlah_media}</span>",
+                f"<span class='news-chip'>Skala: {skala}</span>",
+            ]
+
+            st.markdown(
+                f"""
+                <div class="news-card cluster-highlight">
+                    <div style='display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;'>
+                        <div style='flex:1; min-width:260px;'>
+                            <div class='news-title'>{nama}</div>
+                            <div class='news-meta'>{cakupan} • {window_tanggal}</div>
+                        </div>
+                        <div>{badge_html(prioritas)}</div>
+                    </div>
+                    <div style='margin:8px 0 10px 0;'>{''.join(chips)}</div>
+                    <div style='font-size:.95rem; line-height:1.65; margin-bottom:8px;'>{ringkasan}</div>
+                    <div class='news-meta'><b>Contoh isu:</b> {contoh}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+# ===============================
 # TAB: ISU UTAMA / CLUSTER
 # ===============================
 with tab_cluster:
     st.markdown('<div class="section-title">Isu Utama Hasil Pengelompokan</div>', unsafe_allow_html=True)
-    st.caption("Setiap isu merupakan gabungan beberapa berita serupa berdasarkan topik, lokasi, tanggal, dan kemiripan judul.")
+    st.caption("Setiap isu merupakan gabungan beberapa berita serupa berdasarkan topik, lokasi, window tanggal, dan kata inti judul.")
 
     if clustered_for_view.empty:
         st.info("Belum ada data cluster isu. Klik 🔄 Update Data dulu.")
@@ -1734,11 +1903,16 @@ Penilaian prioritas mempertimbangkan substansi isu, kebaruan berita, serta skala
 <br><br>
 
 <b>6. Cluster Isu / Isu Utama</b><br>
-Sistem juga mengelompokkan beberapa berita serupa menjadi satu isu utama berdasarkan topik, lokasi, tanggal, dan kemiripan judul. Dengan demikian, dashboard tidak hanya membaca per artikel, tetapi juga per isu.
+Sistem mengelompokkan beberapa berita serupa menjadi satu isu utama berdasarkan topik, lokasi, window tanggal, dan kemiripan judul. Dengan demikian, dashboard tidak hanya membaca per artikel, tetapi juga per isu.
 
 <br><br>
 
-<b>7. Dashboard Monitoring Isu</b><br>
+<b>7. Isu Strategis</b><br>
+Sistem juga membentuk agregasi isu besar dari beberapa cluster untuk melihat arah situasi secara strategis. Fitur ini membantu membaca gambaran umum seperti gelombang PHK, isu THR, atau kepesertaan BPJS pada level yang lebih luas.
+
+<br><br>
+
+<b>8. Dashboard Monitoring Isu</b><br>
 Dashboard menampilkan:
 <ul>
 <li>total berita yang dikumpulkan</li>
@@ -1746,18 +1920,19 @@ Dashboard menampilkan:
 <li>distribusi prioritas</li>
 <li>topik dominan</li>
 <li>isu paling kritis hari ini</li>
+<li>isu strategis</li>
 <li>ringkasan cluster isu</li>
 <li>alert eskalasi</li>
 </ul>
 
 <br>
 
-<b>8. Analisis Daerah</b><br>
+<b>9. Analisis Daerah</b><br>
 Tab <b>Analisis Daerah</b> menampilkan distribusi isu berdasarkan provinsi dan kabupaten/kota yang terdeteksi dari judul dan ringkasan berita. Fitur ini digunakan untuk melihat wilayah dengan isu yang paling menonjol.
 
 <br><br>
 
-<b>9. Indeks Eskalasi Isu</b><br>
+<b>10. Indeks Eskalasi Isu</b><br>
 Indeks eskalasi membandingkan jumlah berita dan jumlah media dalam 24 jam terakhir dengan periode 24–48 jam sebelumnya untuk melihat apakah isu:
 <ul>
 <li>📈 Naik</li>

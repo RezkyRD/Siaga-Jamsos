@@ -121,7 +121,7 @@ CITY_TO_PROVINCE = {
 
 
 # =====================================
-# OUTPUT COLUMNS
+# HELPERS
 # =====================================
 
 OUTPUT_COLUMNS = [
@@ -150,19 +150,10 @@ OUTPUT_COLUMNS = [
     "Prioritas",
 ]
 
-
-# =====================================
-# HELPERS
-# =====================================
-
 def clean_text(text: str) -> str:
     text = str(text or "").lower()
     text = re.sub(r"\s+", " ", text).strip()
     return text
-
-
-def contains_any(text: str, patterns) -> bool:
-    return any(re.search(p, text) for p in patterns)
 
 
 def unique_join(items) -> str:
@@ -176,6 +167,10 @@ def unique_join(items) -> str:
     return ", ".join(out)
 
 
+def contains_any(text: str, patterns) -> bool:
+    return any(re.search(p, text) for p in patterns)
+
+
 def ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     for col in OUTPUT_COLUMNS:
@@ -183,10 +178,6 @@ def ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = ""
     return df[OUTPUT_COLUMNS]
 
-
-# =====================================
-# LOKASI
-# =====================================
 
 def detect_location(text: str) -> dict:
     text = clean_text(text)
@@ -220,10 +211,6 @@ def detect_location(text: str) -> dict:
         "Status_Lokasi": "Tidak Diketahui"
     }
 
-
-# =====================================
-# KONTEXT / CATEGORY
-# =====================================
 
 def is_indonesia_related(text: str) -> bool:
     text = clean_text(text)
@@ -290,10 +277,6 @@ def detect_category(text: str) -> str:
         return "NASIONAL"
     return "GLOBAL"
 
-
-# =====================================
-# TOPIC / KEPESERTAAN
-# =====================================
 
 def detect_topic(text: str) -> str:
     if is_service_education(text):
@@ -395,10 +378,6 @@ def detect_kepesertaan(text: str):
     return hasil
 
 
-# =====================================
-# PRIORITY / REASON
-# =====================================
-
 def classify_priority(score: int, category: str, topic: str) -> str:
     if category == "EDUKASI":
         return "PRIORITAS RENDAH"
@@ -408,7 +387,7 @@ def classify_priority(score: int, category: str, topic: str) -> str:
             return "PRIORITAS SEDANG"
         return "PRIORITAS RENDAH"
 
-    if score >= 8:
+    if score >= 7:
         return "PRIORITAS TINGGI"
     if score >= 4:
         return "PRIORITAS SEDANG"
@@ -418,8 +397,6 @@ def classify_priority(score: int, category: str, topic: str) -> str:
 def build_short_reason(topic: str, programs: str, claims: str, category: str) -> str:
     if category == "EDUKASI":
         return "Berita bersifat edukasi layanan dan tidak memerlukan penanganan prioritas."
-    if category == "GLOBAL":
-        return "Berita global dipantau sebagai referensi dan bukan fokus utama analisis."
 
     reasons = {
         "PHK": "PHK berpotensi meningkatkan klaim JKP dan pencairan JHT.",
@@ -472,33 +449,17 @@ def get_time_boost(row) -> int:
         return 0
 
 
-# =====================================
-# MAIN ANALYSIS
-# =====================================
-
 def analyze_jamsos(text: str, row=None) -> dict:
     text = clean_text(text)
-
-    kategori = detect_category(text)
-    topik = detect_topic(text)
-
-    if any(g in text for g in GLOBAL_COMPANY) and not is_indonesia_related(text):
-        return {
-            "Topik_Utama": "Global",
-            "Kategori_Berita": "GLOBAL",
-            "Score": 0,
-            "Dampak_Program": "",
-            "Dampak_Kepesertaan": "",
-            "Potensi_Klaim": "",
-            "Alasan_Prioritas": "Berita global tidak relevan dengan konteks Indonesia.",
-        }
 
     score = 0
     program = []
     kepesertaan = detect_kepesertaan(text)
     klaim = []
+    topik = detect_topic(text)
+    kategori = detect_category(text)
+    edukasi = (kategori == "EDUKASI")
 
-    # PHK
     if contains_any(text, [r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b"]):
         score += 4
         program.extend(["JKP", "JHT", "JP"])
@@ -506,13 +467,11 @@ def analyze_jamsos(text: str, row=None) -> dict:
         klaim.extend(["JKP", "JHT"])
 
     if contains_any(text, [
-        r"phk.*massal", r"massal.*phk", r"gelombang phk",
-        r"ribuan karyawan", r"ratusan karyawan", r"tutup pabrik",
-        r"pabrik tutup", r"\bpailit\b", r"\bbangkrut\b"
+        r"phk.*massal", r"massal.*phk", r"gelombang phk", r"ribuan karyawan",
+        r"ratusan karyawan", r"tutup pabrik", r"pabrik tutup", r"\bpailit\b", r"\bbangkrut\b"
     ]):
         score += 3
 
-    # JKK
     if contains_any(text, [
         r"kecelakaan kerja", r"\bledakan\b", r"kebakaran pabrik",
         r"tertimbun", r"pekerja jatuh", r"alat berat", r"lokasi proyek"
@@ -528,14 +487,12 @@ def analyze_jamsos(text: str, row=None) -> dict:
         program.append("JKM")
         klaim.append("JKM")
 
-    # Demo / konflik
     if contains_any(text, [r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok", r"mogok kerja"]):
         score += 3
 
     if contains_any(text, [r"perselisihan", r"sengketa", r"konflik buruh", r"mediasi hubungan industrial"]):
         score += 2
 
-    # THR / upah
     if contains_any(text, [r"\bthr\b", r"tunjangan hari raya"]):
         score += 2
         kepesertaan.append("PU")
@@ -553,7 +510,6 @@ def analyze_jamsos(text: str, row=None) -> dict:
         score += 2
         kepesertaan.append("PU")
 
-    # Kepesertaan / kepatuhan
     if contains_any(text, [
         r"bpjs ketenagakerjaan", r"bpjamsostek", r"jamsostek",
         r"kepesertaan bpjs", r"peserta bpjs", r"terdaftar bpjs"
@@ -568,7 +524,6 @@ def analyze_jamsos(text: str, row=None) -> dict:
         score += 3
         program.append("Kepesertaan")
 
-    # Manfaat spesifik
     if contains_any(text, [r"\bjht\b", r"jaminan hari tua", r"klaim jht", r"pencairan jht", r"saldo jht"]):
         score += 2
         program.append("JHT")
@@ -588,7 +543,6 @@ def analyze_jamsos(text: str, row=None) -> dict:
         program.append("JKM")
         klaim.append("JKM")
 
-    # PMI / konstruksi
     if contains_any(text, [r"\bpmi\b", r"pekerja migran", r"\btki\b"]):
         score += 2
         kepesertaan.append("PMI")
@@ -599,19 +553,14 @@ def analyze_jamsos(text: str, row=None) -> dict:
         kepesertaan.append("Jasa Konstruksi")
         program.append("JKK")
 
-    # waktu
     if row is not None:
         score += get_time_boost(row)
 
-    # penalti kategori
     if kategori == "GLOBAL":
-        score = max(score - 2, 0)
+        score = max(score - 3, 0)
 
-    if kategori == "EDUKASI":
+    if edukasi:
         score = min(score, 2)
-
-    if not is_indonesia_related(text) and kategori != "GLOBAL":
-        score = max(score - 1, 0)
 
     program = unique_join(program)
     kepesertaan = unique_join(kepesertaan)
@@ -642,6 +591,7 @@ def run_priority(sheet_key=None):
     except Exception:
         df = pd.DataFrame()
 
+    # Kalau FILTERED kosong, tetap buat ANALYZED dengan header
     if df is None or df.empty:
         empty_df = pd.DataFrame(columns=OUTPUT_COLUMNS)
         clear_and_write(sheet_key, "ANALYZED", empty_df)
@@ -681,7 +631,7 @@ def run_priority(sheet_key=None):
     df["Kabupaten_Kota"] = kabkota_list
     df["Status_Lokasi"] = status_lokasi_list
     df["Topik_Utama"] = hasil_df["Topik_Utama"]
-    df["Score"] = pd.to_numeric(hasil_df["Score"], errors="coerce").fillna(0).astype(int)
+    df["Score"] = hasil_df["Score"]
     df["Dampak_Program"] = hasil_df["Dampak_Program"]
     df["Dampak_Kepesertaan"] = hasil_df["Dampak_Kepesertaan"]
     df["Potensi_Klaim"] = hasil_df["Potensi_Klaim"]
@@ -689,48 +639,14 @@ def run_priority(sheet_key=None):
 
     df["Prioritas"] = df.apply(
         lambda r: classify_priority(
-            int(r["Score"]),
-            str(r["Kategori_Berita"]),
-            str(r["Topik_Utama"])
+            int(pd.to_numeric(r.get("Score", 0), errors="coerce") if str(r.get("Score", "")).strip() != "" else 0),
+            str(r.get("Kategori_Berita", "")),
+            str(r.get("Topik_Utama", ""))
         ),
         axis=1
     )
 
-    # final tuning output: lebih longgar
-    df = df[
-        ~(
-            (df["Kategori_Berita"].astype(str) == "GLOBAL") &
-            (df["Konteks_Berita"].astype(str) == "LUAR NEGERI / TIDAK RELEVAN") &
-            (df["Score"] <= 1)
-        )
-    ].copy()
-
-    df = df[df["Score"] >= 1].copy()
-
     df = ensure_columns(df)
-
-    priority_order = {
-        "PRIORITAS TINGGI": 1,
-        "PRIORITAS SEDANG": 2,
-        "PRIORITAS RENDAH": 3
-    }
-    df["__prio_order"] = df["Prioritas"].map(priority_order).fillna(99)
-
-    if "Waktu_Publish_WIB" in df.columns:
-        df["__publish_dt"] = pd.to_datetime(df["Waktu_Publish_WIB"], errors="coerce")
-        df = df.sort_values(
-            ["__prio_order", "Score", "__publish_dt"],
-            ascending=[True, False, False]
-        )
-        df = df.drop(columns=["__publish_dt"], errors="ignore")
-    else:
-        df = df.sort_values(
-            ["__prio_order", "Score"],
-            ascending=[True, False]
-        )
-
-    df = df.drop(columns=["__prio_order"], errors="ignore")
-
     clear_and_write(sheet_key, "ANALYZED", df)
     return df
 

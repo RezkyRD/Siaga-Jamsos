@@ -1241,22 +1241,15 @@ with tab_data:
             }
         ).reset_index()
 
-        cols_head = ["Topik", "Judul"]
-        if "Link" in df_recent.columns:
-            cols_head.append("Link")
-
         head = (
             df_recent.sort_values("publish_dt", ascending=False)
             .groupby("Topik", dropna=False)
-            .head(1)[cols_head]
+            .head(1)[["Topik", "Judul", "Link"]]
             .rename(columns={
                 "Judul": "Headline",
                 "Link": "Headline_URL"
             })
         )
-
-        if "Headline_URL" not in head.columns:
-            head["Headline_URL"] = ""
 
         return out.merge(head, on="Topik", how="left")
 
@@ -1288,81 +1281,38 @@ with tab_data:
 
         esk["Trend"] = esk.apply(trend, axis=1)
         esk["Topik"] = esk["Topik"].astype(str).apply(clean_label)
-        esk = esk.sort_values(["Skor", "Media 24 Jam", "Berita 24 Jam"], ascending=False).head(10).copy()
+        esk = esk.sort_values(["Skor", "Media 24 Jam", "Berita 24 Jam"], ascending=False)
 
-        st.markdown(
-            """
-            <style>
-            .esk-row {
-                padding: 10px 12px;
-                border: 1px solid rgba(148, 163, 184, 0.18);
-                border-top: none;
-                background: rgba(255,255,255,0.35);
-                border-radius: 0;
-            }
-            .esk-head {
-                padding: 10px 12px;
-                border: 1px solid rgba(148, 163, 184, 0.18);
-                background: rgba(79,70,229,0.06);
-                font-size: 12px;
-                font-weight: 700;
-                text-align: center;
-            }
-            .esk-headline a {
-                color: #2563eb;
-                text-decoration: none;
-                font-weight: 500;
-                line-height: 1.5;
-            }
-            .esk-headline a:hover {
-                text-decoration: underline;
-            }
-            .esk-center {
-                text-align: center;
-                white-space: nowrap;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
+        esk_show = esk[
+            ["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam",
+             "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline", "Headline_URL"]
+        ].head(10).copy()
+
+        esk_show["Headline"] = esk_show["Headline"].astype(str).fillna("")
+        esk_show["Buka Berita"] = esk_show["Headline_URL"].astype(str).fillna("")
+
+        st.data_editor(
+            esk_show[
+                ["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam",
+                 "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline", "Buka Berita"]
+            ],
+            use_container_width=True,
+            hide_index=True,
+            disabled=True,
+            column_config={
+                "Topik": st.column_config.TextColumn("Topik", width="medium"),
+                "Trend": st.column_config.TextColumn("Trend", width="small"),
+                "Media 24 Jam": st.column_config.NumberColumn("Media 24 Jam", width="small"),
+                "Berita 24 Jam": st.column_config.NumberColumn("Berita 24 Jam", width="small"),
+                "Media 24-48 Jam": st.column_config.NumberColumn("Media 24-48 Jam", width="small"),
+                "Berita 24-48 Jam": st.column_config.NumberColumn("Berita 24-48 Jam", width="small"),
+                "Skor": st.column_config.NumberColumn("Skor", width="small"),
+                "Headline": st.column_config.TextColumn("Headline", width="large"),
+                "Buka Berita": st.column_config.LinkColumn("Buka Berita", width="small", display_text="Buka link"),
+            },
         )
-
-        hdr = st.columns([2.1, 1.2, 1.0, 1.0, 1.1, 1.1, 0.8, 4.7], gap="small")
-        headers = ["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam", "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline"]
-        for col, label in zip(hdr, headers):
-            with col:
-                st.markdown(f"<div class='esk-head'>{label}</div>", unsafe_allow_html=True)
-
-        for _, row in esk.iterrows():
-            cols = st.columns([2.1, 1.2, 1.0, 1.0, 1.1, 1.1, 0.8, 4.7], gap="small")
-
-            vals = [
-                escape(str(row.get("Topik", ""))),
-                escape(str(row.get("Trend", ""))),
-                escape(str(row.get("Media 24 Jam", ""))),
-                escape(str(row.get("Berita 24 Jam", ""))),
-                escape(str(row.get("Media 24-48 Jam", ""))),
-                escape(str(row.get("Berita 24-48 Jam", ""))),
-                escape(str(row.get("Skor", ""))),
-            ]
-            url = str(row.get("Headline_URL", "")).strip()
-            headline = escape(str(row.get("Headline", "")))
-
-            for idx, val in enumerate(vals):
-                klass = "esk-row esk-center" if idx in [1, 2, 3, 4, 5, 6] else "esk-row"
-                with cols[idx]:
-                    st.markdown(f"<div class='{klass}'>{val}</div>", unsafe_allow_html=True)
-
-            with cols[7]:
-                if url:
-                    st.markdown(
-                        f"<div class='esk-row esk-headline'><a href='{escape(url, quote=True)}' target='_blank'>{headline}</a></div>",
-                        unsafe_allow_html=True
-                    )
-                else:
-                    st.markdown(f"<div class='esk-row'>{headline}</div>", unsafe_allow_html=True)
     else:
         st.info("Belum ada data eskalasi isu.")
-
 
 # ===============================
 # TAB: ANALISIS DAERAH

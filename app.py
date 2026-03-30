@@ -8,7 +8,6 @@ from scraper import run_scraper
 from filter_keyword import run_filter
 from update_priority import run_priority
 from gsheet_utils import read_sheet
-from check_links import run_link_monitor
 
 SHEET_KEY = st.secrets["SHEET_KEY"]
 
@@ -470,7 +469,6 @@ def load_sheet(key: str, tab: str) -> pd.DataFrame:
 
 raw = load_sheet(SHEET_KEY, "RAW")
 analyzed = load_sheet(SHEET_KEY, "ANALYZED")
-link_monitor = load_sheet(SHEET_KEY, "LINK_MONITOR")
 
 if raw is None or raw.empty:
     st.warning("Data RAW belum tersedia.")
@@ -478,14 +476,10 @@ if raw is None or raw.empty:
 
 if analyzed is None:
     analyzed = pd.DataFrame()
-if link_monitor is None:
-    link_monitor = pd.DataFrame()
 
 raw.columns = raw.columns.astype(str).str.strip()
 if not analyzed.empty:
     analyzed.columns = analyzed.columns.astype(str).str.strip()
-if not link_monitor.empty:
-    link_monitor.columns = link_monitor.columns.astype(str).str.strip()
 
 # ===============================
 # FIX TANGGAL
@@ -530,7 +524,7 @@ max_date = raw["Tanggal_Hari"].max()
 # ===============================
 st.markdown('<div class="section-title">Kontrol Data</div>', unsafe_allow_html=True)
 
-c_ctrl1, c_ctrl2, c_ctrl3, c_ctrl4, c_ctrl5 = st.columns([1.1, 1.1, 2.0, 1.3, 1.3])
+c_ctrl1, c_ctrl2, c_ctrl3, c_ctrl4 = st.columns([1.1, 2.2, 1.4, 1.4])
 
 with c_ctrl1:
     if st.button("🔄 Update Data", key="update_data_main"):
@@ -543,28 +537,20 @@ with c_ctrl1:
         st.rerun()
 
 with c_ctrl2:
-    if st.button("🔗 Cek Status Link", key="check_link_status"):
-        with st.spinner("Mengecek status link berita..."):
-            run_link_monitor(max_links=100, days_back=3)
-            safe_clear_caches()
-        st.success("Cek status link selesai!")
-        st.rerun()
-
-with c_ctrl3:
     date_range = st.date_input(
         "Rentang tanggal",
         value=(min_date, max_date),
         key="main_date_range"
     )
 
-with c_ctrl4:
+with c_ctrl3:
     filter_option = st.selectbox(
         "Prioritas",
         ["SEMUA", "PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"],
         key="main_filter_option"
     )
 
-with c_ctrl5:
+with c_ctrl4:
     kategori_option = st.selectbox(
         "Kategori Berita",
         ["SEMUA", "NASIONAL", "GLOBAL", "EDUKASI"],
@@ -677,16 +663,46 @@ if not filtered_for_table.empty and filter_option != "SEMUA" and "Prioritas" in 
 # ===============================
 # TABS
 # ===============================
-tab_dash, tab_data, tab_region, tab_link, tab_info = st.tabs(
-    ["📊 Dashboard", "📰 Data Berita", "📍 Analisis Daerah", "🔗 Monitoring Link", "📘 Panduan"]
+tab_dash, tab_data, tab_region, tab_info = st.tabs(
+    ["📊 Dashboard", "📰 Data Berita", "📍 Analisis Daerah", "📘 Panduan"]
 )
 
 # ===============================
 # TAB: DASHBOARD
 # ===============================
 with tab_dash:
+    if raw_filtered.empty:
+        st.warning("Belum ada data RAW pada rentang tanggal ini.")
+        st.stop()
+
     if filtered_display.empty or "Prioritas" not in filtered_display.columns:
-        st.error("Data ANALYZED belum tersedia. Klik 🔄 Update Data dulu.")
+        c1, c2 = st.columns([1.2, 1.2], gap="large")
+
+        with c1:
+            st.markdown(
+                f"""
+                <div class="kpi-card">
+                  <div class="kpi-title">Total Berita Raw</div>
+                  <div class="kpi-value">{len(raw_filtered):,}</div>
+                  <div class="kpi-sub">Sesuai rentang tanggal</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        with c2:
+            st.markdown(
+                """
+                <div class="kpi-card">
+                  <div class="kpi-title">Berita Teranalisis</div>
+                  <div class="kpi-value">0</div>
+                  <div class="kpi-sub">Belum ada yang lolos analisis</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        st.info("Tidak ada berita yang lolos analisis pada rentang tanggal ini.")
         st.stop()
 
     tinggi = int((filtered_display["Prioritas"] == "PRIORITAS TINGGI").sum())
@@ -1441,143 +1457,141 @@ with tab_region:
             st.info("Tidak ada berita pada wilayah terpilih.")
 
 # ===============================
-# TAB: MONITORING LINK
-# ===============================
-with tab_link:
-    st.markdown('<div class="section-title">Monitoring Status Link Berita</div>', unsafe_allow_html=True)
-
-    if link_monitor is None or link_monitor.empty:
-        st.info("Belum ada hasil pengecekan link. Klik tombol 🔗 Cek Status Link terlebih dahulu.")
-    else:
-        lm = link_monitor.copy()
-
-        if "Status_Link" in lm.columns:
-            aktif_count = int((lm["Status_Link"].astype(str) == "AKTIF").sum())
-            redirect_count = int((lm["Status_Link"].astype(str) == "REDIRECT").sum())
-            takedown_count = int((lm["Status_Link"].astype(str) == "KEMUNGKINAN TAKEDOWN").sum())
-            terbatas_count = int((lm["Status_Link"].astype(str) == "TERBATAS").sum())
-            error_count = int((lm["Status_Link"].astype(str) == "ERROR CEK").sum())
-
-            k1, k2, k3, k4, k5 = st.columns(5)
-            k1.metric("Aktif", aktif_count)
-            k2.metric("Redirect", redirect_count)
-            k3.metric("Kemungkinan Takedown", takedown_count)
-            k4.metric("Terbatas", terbatas_count)
-            k5.metric("Error Cek", error_count)
-
-        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
-
-        status_filter = st.selectbox(
-            "Filter Status Link",
-            ["SEMUA", "AKTIF", "REDIRECT", "KEMUNGKINAN TAKEDOWN", "TERBATAS", "ERROR CEK"],
-            key="status_link_filter"
-        )
-
-        if status_filter != "SEMUA" and "Status_Link" in lm.columns:
-            lm = lm[lm["Status_Link"].astype(str) == status_filter].copy()
-
-        show_cols = [
-            c for c in [
-                "Judul",
-                "Media",
-                "Tanggal_Publish",
-                "Status_Link",
-                "HTTP_Status",
-                "Terakhir_Dicek",
-                "Link"
-            ] if c in lm.columns
-        ]
-
-        st.dataframe(
-            lm[show_cols],
-            use_container_width=True,
-            hide_index=True
-        )
-
-# ===============================
 # TAB: PANDUAN
 # ===============================
 with tab_info:
     st.markdown('<div class="section-title">Panduan Sistem Early Warning System</div>', unsafe_allow_html=True)
 
     st.markdown(
+        """
+Sistem **Early Warning System (EWS) Isu Ketenagakerjaan** digunakan untuk memantau perkembangan isu ketenagakerjaan di media online serta menganalisis potensi dampaknya terhadap program jaminan sosial ketenagakerjaan.
 """
-<div class="info-card">
-<div class="info-text">
-
-Sistem <b>Early Warning System (EWS) Isu Ketenagakerjaan</b> digunakan untuk memantau perkembangan isu ketenagakerjaan di media online serta menganalisis potensi dampaknya terhadap program jaminan sosial ketenagakerjaan.
-
-<br>
-
-<b>1. Pengumpulan Data Berita</b><br>
-Sistem mengambil berita dari berbagai media online yang memuat isu ketenagakerjaan. Data yang dikumpulkan meliputi judul, media, waktu publikasi, ringkasan, dan tautan berita.
-
-<br><br>
-
-<b>2. Penyaringan Isu Ketenagakerjaan</b><br>
-Berita yang terkumpul disaring menggunakan kata kunci ketenagakerjaan seperti PHK, upah, buruh, hubungan industrial, BPJS Ketenagakerjaan, kecelakaan kerja, dan jaminan sosial tenaga kerja.
-
-<br><br>
-
-<b>3. Identifikasi Topik dan Kategori Berita</b><br>
-Sistem mengidentifikasi topik utama berita seperti PHK, THR, upah, konflik hubungan industrial, kepesertaan BPJS, JKK, JHT, JKP, JP, JKM, dan lain-lain.
-
-Selain itu, berita juga dikelompokkan menjadi:
-<ul>
-<li><b>NASIONAL</b>: berita yang relevan langsung dengan Indonesia</li>
-<li><b>GLOBAL</b>: berita luar negeri yang dipantau sebagai referensi</li>
-<li><b>EDUKASI</b>: berita informatif layanan, panduan, atau prosedur klaim</li>
-</ul>
-
-<br>
-
-<b>4. Analisis Dampak terhadap Program</b><br>
-Setiap berita dianalisis untuk melihat potensi dampaknya terhadap program BPJS Ketenagakerjaan, antara lain JHT, JKK, JKM, JKP, dan JP.
-
-<br><br>
-
-<b>5. Penentuan Prioritas</b><br>
-Berita diklasifikasikan menjadi:
-<ul>
-<li><b>Prioritas Tinggi</b>: isu yang memerlukan perhatian segera</li>
-<li><b>Prioritas Sedang</b>: isu yang perlu dipantau</li>
-<li><b>Prioritas Rendah</b>: isu informatif atau berdampak terbatas</li>
-</ul>
-
-Berita edukasi ditempatkan sebagai prioritas rendah, sedangkan berita global tidak dijadikan fokus utama analisis.
-
-<br><br>
-
-<b>6. Dashboard Monitoring Isu</b><br>
-Dashboard menampilkan:
-<ul>
-<li>total berita yang dikumpulkan</li>
-<li>berita yang telah dianalisis</li>
-<li>distribusi prioritas</li>
-<li>topik dominan</li>
-<li>isu paling kritis hari ini</li>
-<li>alert eskalasi</li>
-</ul>
-
-<br>
-
-<b>7. Analisis Daerah</b><br>
-Tab <b>Analisis Daerah</b> menampilkan distribusi isu berdasarkan provinsi dan kabupaten/kota yang terdeteksi dari judul dan ringkasan berita. Fitur ini digunakan untuk melihat wilayah dengan isu yang paling menonjol.
-
-<br><br>
-
-<b>8. Indeks Eskalasi Isu</b><br>
-Indeks eskalasi membandingkan jumlah berita dan jumlah media dalam 24 jam terakhir dengan periode 24–48 jam sebelumnya untuk melihat apakah isu:
-<ul>
-<li>📈 Naik</li>
-<li>📉 Turun</li>
-<li>➖ Stabil</li>
-</ul>
-
-Semakin tinggi skor eskalasi, semakin besar kemungkinan isu berkembang dan memerlukan perhatian lebih lanjut.
-
-</div>
-</div>
-""",
-        unsafe_allow_html=True
     )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ===============================
+    # DASHBOARD
+    # ===============================
+    with st.expander("📊 Tab Dashboard", expanded=True):
+        st.markdown(
+            """
+Dashboard menampilkan gambaran umum kondisi isu ketenagakerjaan.
+
+**Komponen utama:**
+- Total Berita RAW  
+- Berita Teranalisis  
+- Prioritas Tinggi / Sedang / Rendah  
+- Isu Paling Kritis Hari Ini  
+- Distribusi Prioritas  
+- Topik Dominan  
+- Top 5 Berita Prioritas Tinggi  
+- Analisis Situasi  
+"""
+        )
+
+    # ===============================
+    # DATA BERITA
+    # ===============================
+    with st.expander("📰 Tab Data Berita"):
+        st.markdown(
+            """
+Menampilkan seluruh berita hasil analisis dalam bentuk tabel.
+
+**Fungsi utama:**
+- Melihat detail berita  
+- Filter berdasarkan prioritas  
+- Filter kategori berita  
+- Menelusuri sumber dan waktu berita  
+"""
+        )
+
+    # ===============================
+    # ANALISIS DAERAH
+    # ===============================
+    with st.expander("📍 Tab Analisis Daerah"):
+        st.markdown(
+            """
+Menampilkan distribusi isu berdasarkan wilayah.
+
+**Manfaat:**
+- Mengidentifikasi wilayah dengan isu tertinggi  
+- Melihat persebaran isu secara geografis  
+- Menentukan fokus pengawasan wilayah  
+"""
+        )
+
+    # ===============================
+    # CARA KERJA SISTEM
+    # ===============================
+    with st.expander("⚙️ Cara Kerja Sistem"):
+        st.markdown(
+            """
+**1. Scraping (RAW)**  
+Mengambil berita dari berbagai media online.
+
+**2. Filtering (FILTERED)**  
+Menyaring berita berdasarkan kata kunci ketenagakerjaan.
+
+**3. Analisis (ANALYZED)**  
+Menentukan:
+- Topik utama  
+- Lokasi  
+- Dampak program  
+- Skor  
+- Prioritas  
+
+**4. Visualisasi Dashboard**  
+Menampilkan hasil analisis dalam bentuk grafik dan ringkasan.
+"""
+        )
+
+    # ===============================
+    # PRIORITAS
+    # ===============================
+    with st.expander("🚨 Penentuan Prioritas"):
+        st.markdown(
+            """
+**Prioritas Tinggi**
+- PHK massal  
+- Kecelakaan kerja fatal  
+- Konflik besar  
+
+**Prioritas Sedang**
+- Isu berkembang  
+- Dampak terbatas  
+
+**Prioritas Rendah**
+- Edukasi layanan  
+- Informasi umum  
+- Berita global  
+"""
+        )
+
+    # ===============================
+    # ESKALASI
+    # ===============================
+    with st.expander("📈 Indeks Eskalasi Isu"):
+        st.markdown(
+            """
+Membandingkan kondisi 24 jam terakhir dengan periode sebelumnya:
+
+- 📈 Naik → isu meningkat  
+- 📉 Turun → isu menurun  
+- ➖ Stabil → tidak ada perubahan signifikan  
+
+Semakin tinggi eskalasi, semakin perlu perhatian lebih lanjut.
+"""
+        )
+
+    # ===============================
+    # CATATAN
+    # ===============================
+    with st.expander("📌 Catatan Penting"):
+        st.markdown(
+            """
+- Jika **RAW ada tetapi ANALYZED kosong**, berarti tidak ada berita yang lolos analisis  
+- Gunakan tombol **Update Data** untuk memperbarui data  
+- Sistem ini bersifat **early warning**, bukan keputusan final  
+"""
+        )

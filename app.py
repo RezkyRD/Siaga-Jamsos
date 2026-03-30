@@ -1283,6 +1283,53 @@ with tab_data:
         esk["Topik"] = esk["Topik"].astype(str).apply(clean_label)
         esk = esk.sort_values(["Skor", "Media 24 Jam", "Berita 24 Jam"], ascending=False)
 
+        st.markdown(
+            """
+            <style>
+            .eskalasi-wrap {
+                overflow-x: auto;
+                margin-top: 4px;
+            }
+            .eskalasi-table {
+                width: 100%;
+                min-width: 980px;
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            .eskalasi-table th,
+            .eskalasi-table td {
+                border: 1px solid rgba(148, 163, 184, 0.18);
+                padding: 10px 10px;
+                vertical-align: top;
+            }
+            .eskalasi-table th {
+                text-align: center;
+                font-size: 12px;
+                font-weight: 700;
+                white-space: nowrap;
+            }
+            .eskalasi-table td.num {
+                text-align: center;
+                white-space: nowrap;
+            }
+            .eskalasi-table td.headline-col {
+                min-width: 520px;
+                white-space: normal;
+                word-break: break-word;
+                line-height: 1.55;
+            }
+            .eskalasi-table a {
+                color: #2563eb;
+                text-decoration: none;
+            }
+            .eskalasi-table a:hover {
+                text-decoration: underline;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
         esk_show = esk[
             ["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam",
              "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline", "Headline_URL"]
@@ -1308,40 +1355,39 @@ with tab_data:
             rows_html += f"""
             <tr>
                 <td>{topik}</td>
-                <td>{trend_val}</td>
-                <td style='text-align:center;'>{media24}</td>
-                <td style='text-align:center;'>{berita24}</td>
-                <td style='text-align:center;'>{media48}</td>
-                <td style='text-align:center;'>{berita48}</td>
-                <td style='text-align:center;'>{skor}</td>
-                <td style='min-width:520px; white-space:normal; word-break:break-word;'>{headline_html}</td>
+                <td class='num'>{trend_val}</td>
+                <td class='num'>{media24}</td>
+                <td class='num'>{berita24}</td>
+                <td class='num'>{media48}</td>
+                <td class='num'>{berita48}</td>
+                <td class='num'>{skor}</td>
+                <td class='headline-col'>{headline_html}</td>
             </tr>
             """
 
-        st.markdown(
-            f"""
-            <div style="overflow-x:auto;">
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead>
-                        <tr>
-                            <th>Topik</th>
-                            <th>Trend</th>
-                            <th>Media 24 Jam</th>
-                            <th>Berita 24 Jam</th>
-                            <th>Media 24-48 Jam</th>
-                            <th>Berita 24-48 Jam</th>
-                            <th>Skor</th>
-                            <th>Headline</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows_html}
-                    </tbody>
-                </table>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        html_table = f"""
+        <div class="eskalasi-wrap">
+            <table class="eskalasi-table">
+                <thead>
+                    <tr>
+                        <th>Topik</th>
+                        <th>Trend</th>
+                        <th>Media 24 Jam</th>
+                        <th>Berita 24 Jam</th>
+                        <th>Media 24-48 Jam</th>
+                        <th>Berita 24-48 Jam</th>
+                        <th>Skor</th>
+                        <th>Headline</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows_html}
+                </tbody>
+            </table>
+        </div>
+        """
+
+        st.markdown(html_table, unsafe_allow_html=True)
     else:
         st.info("Belum ada data eskalasi isu.")
 

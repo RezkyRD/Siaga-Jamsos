@@ -1232,7 +1232,7 @@ with tab_data:
 
     def agg(df_recent):
         if df_recent.empty:
-            return pd.DataFrame(columns=["Topik", "Berita 24 Jam", "Media 24 Jam", "Headline"])
+            return pd.DataFrame(columns=["Topik", "Berita 24 Jam", "Media 24 Jam", "Headline", "Headline_URL"])
 
         out = df_recent.groupby("Topik", dropna=False).agg(
             **{
@@ -1244,8 +1244,11 @@ with tab_data:
         head = (
             df_recent.sort_values("publish_dt", ascending=False)
             .groupby("Topik", dropna=False)
-            .head(1)[["Topik", "Judul"]]
-            .rename(columns={"Judul": "Headline"})
+            .head(1)[["Topik", "Judul", "Link"]]
+            .rename(columns={
+                "Judul": "Headline",
+                "Link": "Headline_URL"
+            })
         )
 
         return out.merge(head, on="Topik", how="left")
@@ -1280,13 +1283,64 @@ with tab_data:
         esk["Topik"] = esk["Topik"].astype(str).apply(clean_label)
         esk = esk.sort_values(["Skor", "Media 24 Jam", "Berita 24 Jam"], ascending=False)
 
-        st.dataframe(
-            esk[
-                ["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam",
-                 "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline"]
-            ].head(10),
-            use_container_width=True,
-            hide_index=True
+        esk_show = esk[
+            ["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam",
+             "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline", "Headline_URL"]
+        ].head(10).copy()
+
+        rows_html = ""
+        for _, row in esk_show.iterrows():
+            topik = escape(str(row.get("Topik", "")))
+            trend_val = escape(str(row.get("Trend", "")))
+            media24 = escape(str(row.get("Media 24 Jam", "")))
+            berita24 = escape(str(row.get("Berita 24 Jam", "")))
+            media48 = escape(str(row.get("Media 24-48 Jam", "")))
+            berita48 = escape(str(row.get("Berita 24-48 Jam", "")))
+            skor = escape(str(row.get("Skor", "")))
+            headline = escape(str(row.get("Headline", "")))
+            url = str(row.get("Headline_URL", "")).strip()
+
+            if url:
+                headline_html = f"<a href='{escape(url, quote=True)}' target='_blank'>{headline}</a>"
+            else:
+                headline_html = headline
+
+            rows_html += f"""
+            <tr>
+                <td>{topik}</td>
+                <td>{trend_val}</td>
+                <td style='text-align:center;'>{media24}</td>
+                <td style='text-align:center;'>{berita24}</td>
+                <td style='text-align:center;'>{media48}</td>
+                <td style='text-align:center;'>{berita48}</td>
+                <td style='text-align:center;'>{skor}</td>
+                <td style='min-width:520px; white-space:normal; word-break:break-word;'>{headline_html}</td>
+            </tr>
+            """
+
+        st.markdown(
+            f"""
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr>
+                            <th>Topik</th>
+                            <th>Trend</th>
+                            <th>Media 24 Jam</th>
+                            <th>Berita 24 Jam</th>
+                            <th>Media 24-48 Jam</th>
+                            <th>Berita 24-48 Jam</th>
+                            <th>Skor</th>
+                            <th>Headline</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows_html}
+                    </tbody>
+                </table>
+            </div>
+            """,
+            unsafe_allow_html=True
         )
     else:
         st.info("Belum ada data eskalasi isu.")

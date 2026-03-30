@@ -419,6 +419,16 @@ def normalize_datetime_col(df: pd.DataFrame, col: str) -> pd.Series:
         pass
     return s
 
+
+def has_kepesertaan_value(cell_value: str, target: str) -> bool:
+    cell = str(cell_value or "").strip()
+    if not cell:
+        return False
+
+    items = [x.strip() for x in cell.split(",") if x.strip()]
+    items_lower = [x.lower() for x in items]
+    return target.strip().lower() in items_lower
+
 def build_alerts(df: pd.DataFrame) -> list[str]:
     alerts = []
     if df.empty:
@@ -524,7 +534,7 @@ max_date = raw["Tanggal_Hari"].max()
 # ===============================
 st.markdown('<div class="section-title">Kontrol Data</div>', unsafe_allow_html=True)
 
-c_ctrl1, c_ctrl2, c_ctrl3, c_ctrl4 = st.columns([1.1, 2.2, 1.4, 1.4])
+c_ctrl1, c_ctrl2, c_ctrl3, c_ctrl4, c_ctrl5 = st.columns([1.1, 2.0, 1.2, 1.2, 1.4])
 
 with c_ctrl1:
     if st.button("🔄 Update Data", key="update_data_main"):
@@ -551,6 +561,13 @@ with c_ctrl3:
     )
 
 with c_ctrl4:
+    kepesertaan_option = st.selectbox(
+        "Kepesertaan",
+        ["SEMUA", "PU", "BPU", "PMI", "Jasa Konstruksi"],
+        key="main_kepesertaan_option"
+    )
+
+with c_ctrl5:
     kategori_option = st.selectbox(
         "Kategori Berita",
         ["SEMUA", "NASIONAL", "GLOBAL", "EDUKASI"],
@@ -643,6 +660,13 @@ filtered_display = analyzed[
 if not filtered_display.empty and kategori_option != "SEMUA" and "Kategori_Berita" in filtered_display.columns:
     filtered_display = filtered_display[
         filtered_display["Kategori_Berita"].astype(str).str.upper().eq(kategori_option)
+    ].copy()
+
+if not filtered_display.empty and kepesertaan_option != "SEMUA" and "Dampak_Kepesertaan" in filtered_display.columns:
+    filtered_display = filtered_display[
+        filtered_display["Dampak_Kepesertaan"].apply(
+            lambda x: has_kepesertaan_value(x, kepesertaan_option)
+        )
     ].copy()
 
 if not filtered_display.empty:

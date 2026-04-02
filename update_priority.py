@@ -26,7 +26,16 @@ INDONESIA_CONTEXT = [
 GLOBAL_COMPANY = [
     "amazon", "google", "alphabet", "morgan stanley", "meta", "facebook",
     "instagram", "apple", "tesla", "microsoft", "intel", "nvidia", "tiktok",
-    "netflix", "warner bros", "ubisoft", "sony", "samsung", "epic games"
+    "netflix", "warner bros", "ubisoft", "sony", "samsung", "epic games",
+    "oracle", "sap", "ibm", "adobe", "cisco", "paypal", "spotify", "bytedance",
+    "xiaomi", "foxconn", "boeing", "dell", "hp", "ea", "electronic arts",
+    "openai", "anthropic"
+]
+
+MEDIA_NOISE = [
+    "cnn indonesia", "cnbc indonesia", "kompas.com", "detik", "tempo.co",
+    "tribunnews", "bisnis.com", "liputan6", "kontan", "antara", "jpnn",
+    "kumparan", "republika", "okezone", "sindonews", "suara.com", "idxchannel"
 ]
 
 
@@ -184,6 +193,18 @@ def ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df[OUTPUT_COLUMNS]
 
 
+def strip_media_noise(text: str) -> str:
+    text = clean_text(text)
+    for noise in MEDIA_NOISE:
+        text = re.sub(rf"\b{re.escape(noise)}\b", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def has_global_company(text: str) -> bool:
+    return any(g in text for g in GLOBAL_COMPANY)
+
+
 # =====================================
 # LOKASI
 # =====================================
@@ -225,6 +246,24 @@ def detect_location(text: str) -> dict:
 # KONTEKS / CATEGORY
 # =====================================
 
+def has_real_indonesia_context(text: str) -> bool:
+    text = strip_media_noise(text)
+    lokasi = detect_location(text)
+
+    if lokasi["Provinsi"] not in ["", "Nasional"]:
+        return True
+
+    strong_context = [
+        "di indonesia", "wilayah indonesia", "nasional", "kemnaker", "disnaker",
+        "bpjs ketenagakerjaan", "bpjamsostek", "pekerja indonesia", "buruh indonesia",
+        "karyawan di indonesia", "perusahaan di indonesia", "pabrik di indonesia",
+        "operasi di indonesia", "anak usaha di indonesia", "kantor di indonesia",
+        "peserta bpjs", "kepesertaan bpjs", "klaim jht", "klaim jkp",
+        "jkk", "jkm", "jht", "jkp", "jp"
+    ]
+    return any(k in text for k in strong_context)
+
+
 def is_indonesia_related(text: str) -> bool:
     text = clean_text(text)
 
@@ -238,17 +277,10 @@ def is_indonesia_related(text: str) -> bool:
     ]):
         return True
 
-    if any(g in text for g in GLOBAL_COMPANY):
-        strong_id_context = [
-            "di indonesia", "indonesia", "pekerja indonesia", "buruh indonesia",
-            "karyawan di indonesia", "operasi di indonesia", "anak usaha di indonesia",
-            "anak usaha indonesia", "pabrik di indonesia", "kantor di indonesia",
-            "kemnaker", "disnaker", "bpjs ketenagakerjaan", "bpjamsostek",
-            "phk di indonesia", "buruh indonesia terdampak", "pekerja indonesia terdampak"
-        ]
-        return any(k in text for k in strong_id_context)
+    if has_global_company(text):
+        return has_real_indonesia_context(text)
 
-    return any(k in text for k in INDONESIA_CONTEXT)
+    return has_real_indonesia_context(text) or any(k in strip_media_noise(text) for k in INDONESIA_CONTEXT)
 
 
 def get_context_label(text: str) -> str:
@@ -400,12 +432,7 @@ def detect_kepesertaan(text: str):
 # =====================================
 
 def classify_priority(score: int, category: str, topic: str) -> str:
-    if category == "EDUKASI":
-        return "PRIORITAS RENDAH"
-
-    if category == "GLOBAL":
-        if score >= 5:
-            return "PRIORITAS SEDANG"
+    if category in ["EDUKASI", "GLOBAL"]:
         return "PRIORITAS RENDAH"
 
     if score >= 7:
@@ -419,7 +446,7 @@ def build_short_reason(topic: str, programs: str, claims: str, category: str) ->
     if category == "EDUKASI":
         return "Berita bersifat edukasi layanan dan tidak memerlukan penanganan prioritas."
     if category == "GLOBAL":
-        return "Berita global dipantau sebagai referensi dan bukan fokus utama analisis."
+        return "Berita global dipantau sebagai referensi dan bukan fokus utama analisis nasional."
 
     reasons = {
         "PHK": "PHK berpotensi meningkatkan klaim JKP dan pencairan JHT.",
@@ -482,9 +509,9 @@ def analyze_jamsos(text: str, row=None) -> dict:
     kategori = detect_category(text)
     topik = detect_topic(text)
 
-    if any(g in text for g in GLOBAL_COMPANY) and not is_indonesia_related(text):
+    if has_global_company(text) and not has_real_indonesia_context(text):
         return {
-            "Topik_Utama": "Global",
+            "Topik_Utama": topik,
             "Kategori_Berita": "GLOBAL",
             "Score": 0,
             "Dampak_Program": "",
@@ -590,17 +617,17 @@ def analyze_jamsos(text: str, row=None) -> dict:
         kepesertaan.append("Jasa Konstruksi")
         program.append("JKK")
 
-    if row is not None:
+    if row is not None and kategori == "NASIONAL":
         score += get_time_boost(row)
 
     if kategori == "GLOBAL":
-        score = max(score - 2, 0)
-
+        score = 0
     if kategori == "EDUKASI":
         score = min(score, 2)
 
-    if not is_indonesia_related(text) and kategori != "GLOBAL":
-        score = max(score - 1, 0)
+    if kategori == "NASIONAL" and not has_real_indonesia_context(text):
+        kategori = "GLOBAL"
+        score = 0
 
     program = unique_join(program)
     kepesertaan = unique_join(kepesertaan)
@@ -685,7 +712,6 @@ def run_priority(sheet_key=None):
         axis=1
     )
 
-    # buang hanya berita global yang benar-benar tidak relevan dan skor nol
     df = df[
         ~(
             (df["Kategori_Berita"].astype(str) == "GLOBAL") &
@@ -694,7 +720,6 @@ def run_priority(sheet_key=None):
         )
     ].copy()
 
-    # jangan filter keras Score >= 1, agar tanggal tipis tidak kosong total
     df = ensure_columns(df)
 
     priority_order = {

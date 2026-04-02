@@ -1083,12 +1083,43 @@ Topik dominan pada periode ini:
 # ===============================
 with tab_data:
     st.markdown('<div class="section-title">Berita Terkini</div>', unsafe_allow_html=True)
+
+    search_keyword = st.text_input(
+        "",
+        placeholder="🔍 Cari berita (bisa lebih dari satu kata, misalnya: PHK Bekasi)",
+        key="search_berita"
+    )
+
     st.caption("Daftar 10 berita terbaru berdasarkan prioritas dan waktu publikasi.")
 
     df_display = filtered_for_table.copy()
 
+    if search_keyword:
+        keywords = [k.strip().lower() for k in str(search_keyword).split() if k.strip()]
+
+        search_parts = []
+        for col in ["Judul", "Ringkasan", "Media", "Topik_Utama", "Provinsi", "Kabupaten_Kota"]:
+            if col in df_display.columns:
+                search_parts.append(df_display[col].astype(str).fillna("").str.lower())
+
+        if search_parts:
+            combined_text = search_parts[0]
+            for s in search_parts[1:]:
+                combined_text = combined_text + " " + s
+
+            mask = pd.Series(True, index=df_display.index)
+            for kw in keywords:
+                mask = mask & combined_text.str.contains(kw, na=False, regex=False)
+
+            df_display = df_display[mask].copy()
+
+        if st.session_state.get("search_berita_prev", "") != search_keyword:
+            st.session_state.page = 1
+        st.session_state.search_berita_prev = search_keyword
+        st.caption(f"Hasil pencarian: '{search_keyword}'")
+
     if df_display.empty:
-        st.info("Tidak ada berita untuk filter yang dipilih.")
+        st.info("Tidak ada berita untuk filter atau kata kunci yang dipilih.")
         st.stop()
 
     priority_order = {

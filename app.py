@@ -469,7 +469,13 @@ thead tr th {
         font-size: 12px !important;
         margin-top: 6px !important;
     }
-.kpi-desktop {
+
+    /* FIX FULL WIDTH */
+    .kpi-mobile-grid > div:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .kpi-desktop {
         display: none !important;
     }
 
@@ -486,7 +492,6 @@ thead tr th {
         padding: 12px 14px !important;
         border-radius: 16px !important;
     }
-
 }
 </style>
 """,
@@ -899,22 +904,22 @@ with tab_dash:
 # ===============================
 # KPI MOBILE
 # ===============================
-    st.markdown(
-        f"""
-    <div class="kpi-mobile">
-        <div class="kpi-mobile-grid">
-            {kpi_card_mobile_html("Total Berita Raw", f"{len(raw_filtered):,}", "Sesuai rentang tanggal")}
-            {kpi_card_mobile_html("Berita Teranalisis", f"{len(filtered_display):,}", "Basis analisis EWS")}
-            {kpi_card_mobile_html("Prioritas Tinggi", f"{tinggi:,}", "<span class='badge badge-high'>HIGH</span>")}
-            {kpi_card_mobile_html("Prioritas Sedang", f"{sedang:,}", "<span class='badge badge-mid'>MED</span>")}
-            <div class="kpi-span-2">
-                {kpi_card_mobile_html("Prioritas Rendah", f"{rendah:,}", "<span class='badge badge-low'>LOW</span>")}
-            </div>
-        </div>
-    </div>
-    """,
-        unsafe_allow_html=True
-    )
+    st.markdown('<div class="kpi-mobile">', unsafe_allow_html=True)
+    st.markdown('<div class="kpi-mobile-grid">', unsafe_allow_html=True)
+
+# baris 1
+    st.markdown(kpi_card_mobile_html("Total Berita Raw", f"{len(raw_filtered):,}", "Sesuai rentang tanggal"), unsafe_allow_html=True)
+    st.markdown(kpi_card_mobile_html("Berita Teranalisis", f"{len(filtered_display):,}", "Basis analisis EWS"), unsafe_allow_html=True)
+
+# baris 2
+    st.markdown(kpi_card_mobile_html("Prioritas Tinggi", f"{tinggi:,}", "<span class='badge badge-high'>HIGH</span>"), unsafe_allow_html=True)
+    st.markdown(kpi_card_mobile_html("Prioritas Sedang", f"{sedang:,}", "<span class='badge badge-mid'>MED</span>"), unsafe_allow_html=True)
+
+# baris 3 (full width tanpa wrapper HTML)
+    st.markdown(kpi_card_mobile_html("Prioritas Rendah", f"{rendah:,}", "<span class='badge badge-low'>LOW</span>"), unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
 

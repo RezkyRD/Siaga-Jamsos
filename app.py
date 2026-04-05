@@ -128,11 +128,6 @@ html, body, [class*="css"] {
     color: rgba(255,255,255,0.92);
     max-width: 880px;
 }
-.hero-meta {
-    margin-top: 14px;
-    font-size: 12px;
-    color: rgba(255,255,255,0.82);
-}
 
 .section-title {
     font-size: 1.22rem;
@@ -160,7 +155,7 @@ html, body, [class*="css"] {
 .panel-card,
 .info-card,
 .news-card {
-    padding: 18px 18px 16px 18px;
+    padding: 16px 18px 14px 18px;
 }
 .glass-card {
     padding: 16px 18px;
@@ -248,9 +243,9 @@ div[data-testid="stDateInput"] > div > div {
 
 .pill {
     display: inline-block;
-    padding: 5px 10px;
+    padding: 4px 9px;
     border-radius: 999px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     border: 1px solid transparent;
     margin-right: 6px;
@@ -283,9 +278,9 @@ div[data-testid="stDateInput"] > div > div {
     text-decoration: none;
 }
 .news-meta {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 .news-body,
 .analysis-body {
@@ -356,9 +351,6 @@ st.markdown(
         <div class="hero-sub">
             Dashboard pemantauan isu berbasis media online untuk mendukung deteksi dini,
             analisis situasi, dan pengambilan keputusan yang lebih cepat, terukur, dan fokus pada prioritas.
-        </div>
-        <div class="hero-meta">
-            Tampilan ini hanya mengubah layer visual aplikasi. Pipeline backend tetap sama.
         </div>
     </div>
     """,
@@ -529,8 +521,6 @@ section_header(
     "Kontrol Data",
     "Atur pembaruan data, rentang waktu analisis, tingkat prioritas, dan kategori berita."
 )
-
-st.markdown('<div class="glass-card">', unsafe_allow_html=True)
 
 c_ctrl1, c_ctrl2, c_ctrl3, c_ctrl4 = st.columns([1.1, 2.2, 1.3, 1.3], gap="medium")
 with c_ctrl1:
@@ -712,7 +702,6 @@ with tab_dash:
 
     with left:
         section_header("Distribusi Prioritas", "Perbandingan jumlah berita berdasarkan level prioritas.")
-        st.markdown('<div class="panel-card">', unsafe_allow_html=True)
         priority_counts = filtered_display["Prioritas"].value_counts()
         if not priority_counts.empty:
             order = ["PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
@@ -729,11 +718,9 @@ with tab_dash:
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "responsive": True}, key="chart_distribusi_prioritas")
         else:
             st.info("Belum ada data distribusi prioritas.")
-        st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
         section_header("Topik Dominan", "Lima topik yang paling sering muncul pada periode terpilih.")
-        st.markdown('<div class="panel-card">', unsafe_allow_html=True)
         topik_counts = filtered_display["Topik"].value_counts().head(5)
         if not topik_counts.empty:
             fig_topik = go.Figure()
@@ -742,7 +729,6 @@ with tab_dash:
             st.plotly_chart(fig_topik, use_container_width=True, config={"displayModeBar": False}, key="chart_topik_dominan")
         else:
             st.info("Belum ada topik dominan.")
-        st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
         section_header("Top 5 Berita Prioritas Tinggi", "Berita prioritas tinggi terbaru untuk perhatian cepat.")
@@ -847,11 +833,9 @@ Topik dominan pada periode ini:
 # ===============================
 with tab_data:
     section_header("Data Berita", "Daftar berita hasil analisis yang dapat ditelusuri berdasarkan kata kunci, prioritas, dan waktu publikasi.")
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     st.markdown("<div style='font-size:12px; color:#64748b; font-weight:700; margin-bottom:8px;'>Pencarian Berita</div>", unsafe_allow_html=True)
     search_keyword = st.text_input("", placeholder="Cari berita dengan satu atau beberapa kata kunci, misalnya: PHK Bekasi, JKP, BPJS, JKK", key="search_berita")
     st.markdown("<div style='font-size:12px; color:#64748b; margin-top:2px;'>Hasil ditampilkan berdasarkan prioritas tertinggi terlebih dahulu, lalu diurutkan menurut waktu publikasi terbaru.</div>", unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
 
     df_display = filtered_for_table.copy()
@@ -1015,7 +999,6 @@ with tab_data:
         esk_show = esk[["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam", "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline", "Headline_URL"]].head(10).copy()
         esk_show["Headline"] = esk_show["Headline"].astype(str).fillna("")
         esk_show["Buka Berita"] = esk_show["Headline_URL"].astype(str).fillna("")
-        st.markdown('<div class="panel-card">', unsafe_allow_html=True)
         st.data_editor(
             esk_show[["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam", "Media 24-48 Jam", "Berita 24-48 Jam", "Skor", "Headline", "Buka Berita"]],
             use_container_width=True,
@@ -1033,7 +1016,6 @@ with tab_data:
                 "Buka Berita": st.column_config.LinkColumn("Buka Berita", width="small", display_text="Buka link"),
             },
         )
-        st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.info("Belum ada data eskalasi isu.")
 
@@ -1041,12 +1023,11 @@ with tab_data:
 # TAB: ANALISIS WILAYAH
 # ===============================
 with tab_region:
-    section_header("Analisis Daerah", "Pemantauan isu berdasarkan wilayah untuk melihat konsentrasi topik dan tingkat prioritas secara lebih spesifik.")
+    section_header("Analisis Wilayah", "Pemantauan isu berdasarkan wilayah untuk melihat konsentrasi topik dan tingkat prioritas secara lebih spesifik.")
     if filtered_display.empty:
-        st.info("Belum ada data analisis daerah pada periode dan filter yang dipilih.")
+        st.info("Belum ada data analisis wilayah pada periode dan filter yang dipilih.")
     else:
         df_region_all = filtered_display.copy()
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
         st.markdown("<div style='font-size:12px; color:#64748b; font-weight:700; margin-bottom:8px;'>Filter Wilayah</div>", unsafe_allow_html=True)
         provinsi_options = ["SEMUA"]
         if "Provinsi" in df_region_all.columns:
@@ -1064,7 +1045,6 @@ with tab_region:
             selected_kab = st.selectbox("Kabupaten/Kota", kab_options, key="kab_filter")
         if selected_kab != "SEMUA" and "Kabupaten_Kota" in df_region.columns:
             df_region = df_region[df_region["Kabupaten_Kota"].astype(str) == selected_kab].copy()
-        st.markdown('</div>', unsafe_allow_html=True)
         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
 
         total_region = len(df_region)
@@ -1087,7 +1067,6 @@ with tab_region:
         lcol, rcol = st.columns([1, 1], gap="medium")
         with lcol:
             section_header("Topik Dominan Wilayah", "Topik yang paling sering muncul pada wilayah yang dipilih.")
-            st.markdown('<div class="panel-card">', unsafe_allow_html=True)
             if not df_region.empty:
                 topik_region = df_region["Topik"].value_counts().head(5)
                 if not topik_region.empty:
@@ -1099,10 +1078,8 @@ with tab_region:
                     st.info("Belum ada topik wilayah.")
             else:
                 st.info("Tidak ada data pada wilayah terpilih.")
-            st.markdown('</div>', unsafe_allow_html=True)
         with rcol:
             section_header("Prioritas Wilayah", "Distribusi level prioritas isu pada wilayah terpilih.")
-            st.markdown('<div class="panel-card">', unsafe_allow_html=True)
             if not df_region.empty:
                 prio_region = df_region["Prioritas"].value_counts().reindex(["PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]).fillna(0).astype(int)
                 fig_pr = go.Figure()
@@ -1111,7 +1088,6 @@ with tab_region:
                 st.plotly_chart(fig_pr, use_container_width=True, config={"displayModeBar": False}, key="chart_prioritas_wilayah")
             else:
                 st.info("Tidak ada data prioritas wilayah.")
-            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
         section_header("Ringkasan Wilayah", "Interpretasi singkat kondisi isu pada wilayah yang sedang ditinjau.")
@@ -1223,8 +1199,8 @@ with tab_info:
         Indeks Eskalasi Isu membandingkan intensitas pemberitaan 24 jam terakhir dengan periode 24–48 jam sebelumnya.
         Jika jumlah media dan berita meningkat, maka isu dapat dipandang sedang mengalami eskalasi.
         """)
-    guide_card("9. Analisis Daerah", """
-        Tab Analisis Daerah digunakan untuk melihat kondisi isu berdasarkan wilayah, baik provinsi maupun kabupaten/kota.
+    guide_card("9. Analisis Wilayah", """
+        Tab Analisis Wilayah digunakan untuk melihat kondisi isu berdasarkan wilayah, baik provinsi maupun kabupaten/kota.
         Melalui tab ini, pengguna dapat mengetahui wilayah yang memiliki konsentrasi isu lebih tinggi, topik dominan wilayah,
         serta komposisi prioritas pada area tertentu.
         """)

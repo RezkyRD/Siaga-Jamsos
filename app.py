@@ -358,6 +358,48 @@ thead tr th {
     }
 }
 
+@media (max-width: 768px) {
+    .stButton > button {
+        width: 100% !important;
+        min-height: 48px !important;
+        border-radius: 14px !important;
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+    }
+
+    button[data-baseweb="tab"] {
+        flex: 1 1 auto !important;
+        min-width: 120px !important;
+        padding: 12px 14px !important;
+        font-size: 0.95rem !important;
+        border-radius: 14px !important;
+        white-space: nowrap !important;
+    }
+
+    [data-testid="stHorizontalBlock"] {
+        gap: 0.6rem !important;
+    }
+
+    .kpi-card {
+        padding: 14px 16px !important;
+        border-radius: 18px !important;
+    }
+
+    .kpi-title {
+        font-size: 11px !important;
+        margin-bottom: 6px !important;
+    }
+
+    .kpi-value {
+        font-size: 20px !important;
+    }
+
+    .kpi-sub {
+        font-size: 12px !important;
+        margin-top: 6px !important;
+    }
+}
+
 .info-title {
     font-size: 1.05rem;
     font-weight: 800;

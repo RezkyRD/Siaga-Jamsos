@@ -373,14 +373,35 @@ thead tr th {
 
 st.markdown(
     """
-<div style="margin-bottom:18px;">
-  <h1 class="ews-title">Early Warning System</h1>
-  <p class="ews-sub">Monitoring Isu Jaminan Sosial Ketenagakerjaan</p>
+<div style="
+    background: linear-gradient(135deg, #0b2c5f 0%, #1e3a5f 100%);
+    padding: 32px 36px;
+    border-radius: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+">
+
+    <div style="
+        font-size: 2.4rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 6px;
+        letter-spacing: -0.02em;
+    ">
+        Early Warning System
+    </div>
+
+    <div style="
+        font-size: 1rem;
+        color: rgba(255,255,255,0.8);
+    ">
+        Monitoring Isu Jaminan Sosial Ketenagakerjaan
+    </div>
+
 </div>
 """,
     unsafe_allow_html=True
 )
-st.divider()
 
 # ===============================
 # HELPERS

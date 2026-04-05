@@ -643,9 +643,25 @@ with c_ctrl1:
         st.rerun()
 
 with c_ctrl2:
+    today = pd.Timestamp.now().date()
+
+    if "main_date_range" not in st.session_state:
+        default_start = today
+        default_end = today
+
+        if today < min_date:
+            default_start = min_date
+            default_end = min_date
+        elif today > max_date:
+            default_start = max_date
+            default_end = max_date
+
+        st.session_state["main_date_range"] = (default_start, default_end)
+
     date_range = st.date_input(
         "Rentang tanggal",
-        value=(min_date, max_date),
+        min_value=min_date,
+        max_value=max_date,
         key="main_date_range"
     )
 

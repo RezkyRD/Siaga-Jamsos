@@ -169,6 +169,28 @@ html, body, [class*="css"] {
 
 .kpi-card { padding: 16px 18px; }
 
+.kpi-desktop {
+    display: block;
+}
+
+.kpi-mobile {
+    display: none;
+}
+
+.kpi-mobile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.kpi-mobile-grid .kpi-span-2 {
+    grid-column: 1 / -1;
+}
+
+.kpi-card-mobile {
+    height: 100%;
+}
+
 .kpi-title {
     font-size: 12px;
     color: #667085;
@@ -447,26 +469,24 @@ thead tr th {
         font-size: 12px !important;
         margin-top: 6px !important;
     }
+.kpi-desktop {
+        display: none !important;
+    }
 
-    /* KPI only: desktop tetap, mobile jadi grid */
-    .kpi-mobile-wrap [data-testid="stHorizontalBlock"] {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
+    .kpi-mobile {
+        display: block !important;
+    }
+
+    .kpi-mobile-grid {
         gap: 10px !important;
     }
 
-    .kpi-mobile-wrap [data-testid="column"] {
-        width: 100% !important;
-        min-width: 0 !important;
+    .kpi-card,
+    .kpi-card-mobile {
+        padding: 12px 14px !important;
+        border-radius: 16px !important;
     }
 
-    .kpi-mobile-wrap [data-testid="column"]:nth-child(5) {
-        grid-column: 1 / -1;
-    }
-
-    .kpi-mobile-wrap .kpi-card {
-        margin-bottom: 0 !important;
-    }
 }
 </style>
 """,
@@ -515,6 +535,24 @@ def badge_html(prioritas: str) -> str:
     elif prioritas == "PRIORITAS SEDANG":
         return "<span class='badge badge-mid'>Prioritas Sedang</span>"
     return "<span class='badge badge-low'>Prioritas Rendah</span>"
+
+def kpi_card_html(title: str, value, subtitle: str = "") -> str:
+    return f"""
+    <div class="kpi-card">
+        <div class="kpi-title">{escape(str(title))}</div>
+        <div class="kpi-value">{value}</div>
+        <div class="kpi-sub">{subtitle}</div>
+    </div>
+    """
+
+def kpi_card_mobile_html(title: str, value, subtitle: str = "") -> str:
+    return f"""
+    <div class="kpi-card kpi-card-mobile">
+        <div class="kpi-title">{escape(str(title))}</div>
+        <div class="kpi-value">{value}</div>
+        <div class="kpi-sub">{subtitle}</div>
+    </div>
+    """
 
 def normalize_datetime_col(df: pd.DataFrame, col: str) -> pd.Series:
     s = pd.to_datetime(df[col], errors="coerce")
@@ -819,71 +857,64 @@ with tab_dash:
     kategori_global = int((safe_series(filtered_display, "Kategori_Berita").str.upper() == "GLOBAL").sum())
     kategori_edukasi = int((safe_series(filtered_display, "Kategori_Berita").str.upper() == "EDUKASI").sum())
 
-    st.markdown('<div class="kpi-mobile-wrap">', unsafe_allow_html=True)
+    # ===============================
+# KPI DESKTOP
+# ===============================
+    st.markdown('<div class="kpi-desktop">', unsafe_allow_html=True)
 
     c1, c2, c3, c4, c5 = st.columns([1.2, 1.2, 1, 1, 1], gap="large")
 
     with c1:
         st.markdown(
-            f"""
-            <div class="kpi-card">
-              <div class="kpi-title">Total Berita Raw</div>
-              <div class="kpi-value">{len(raw_filtered):,}</div>
-              <div class="kpi-sub">Sesuai rentang tanggal</div>
-            </div>
-            """,
+            kpi_card_html("Total Berita Raw", f"{len(raw_filtered):,}", "Sesuai rentang tanggal"),
             unsafe_allow_html=True
         )
 
     with c2:
         st.markdown(
-            f"""
-            <div class="kpi-card">
-              <div class="kpi-title">Berita Teranalisis</div>
-              <div class="kpi-value">{len(filtered_display):,}</div>
-              <div class="kpi-sub">Basis analisis EWS</div>
-            </div>
-            """,
+            kpi_card_html("Berita Teranalisis", f"{len(filtered_display):,}", "Basis analisis EWS"),
             unsafe_allow_html=True
         )
 
     with c3:
         st.markdown(
-            f"""
-            <div class="kpi-card">
-              <div class="kpi-title">Prioritas Tinggi</div>
-              <div class="kpi-value">{tinggi:,}</div>
-              <div class="kpi-sub"><span class="badge badge-high">HIGH</span></div>
-            </div>
-            """,
+            kpi_card_html("Prioritas Tinggi", f"{tinggi:,}", "<span class='badge badge-high'>HIGH</span>"),
             unsafe_allow_html=True
         )
 
     with c4:
         st.markdown(
-            f"""
-            <div class="kpi-card">
-              <div class="kpi-title">Prioritas Sedang</div>
-              <div class="kpi-value">{sedang:,}</div>
-              <div class="kpi-sub"><span class="badge badge-mid">MED</span></div>
-            </div>
-            """,
-            unsafe_allow_html=True
+           kpi_card_html("Prioritas Sedang", f"{sedang:,}", "<span class='badge badge-mid'>MED</span>"),
+           unsafe_allow_html=True
         )
 
     with c5:
         st.markdown(
-            f"""
-            <div class="kpi-card">
-              <div class="kpi-title">Prioritas Rendah</div>
-              <div class="kpi-value">{rendah:,}</div>
-              <div class="kpi-sub"><span class="badge badge-low">LOW</span></div>
-            </div>
-            """,
+            kpi_card_html("Prioritas Rendah", f"{rendah:,}", "<span class='badge badge-low'>LOW</span>"),
             unsafe_allow_html=True
         )
 
     st.markdown('</div>', unsafe_allow_html=True)
+
+# ===============================
+# KPI MOBILE
+# ===============================
+    st.markdown(
+        f"""
+    <div class="kpi-mobile">
+        <div class="kpi-mobile-grid">
+            {kpi_card_mobile_html("Total Berita Raw", f"{len(raw_filtered):,}", "Sesuai rentang tanggal")}
+            {kpi_card_mobile_html("Berita Teranalisis", f"{len(filtered_display):,}", "Basis analisis EWS")}
+            {kpi_card_mobile_html("Prioritas Tinggi", f"{tinggi:,}", "<span class='badge badge-high'>HIGH</span>")}
+            {kpi_card_mobile_html("Prioritas Sedang", f"{sedang:,}", "<span class='badge badge-mid'>MED</span>")}
+            <div class="kpi-span-2">
+                {kpi_card_mobile_html("Prioritas Rendah", f"{rendah:,}", "<span class='badge badge-low'>LOW</span>")}
+            </div>
+        </div>
+    </div>
+    """,
+        unsafe_allow_html=True
+    )
 
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
 

@@ -330,6 +330,26 @@ thead tr th {
     margin-bottom: 14px;
 }
 
+@media (max-width: 768px) {
+    .hero-wrap {
+        padding: 20px 20px !important;
+        border-radius: 20px !important;
+        margin-bottom: 14px !important;
+    }
+
+    .hero-title {
+        font-size: 2rem !important;
+        line-height: 1.15 !important;
+        margin-bottom: 8px !important;
+    }
+
+    .hero-subtitle {
+        font-size: 0.95rem !important;
+        line-height: 1.5 !important;
+        color: rgba(255,255,255,0.82) !important;
+    }
+}
+
 @media (prefers-color-scheme: dark) {
     .info-card {
         background: var(--card-dark);
@@ -373,9 +393,13 @@ thead tr th {
 
 st.markdown(
     """
-<div style="background: linear-gradient(135deg, #0b2c5f 0%, #1e3a5f 100%); padding: 32px 36px; border-radius: 24px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
-<div style="font-size: 2.4rem; font-weight: 800; color: white; margin-bottom: 6px; letter-spacing: -0.02em;">Early Warning System</div>
-<div style="font-size: 1rem; color: rgba(255,255,255,0.8);">Monitoring Isu Jaminan Sosial Ketenagakerjaan</div>
+<div class="hero-wrap" style="background: linear-gradient(135deg, #0b2c5f 0%, #1e3a5f 100%); padding: 32px 36px; border-radius: 24px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+    <div class="hero-title" style="font-size: 2.4rem; font-weight: 800; color: white; margin-bottom: 6px; letter-spacing: -0.02em;">
+        Early Warning System
+    </div>
+    <div class="hero-subtitle" style="font-size: 1rem; color: rgba(255,255,255,0.8);">
+        Monitoring Isu Jaminan Sosial Ketenagakerjaan
+    </div>
 </div>
 """,
     unsafe_allow_html=True

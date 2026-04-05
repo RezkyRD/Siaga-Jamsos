@@ -1,8 +1,9 @@
 import re
-import streamlit as st
-import pandas as pd
 from html import escape
+
+import pandas as pd
 import plotly.graph_objects as go
+import streamlit as st
 
 from scraper import run_scraper
 from filter_keyword import run_filter
@@ -15,14 +16,14 @@ SHEET_KEY = st.secrets["SHEET_KEY"]
 # PAGE CONFIG
 # ===============================
 st.set_page_config(
-    page_title="EWS Ketenagakerjaan",
-    page_icon="📊",
+    page_title="SIAGA JAMSOS",
+    page_icon="🛡️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # ===============================
-# STYLE
+# STYLE — ULTRA POLISHED
 # ===============================
 st.markdown(
     """
@@ -32,200 +33,242 @@ div[data-testid="stToolbar"] { display: none; }
 #MainMenu { visibility: hidden; }
 footer { visibility: hidden; }
 
-:root {
-    --bg-light: #f5f7fb;
-    --card-light: rgba(255,255,255,0.78);
-    --card-solid-light: #ffffff;
-    --text-light: #101828;
-    --muted-light: #667085;
-    --line-light: rgba(16,24,40,0.08);
+:root{
+    --bg:#f3f6fb;
+    --bg-soft:#eef3f9;
+    --surface:#ffffff;
+    --surface-2:#f8fbff;
+    --line:#dbe5f0;
+    --line-2:#e7eef6;
 
-    --bg-dark: #0b1120;
-    --card-dark: rgba(17,25,40,0.78);
-    --card-solid-dark: #111827;
-    --text-dark: #e5e7eb;
-    --muted-dark: #94a3b8;
-    --line-dark: rgba(255,255,255,0.08);
+    --text:#0f172a;
+    --muted:#64748b;
+    --muted-2:#94a3b8;
 
-    --primary: #4f46e5;
-    --primary-2: #06b6d4;
-    --success: #16a34a;
-    --warn: #d97706;
-    --danger: #dc2626;
+    --navy:#0b1f3a;
+    --navy-2:#12345b;
+    --blue:#1d4ed8;
+    --cyan:#0891b2;
+
+    --red:#dc2626;
+    --amber:#d97706;
+    --green:#16a34a;
+
+    --shadow-sm:0 8px 24px rgba(15, 23, 42, 0.05);
+    --shadow-md:0 16px 36px rgba(15, 23, 42, 0.08);
+    --radius-lg:22px;
+    --radius-md:18px;
+    --radius-sm:14px;
 }
 
 html, body, [class*="css"] {
-    font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+    color: var(--text);
 }
 
 .stApp {
     background:
-        radial-gradient(circle at top left, rgba(79,70,229,0.12), transparent 30%),
-        radial-gradient(circle at top right, rgba(34,211,238,0.10), transparent 28%),
-        var(--bg-light);
-    color: var(--text-light);
-}
-
-@media (prefers-color-scheme: dark) {
-    .stApp {
-        background:
-            radial-gradient(circle at top left, rgba(79,70,229,0.16), transparent 30%),
-            radial-gradient(circle at top right, rgba(34,211,238,0.12), transparent 28%),
-            var(--bg-dark);
-        color: var(--text-dark);
-    }
+        radial-gradient(circle at top left, rgba(29,78,216,0.08), transparent 28%),
+        radial-gradient(circle at top right, rgba(8,145,178,0.08), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
 }
 
 .block-container {
-    padding-top: 2rem;
+    max-width: 1460px;
+    padding-top: 1.1rem;
     padding-bottom: 2rem;
-    max-width: 1450px;
 }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0b2c5f 0%, #0b1530 100%);
-    border-right: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(180deg, #0b1f3a 0%, #102b4b 100%);
+    border-right: 1px solid rgba(255,255,255,0.06);
 }
-
 [data-testid="stSidebar"] .stMarkdown,
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] span {
     color: #ffffff !important;
 }
-
 [data-testid="stSidebar"] input,
 [data-testid="stSidebar"] textarea,
 [data-testid="stSidebar"] .stSelectbox div[role="combobox"],
 [data-testid="stSidebar"] .stDateInput div[role="combobox"] {
-    color: #101828 !important;
     background: #ffffff !important;
+    color: #0f172a !important;
     border-radius: 12px !important;
 }
-
 [data-testid="stSidebar"] .stButton > button {
     width: 100%;
     border-radius: 14px;
-    border: 1px solid rgba(255,255,255,.18);
-    background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
-    color: #fff;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.08));
+    color: #ffffff;
     font-weight: 700;
 }
 
-/* Heading */
-.ews-title {
-    font-family: "Space Grotesk", Inter, "Segoe UI", sans-serif;
-    font-size: clamp(2rem, 4vw, 3rem);
+/* Hero */
+.hero-shell {
+    background: linear-gradient(135deg, #0b1f3a 0%, #14385f 62%, #195b88 100%);
+    border-radius: 28px;
+    padding: 26px 26px 22px 26px;
+    color: #ffffff;
+    box-shadow: 0 18px 44px rgba(11, 31, 58, 0.18);
+    margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
+}
+.hero-shell::after {
+    content: "";
+    position: absolute;
+    right: -40px;
+    top: -40px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.14), transparent 65%);
+}
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.14);
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 14px;
+}
+.hero-title {
+    font-size: clamp(1.9rem, 3.6vw, 2.8rem);
     font-weight: 800;
+    line-height: 1.12;
     letter-spacing: -0.03em;
     margin: 0;
-    color: inherit;
 }
-.ews-sub {
-    color: #667085;
-    font-size: 1rem;
-    margin-top: .35rem;
+.hero-sub {
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: rgba(255,255,255,0.92);
+    max-width: 880px;
 }
-@media (prefers-color-scheme: dark) {
-    .ews-sub {
-        color: #94a3b8;
-    }
-}
-
-/* Cards */
-.kpi-card,
-.glass-card,
-.news-card {
-    background: var(--card-light);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid var(--line-light);
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
-}
-
-@media (prefers-color-scheme: dark) {
-    .kpi-card,
-    .glass-card,
-    .news-card {
-        background: var(--card-dark);
-        border: 1px solid var(--line-dark);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
-    }
-}
-
-.kpi-card { padding: 16px 18px; }
-.kpi-title {
+.hero-meta {
+    margin-top: 14px;
     font-size: 12px;
-    color: #667085;
-    margin-bottom: 8px;
+    color: rgba(255,255,255,0.82);
+}
+
+/* Section titles */
+.section-title {
+    font-size: 1.22rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 10px;
+}
+.section-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: -2px;
+    margin-bottom: 12px;
+}
+
+/* Universal cards */
+.glass-card,
+.kpi-card,
+.panel-card,
+.news-card,
+.info-card {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid var(--line-2);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.panel-card,
+.info-card,
+.news-card {
+    padding: 18px 18px 16px 18px;
+}
+
+.glass-card {
+    padding: 16px 18px;
+}
+
+.kpi-card {
+    padding: 16px 18px 14px 18px;
+    min-height: 118px;
+    position: relative;
+    overflow: hidden;
+}
+.kpi-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #1d4ed8, #0891b2);
+}
+.kpi-card.high::before { background: linear-gradient(90deg, #ef4444, #dc2626); }
+.kpi-card.mid::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.kpi-card.low::before { background: linear-gradient(90deg, #22c55e, #16a34a); }
+
+.kpi-label {
+    font-size: 12px;
+    color: var(--muted);
     text-transform: uppercase;
-    letter-spacing: .04em;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+    font-weight: 700;
 }
 .kpi-value {
-    font-size: 28px;
+    font-size: 30px;
+    line-height: 1.05;
     font-weight: 800;
-    color: inherit;
-    line-height: 1.1;
+    color: var(--text);
 }
 .kpi-sub {
-    font-size: 12px;
-    color: #667085;
     margin-top: 8px;
-}
-@media (prefers-color-scheme: dark) {
-    .kpi-title, .kpi-sub { color: #94a3b8; }
-}
-
-.section-title {
-    font-family: "Space Grotesk", Inter, sans-serif;
-    font-size: 1.45rem;
-    font-weight: 700;
-    margin-bottom: .65rem;
-}
-
-.chart-caption {
     font-size: 12px;
-    color: #667085;
-    margin-top: -2px;
-    margin-bottom: 8px;
+    color: var(--muted);
 }
 
-.analysis-body {
-    font-size: .97rem;
-    line-height: 1.75;
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 10px;
+    margin-bottom: 12px;
+}
+button[data-baseweb="tab"] {
+    border-radius: 999px !important;
+    padding: 10px 16px !important;
+    background: rgba(255,255,255,0.82) !important;
+    border: 1px solid var(--line-2) !important;
+    color: #334155 !important;
+    font-weight: 700 !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    background: linear-gradient(135deg, #0b1f3a, #14385f) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(11,31,58,0.15) !important;
+    box-shadow: var(--shadow-sm);
 }
 
-.analysis-body p,
-.analysis-body li {
-    color: inherit;
+/* Inputs */
+div[data-testid="stTextInput"] > div > div,
+div[data-testid="stSelectbox"] > div > div,
+div[data-testid="stDateInput"] > div > div {
+    border-radius: 14px !important;
 }
 
-@media (prefers-color-scheme: dark) {
-    .chart-caption { color: #94a3b8; }
+/* Buttons */
+.stButton > button {
+    border-radius: 12px !important;
+    font-weight: 700 !important;
 }
 
-.top5-link a {
-    color: #4338ca;
-    text-decoration: none;
-    font-weight: 700;
-    line-height: 1.5;
-}
-.top5-link a:hover { text-decoration: underline; }
-
-.top5-meta {
-    font-size: .86rem;
-    color: #667085;
-    margin-top: 4px;
-}
-
-@media (prefers-color-scheme: dark) {
-    .top5-link a { color: #a5b4fc; }
-    .top5-meta { color: #94a3b8; }
-}
-
-/* Badge */
+/* Badges */
 .badge {
     display: inline-flex;
     align-items: center;
@@ -233,154 +276,129 @@ html, body, [class*="css"] {
     padding: 6px 12px;
     border-radius: 999px;
     font-size: 12px;
-    font-weight: 700;
-    color: #fff;
+    font-weight: 800;
+    color: #ffffff;
 }
 .badge-high { background: linear-gradient(135deg, #ef4444, #dc2626); }
-.badge-mid { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.badge-low { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.badge-mid  { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.badge-low  { background: linear-gradient(135deg, #22c55e, #16a34a); }
 
-.badge-cat {
-    background: rgba(79,70,229,.12);
-    color: #4338ca;
-    border: 1px solid rgba(79,70,229,.14);
+.pill {
+    display: inline-block;
     padding: 5px 10px;
     border-radius: 999px;
-    font-size: .75rem;
+    font-size: 11px;
     font-weight: 700;
-    display: inline-block;
+    border: 1px solid transparent;
     margin-right: 6px;
     margin-bottom: 6px;
 }
-@media (prefers-color-scheme: dark) {
-    .badge-cat {
-        background: rgba(129,140,248,.18);
-        color: #c7d2fe;
-    }
+.pill-blue {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+.pill-soft {
+    background: #f8fafc;
+    color: #475569;
+    border-color: #e2e8f0;
 }
 
-/* Tabs */
-button[data-baseweb="tab"] {
-    border-radius: 999px !important;
-    padding: 10px 16px !important;
+/* News cards */
+.news-title {
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.55;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+.news-title a {
+    color: var(--text);
+    text-decoration: none;
+}
+.news-title a:hover {
+    color: var(--blue);
+    text-decoration: none;
+}
+.news-meta {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+}
+.news-body {
+    font-size: 14px;
+    line-height: 1.72;
+    color: #334155;
+}
+.news-link a {
+    color: var(--blue);
+    text-decoration: none;
+    font-weight: 700;
+}
+.news-link a:hover {
+    text-decoration: underline;
 }
 
-table { -webkit-tap-highlight-color: transparent; }
-tbody tr:hover,
-tbody tr:active,
-tbody tr:focus { background-color: transparent !important; }
-tbody tr { transition: none !important; }
-
+/* Table/editor polish */
 thead tr th {
     text-align: center !important;
     font-size: 12px !important;
 }
+table { -webkit-tap-highlight-color: transparent; }
 
-/* News cards */
-.news-card {
-    padding: 18px 18px 16px 18px;
-    margin-bottom: 14px;
-}
-.news-title {
-    font-size: 1rem;
-    font-weight: 700;
-    line-height: 1.5;
-    margin-bottom: 8px;
-}
-.news-meta {
-    font-size: .86rem;
-    color: #667085;
-    margin-bottom: 10px;
-}
-.news-chip {
-    display: inline-block;
-    font-size: .76rem;
-    font-weight: 700;
-    padding: 5px 10px;
-    border-radius: 999px;
-    background: rgba(79,70,229,.12);
-    color: #4338ca;
-    margin-right: 6px;
-    margin-bottom: 6px;
-}
-.news-link a {
-    color: #4338ca;
-    text-decoration: none;
-    font-weight: 700;
-}
-.news-link a:hover { text-decoration: underline; }
-
-@media (prefers-color-scheme: dark) {
-    .news-meta { color: #94a3b8; }
-    .news-chip {
-        background: rgba(129,140,248,.18);
-        color: #c7d2fe;
-    }
-    .news-link a { color: #a5b4fc; }
-}
-
-.info-card {
-    background: var(--card-light);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid var(--line-light);
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
-    padding: 18px 20px;
-    margin-bottom: 14px;
-}
-
-@media (prefers-color-scheme: dark) {
-    .info-card {
-        background: var(--card-dark);
-        border: 1px solid var(--line-dark);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
-    }
-}
-
-.info-title {
-    font-size: 1.05rem;
-    font-weight: 800;
-    margin-bottom: 10px;
-}
-
-.info-text {
-    font-size: .96rem;
-    line-height: 1.75;
-    color: inherit;
-}
-
-.info-text ul {
-    padding-left: 18px;
-    margin-top: 8px;
-    margin-bottom: 0;
-}
-.info-text li { margin-bottom: 6px; }
-
+/* Mobile */
 @media (max-width: 768px) {
     .block-container {
-        padding-top: 1.2rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding-top: 0.9rem;
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
     }
-    .kpi-value { font-size: 22px; }
-    .news-card { padding: 14px; }
+    .hero-shell {
+        padding: 18px 16px 16px 16px;
+        border-radius: 22px;
+    }
+    .hero-title {
+        font-size: 1.7rem;
+    }
+    .hero-sub {
+        font-size: 13px;
+        line-height: 1.65;
+    }
+    .kpi-value {
+        font-size: 24px;
+    }
+    .panel-card,
+    .info-card,
+    .news-card,
+    .glass-card,
+    .kpi-card {
+        border-radius: 16px;
+    }
 }
 </style>
 """,
     unsafe_allow_html=True
 )
 
+# ===============================
+# HERO
+# ===============================
 st.markdown(
     """
-<div style="margin-bottom:18px;">
-  <h1 class="ews-title">Early Warning System</h1>
-  <p class="ews-sub">Monitoring Isu Jaminan Sosial Ketenagakerjaan</p>
-</div>
-""",
+    <div class="hero-shell">
+        <div class="hero-badge">🛡️ SIAGA JAMSOS • Early Warning System</div>
+        <div class="hero-title">Monitoring Isu Ketenagakerjaan & Jaminan Sosial</div>
+        <div class="hero-sub">
+            Dashboard pemantauan isu berbasis media online untuk mendukung deteksi dini,
+            analisis situasi, dan pengambilan keputusan yang lebih cepat, terukur, dan fokus pada prioritas.
+        </div>
+        <div class="hero-meta">
+            Tampilan ini hanya mengubah layer visual aplikasi. Pipeline backend tetap sama.
+        </div>
+    </div>
+    """,
     unsafe_allow_html=True
 )
-st.divider()
 
 # ===============================
 # HELPERS
@@ -426,7 +444,6 @@ def build_alerts(df: pd.DataFrame) -> list[str]:
 
     df_alert = df.copy()
 
-    # Prioritas tinggi
     if "Prioritas" in df_alert.columns:
         tinggi_count = int((df_alert["Prioritas"] == "PRIORITAS TINGGI").sum())
         if tinggi_count >= 3:
@@ -434,20 +451,17 @@ def build_alerts(df: pd.DataFrame) -> list[str]:
         elif tinggi_count > 0:
             alerts.append("🟡 Terdapat isu prioritas tinggi yang perlu dipantau lebih dekat.")
 
-    # Topik dominan
     if "Topik" in df_alert.columns and not df_alert["Topik"].empty:
         topik_counts = df_alert["Topik"].value_counts()
         if not topik_counts.empty and int(topik_counts.iloc[0]) >= 5:
             alerts.append(f"📈 Isu didominasi oleh topik {clean_label(topik_counts.index[0])}.")
 
-    # Wilayah dominan
     if "Provinsi" in df_alert.columns:
         prov_counts = df_alert["Provinsi"].astype(str).str.strip()
         prov_counts = prov_counts[prov_counts != ""].value_counts()
         if not prov_counts.empty and int(prov_counts.iloc[0]) >= 3:
             alerts.append(f"🌍 Konsentrasi isu terpantau di wilayah {prov_counts.index[0]}.")
 
-    # Lonjakan 6 jam terakhir
     if "Waktu_Publish_WIB" in df_alert.columns:
         try:
             publish_dt = normalize_datetime_col(df_alert, "Waktu_Publish_WIB")
@@ -459,6 +473,39 @@ def build_alerts(df: pd.DataFrame) -> list[str]:
             pass
 
     return alerts if alerts else ["Belum ada eskalasi signifikan pada periode terpilih."]
+
+def kpi_card(title: str, value, sub: str = "", tone: str = ""):
+    tone_class = tone if tone in ["high", "mid", "low"] else ""
+    st.markdown(
+        f"""
+        <div class="kpi-card {tone_class}">
+            <div class="kpi-label">{escape(str(title))}</div>
+            <div class="kpi-value">{escape(str(value))}</div>
+            <div class="kpi-sub">{escape(str(sub))}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+def section_header(title: str, subtitle: str = ""):
+    st.markdown(f'<div class="section-title">{escape(title)}</div>', unsafe_allow_html=True)
+    if subtitle:
+        st.markdown(f'<div class="section-sub">{escape(subtitle)}</div>', unsafe_allow_html=True)
+
+def guide_card(title: str, content: str):
+    st.markdown(
+        f"""
+        <div class="info-card">
+            <div style="font-size:1rem; font-weight:800; margin-bottom:8px; color:#0f172a;">
+                {escape(title)}
+            </div>
+            <div style="font-size:14px; line-height:1.75; color:#334155;">
+                {content}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ===============================
 # LOAD DATA
@@ -520,20 +567,26 @@ min_date = raw["Tanggal_Hari"].min()
 max_date = raw["Tanggal_Hari"].max()
 
 # ===============================
-# KONTROL UTAMA
+# KONTROL DATA — ULTRA POLISHED
 # ===============================
-st.markdown('<div class="section-title">Kontrol Data</div>', unsafe_allow_html=True)
+section_header(
+    "Kontrol Data",
+    "Atur pembaruan data, rentang waktu analisis, tingkat prioritas, dan kategori berita."
+)
 
-c_ctrl1, c_ctrl2, c_ctrl3, c_ctrl4 = st.columns([1.1, 2.2, 1.4, 1.4])
+st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+
+c_ctrl1, c_ctrl2, c_ctrl3, c_ctrl4 = st.columns([1.1, 2.2, 1.3, 1.3], gap="medium")
 
 with c_ctrl1:
-    if st.button("🔄 Update Data", key="update_data_main"):
+    st.markdown("<div style='font-size:12px; color:#64748b; font-weight:700; margin-bottom:8px;'>Aksi Sistem</div>", unsafe_allow_html=True)
+    if st.button("🔄 Update Data", key="update_data_main", use_container_width=True):
         with st.spinner("Memproses update..."):
             run_scraper()
             run_filter()
             run_priority()
             safe_clear_caches()
-        st.success("Update selesai!")
+        st.success("Update selesai.")
         st.rerun()
 
 with c_ctrl2:
@@ -556,6 +609,17 @@ with c_ctrl4:
         ["SEMUA", "NASIONAL", "GLOBAL", "EDUKASI"],
         key="main_kategori_option"
     )
+
+st.markdown(
+    f"""
+    <div style="margin-top:10px; font-size:12px; color:#64748b;">
+        Periode data tersedia: <b>{escape(str(min_date))}</b> s.d. <b>{escape(str(max_date))}</b>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ===============================
 # TOPIC FALLBACK
@@ -664,7 +728,7 @@ if not filtered_for_table.empty and filter_option != "SEMUA" and "Prioritas" in 
 # TABS
 # ===============================
 tab_dash, tab_data, tab_region, tab_info = st.tabs(
-    ["📊 Dashboard", "📰 Data Berita", "📍 Analisis Daerah", "📘 Panduan"]
+    ["📊 Dashboard Utama", "📰 Data Berita", "📍 Analisis Wilayah", "📘 Panduan"]
 )
 
 # ===============================
@@ -676,31 +740,15 @@ with tab_dash:
         st.stop()
 
     if filtered_display.empty or "Prioritas" not in filtered_display.columns:
-        c1, c2 = st.columns([1.2, 1.2], gap="large")
-
+        section_header(
+            "Ringkasan Utama",
+            "Gambaran cepat kondisi isu pada periode yang dipilih."
+        )
+        c1, c2 = st.columns([1.2, 1.2], gap="medium")
         with c1:
-            st.markdown(
-                f"""
-                <div class="kpi-card">
-                  <div class="kpi-title">Total Berita Raw</div>
-                  <div class="kpi-value">{len(raw_filtered):,}</div>
-                  <div class="kpi-sub">Sesuai rentang tanggal</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
+            kpi_card("Total Berita Raw", f"{len(raw_filtered):,}", "Sesuai rentang tanggal")
         with c2:
-            st.markdown(
-                """
-                <div class="kpi-card">
-                  <div class="kpi-title">Berita Teranalisis</div>
-                  <div class="kpi-value">0</div>
-                  <div class="kpi-sub">Belum ada yang lolos analisis</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            kpi_card("Berita Teranalisis", "0", "Belum ada yang lolos analisis")
 
         st.info("Tidak ada berita yang lolos analisis pada rentang tanggal ini.")
         st.stop()
@@ -713,72 +761,30 @@ with tab_dash:
     kategori_global = int((safe_series(filtered_display, "Kategori_Berita").str.upper() == "GLOBAL").sum())
     kategori_edukasi = int((safe_series(filtered_display, "Kategori_Berita").str.upper() == "EDUKASI").sum())
 
-    c1, c2, c3, c4, c5 = st.columns([1.2, 1.2, 1, 1, 1], gap="large")
+    section_header(
+        "Ringkasan Utama",
+        "Gambaran cepat kondisi isu pada periode yang dipilih."
+    )
+
+    c1, c2, c3, c4, c5 = st.columns([1.25, 1.25, 1, 1, 1], gap="medium")
 
     with c1:
-        st.markdown(
-            f"""
-            <div class="kpi-card">
-              <div class="kpi-title">Total Berita Raw</div>
-              <div class="kpi-value">{len(raw_filtered):,}</div>
-              <div class="kpi-sub">Sesuai rentang tanggal</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
+        kpi_card("Total Berita Raw", f"{len(raw_filtered):,}", "Sesuai rentang tanggal")
     with c2:
-        st.markdown(
-            f"""
-            <div class="kpi-card">
-              <div class="kpi-title">Berita Teranalisis</div>
-              <div class="kpi-value">{len(filtered_display):,}</div>
-              <div class="kpi-sub">Basis analisis EWS</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
+        kpi_card("Berita Teranalisis", f"{len(filtered_display):,}", "Basis analisis SIAGA JAMSOS")
     with c3:
-        st.markdown(
-            f"""
-            <div class="kpi-card">
-              <div class="kpi-title">Prioritas Tinggi</div>
-              <div class="kpi-value">{tinggi:,}</div>
-              <div class="kpi-sub"><span class="badge badge-high">HIGH</span></div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
+        kpi_card("Prioritas Tinggi", f"{tinggi:,}", "Perlu perhatian segera", "high")
     with c4:
-        st.markdown(
-            f"""
-            <div class="kpi-card">
-              <div class="kpi-title">Prioritas Sedang</div>
-              <div class="kpi-value">{sedang:,}</div>
-              <div class="kpi-sub"><span class="badge badge-mid">MED</span></div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
+        kpi_card("Prioritas Sedang", f"{sedang:,}", "Perlu pemantauan", "mid")
     with c5:
-        st.markdown(
-            f"""
-            <div class="kpi-card">
-              <div class="kpi-title">Prioritas Rendah</div>
-              <div class="kpi-value">{rendah:,}</div>
-              <div class="kpi-sub"><span class="badge badge-low">LOW</span></div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        kpi_card("Prioritas Rendah", f"{rendah:,}", "Informasi umum", "low")
 
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
 
-    # Isu paling kritis
-    st.markdown('<div class="section-title">🚨 Isu Paling Kritis Hari Ini</div>', unsafe_allow_html=True)
+    section_header(
+        "Isu Paling Kritis Hari Ini",
+        "Berita dengan urgensi tertinggi berdasarkan skor, waktu publikasi, dan konteks analisis."
+    )
 
     df_critical = filtered_display.copy()
     if "Score" in df_critical.columns:
@@ -800,26 +806,46 @@ with tab_dash:
         topik = escape(clean_label(top_issue.get("Topik_Utama", "-")))
         kategori = escape(clean_label(top_issue.get("Kategori_Berita", "-")))
         lokasi = escape(clean_label(
-            str(top_issue.get("Kabupaten_Kota", "") or "").strip() or str(top_issue.get("Provinsi", "") or "").strip() or "-"
+            str(top_issue.get("Kabupaten_Kota", "") or "").strip() or
+            str(top_issue.get("Provinsi", "") or "").strip() or "-"
         ))
         dampak = escape(clean_label(top_issue.get("Dampak_Program", "-")))
         alasan = escape(clean_label(top_issue.get("Alasan_Prioritas", "-")))
         prioritas = str(top_issue.get("Prioritas", "PRIORITAS RENDAH")).strip()
+        media = escape(str(top_issue.get("Media", "-")))
+        link = str(top_issue.get("Link", "")).strip()
+        waktu = escape(str(top_issue.get("Waktu_Publish_WIB", "")))
+
+        if prioritas == "PRIORITAS TINGGI":
+            badge = "<span class='badge badge-high'>Prioritas Tinggi</span>"
+        elif prioritas == "PRIORITAS SEDANG":
+            badge = "<span class='badge badge-mid'>Prioritas Sedang</span>"
+        else:
+            badge = "<span class='badge badge-low'>Prioritas Rendah</span>"
+
+        title_html = judul
+        if link:
+            title_html = f"<a href='{escape(link, quote=True)}' target='_blank'>{judul}</a>"
 
         st.markdown(
             f"""
-            <div class="news-card">
-                <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+            <div class="panel-card">
+                <div style="display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:flex-start;">
                     <div style="flex:1; min-width:280px;">
-                        <div class="news-title">{judul}</div>
-                        <div class="news-meta">{lokasi} • {kategori} • {topik}</div>
+                        <div class="news-title">{title_html}</div>
+                        <div class="news-meta">{media} • {waktu}</div>
                     </div>
-                    <div>{badge_html(prioritas)}</div>
+                    <div>{badge}</div>
                 </div>
-                <div style="margin-top:6px;">
-                    <span class='news-chip'>Dampak: {dampak}</span>
+
+                <div style="margin:4px 0 10px 0;">
+                    <span class="pill pill-blue">{kategori}</span>
+                    <span class="pill pill-soft">{lokasi}</span>
+                    <span class="pill pill-soft">Topik: {topik}</span>
+                    <span class="pill pill-soft">Dampak: {dampak}</span>
                 </div>
-                <div style="font-size:.96rem; line-height:1.7; margin-top:10px;">
+
+                <div class="news-body">
                     {alasan}
                 </div>
             </div>
@@ -827,10 +853,12 @@ with tab_dash:
             unsafe_allow_html=True
         )
 
-    left, right = st.columns([1.05, 0.95], gap="large")
+    st.markdown("<div style='height:6px;'></div>", unsafe_allow_html=True)
+    left, right = st.columns([1.08, 0.92], gap="medium")
 
     with left:
-        st.markdown('<div class="section-title">Distribusi Prioritas</div>', unsafe_allow_html=True)
+        section_header("Distribusi Prioritas", "Perbandingan jumlah berita berdasarkan level prioritas.")
+        st.markdown('<div class="panel-card">', unsafe_allow_html=True)
 
         priority_counts = filtered_display["Prioritas"].value_counts()
         if not priority_counts.empty:
@@ -851,8 +879,6 @@ with tab_dash:
             y_vals = [label_map[x] for x in priority_counts.index]
             colors = [color_map[x] for x in priority_counts.index]
             max_val = max(x_vals) if max(x_vals) > 0 else 1
-
-            st.caption("Perbandingan jumlah berita berdasarkan level prioritas pada periode terpilih")
 
             fig = go.Figure()
             fig.add_trace(
@@ -898,11 +924,13 @@ with tab_dash:
         else:
             st.info("Belum ada data distribusi prioritas.")
 
-        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="section-title">Topik Dominan</div>', unsafe_allow_html=True)
+        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+        section_header("Topik Dominan", "Lima topik yang paling sering muncul pada periode terpilih.")
+        st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+
         topik_counts = filtered_display["Topik"].value_counts().head(5)
-
         if not topik_counts.empty:
             fig_topik = go.Figure()
             fig_topik.add_trace(
@@ -912,7 +940,7 @@ with tab_dash:
                     orientation="h",
                     text=[f"{v:,}" for v in topik_counts.values.tolist()],
                     textposition="outside",
-                    marker=dict(color="#4f46e5")
+                    marker=dict(color="#1d4ed8")
                 )
             )
             fig_topik.update_layout(
@@ -928,8 +956,10 @@ with tab_dash:
         else:
             st.info("Belum ada topik dominan.")
 
-        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
-        st.markdown('<div class="section-title">Top 5 Berita Prioritas Tinggi</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+        section_header("Top 5 Berita Prioritas Tinggi", "Berita prioritas tinggi terbaru untuk perhatian cepat.")
 
         df_high = filtered_display[filtered_display["Prioritas"] == "PRIORITAS TINGGI"].copy()
 
@@ -954,10 +984,10 @@ with tab_dash:
                     st.markdown(
                         f"""
                         <div class="news-card">
-                            <div class="top5-link">
+                            <div class="news-title">
                                 <a href="{escape(link, quote=True)}" target="_blank">{judul}</a>
                             </div>
-                            <div class="top5-meta">{media} • {waktu} • {lokasi} • {kategori}</div>
+                            <div class="news-meta">{media} • {waktu} • {lokasi} • {kategori}</div>
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -966,8 +996,8 @@ with tab_dash:
                     st.markdown(
                         f"""
                         <div class="news-card">
-                            <div class="top5-link">{judul}</div>
-                            <div class="top5-meta">{media} • {waktu} • {lokasi} • {kategori}</div>
+                            <div class="news-title">{judul}</div>
+                            <div class="news-meta">{media} • {waktu} • {lokasi} • {kategori}</div>
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -976,7 +1006,7 @@ with tab_dash:
             st.info("Belum ada berita prioritas tinggi.")
 
     with right:
-        st.markdown('<div class="section-title">🧠 Analisis Situasi</div>', unsafe_allow_html=True)
+        section_header("Analisis Situasi", "Ringkasan kondisi isu dan implikasi umum terhadap program.")
 
         total = len(filtered_display)
 
@@ -1033,7 +1063,7 @@ with tab_dash:
 
         st.markdown(
             f"""
-<div class="news-card analysis-body">
+<div class="panel-card analysis-body">
 
 **Status:** {status_txt}
 
@@ -1064,8 +1094,8 @@ Topik dominan pada periode ini:
             unsafe_allow_html=True
         )
 
-        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
-        st.markdown('<div class="section-title">🔥 Alert Eskalasi</div>', unsafe_allow_html=True)
+        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+        section_header("Alert Eskalasi", "Sinyal awal yang perlu dipantau lebih dekat.")
 
         alerts = build_alerts(filtered_display)
         for msg in alerts:
@@ -1082,15 +1112,40 @@ Topik dominan pada periode ini:
 # TAB: DATA BERITA
 # ===============================
 with tab_data:
-    st.markdown('<div class="section-title">Berita Terkini</div>', unsafe_allow_html=True)
+    section_header(
+        "Data Berita",
+        "Daftar berita hasil analisis yang dapat ditelusuri berdasarkan kata kunci, prioritas, dan waktu publikasi."
+    )
+
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+
+    st.markdown(
+        """
+        <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:8px;">
+            Pencarian Berita
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     search_keyword = st.text_input(
         "",
-        placeholder="🔍 Cari berita (bisa lebih dari satu kata, misalnya: PHK Bekasi)",
+        placeholder="Cari berita dengan satu atau beberapa kata kunci, misalnya: PHK Bekasi, JKP, BPJS, JKK",
         key="search_berita"
     )
 
-    st.caption("Daftar 10 berita terbaru berdasarkan prioritas dan waktu publikasi.")
+    st.markdown(
+        """
+        <div style="font-size:12px; color:#64748b; margin-top:2px;">
+            Hasil ditampilkan berdasarkan prioritas tertinggi terlebih dahulu, lalu diurutkan menurut waktu publikasi terbaru.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
 
     df_display = filtered_for_table.copy()
 
@@ -1116,10 +1171,18 @@ with tab_data:
         if st.session_state.get("search_berita_prev", "") != search_keyword:
             st.session_state.page = 1
         st.session_state.search_berita_prev = search_keyword
-        st.caption(f"Hasil pencarian: '{search_keyword}'")
+
+        st.markdown(
+            f"""
+            <div style="font-size:12px; color:#475569; margin-top:6px; margin-bottom:10px;">
+                Menampilkan hasil untuk kata kunci: <b>{escape(search_keyword)}</b>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     if df_display.empty:
-        st.info("Tidak ada berita untuk filter atau kata kunci yang dipilih.")
+        st.info("Tidak ada berita yang sesuai dengan filter atau kata kunci yang dipilih.")
         st.stop()
 
     priority_order = {
@@ -1129,7 +1192,6 @@ with tab_data:
     }
     df_display["Urutan"] = df_display["Prioritas"].map(priority_order).fillna(99)
 
-    sort_col = None
     if "Waktu_Publish_WIB" in df_display.columns:
         df_display["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_display, "Waktu_Publish_WIB")
         sort_col = "Waktu_Publish_WIB_dt"
@@ -1158,6 +1220,11 @@ with tab_data:
     end_idx = start_idx + items_per_page
     df_page = df_display.iloc[start_idx:end_idx].copy()
 
+    section_header(
+        "Berita Terkini",
+        "Ringkasan berita terpilih untuk penelusuran cepat oleh pengguna dan pimpinan."
+    )
+
     for i, row in df_page.iterrows():
         judul = escape(clean_label(row.get("Judul", "-")))
         media = escape(clean_label(row.get("Media", "-")))
@@ -1176,68 +1243,94 @@ with tab_data:
 
         lokasi = kabkota if kabkota else (provinsi if provinsi else "-")
 
+        if prioritas == "PRIORITAS TINGGI":
+            badge = "<span class='badge badge-high'>Prioritas Tinggi</span>"
+        elif prioritas == "PRIORITAS SEDANG":
+            badge = "<span class='badge badge-mid'>Prioritas Sedang</span>"
+        else:
+            badge = "<span class='badge badge-low'>Prioritas Rendah</span>"
+
         chips = []
         if kategori:
-            chips.append(f"<span class='badge-cat'>{kategori}</span>")
+            chips.append(f"<span class='pill pill-blue'>{kategori}</span>")
         if lokasi and lokasi != "-":
-            chips.append(f"<span class='badge-cat'>{lokasi}</span>")
+            chips.append(f"<span class='pill pill-soft'>{lokasi}</span>")
         if topik:
-            chips.append(f"<span class='news-chip'>Topik: {topik}</span>")
+            chips.append(f"<span class='pill pill-soft'>Topik: {topik}</span>")
         if dampak_program:
-            chips.append(f"<span class='news-chip'>Program: {dampak_program}</span>")
+            chips.append(f"<span class='pill pill-soft'>Program: {dampak_program}</span>")
         if dampak_kepesertaan:
-            chips.append(f"<span class='news-chip'>Kepesertaan: {dampak_kepesertaan}</span>")
+            chips.append(f"<span class='pill pill-soft'>Kepesertaan: {dampak_kepesertaan}</span>")
         if potensi_klaim:
-            chips.append(f"<span class='news-chip'>Klaim: {potensi_klaim}</span>")
+            chips.append(f"<span class='pill pill-soft'>Klaim: {potensi_klaim}</span>")
 
-        link_html = ""
+        title_html = judul
         if link:
-            safe_link = escape(link, quote=True)
-            link_html = f"<div class='news-link'><a href='{safe_link}' target='_blank'>Baca berita</a></div>"
+            title_html = f"<a href='{escape(link, quote=True)}' target='_blank'>{judul}</a>"
 
-        card_html = (
-            f"<div class='news-card'>"
-            f"<div style='display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;'>"
-            f"<div style='flex:1; min-width:250px;'>"
-            f"<div class='news-title'>{i + 1}. {judul}</div>"
-            f"<div class='news-meta'>{media} • {waktu}</div>"
-            f"</div>"
-            f"<div>{badge_html(prioritas)}</div>"
-            f"</div>"
-            f"<div style='margin:8px 0 10px 0;'>{''.join(chips)}</div>"
-            f"<div style='font-size:.95rem; line-height:1.65; margin-bottom:10px;'>{alasan if alasan else 'Belum ada analisis prioritas.'}</div>"
-            f"{link_html}"
-            f"</div>"
+        body_text = alasan if alasan else "Belum ada analisis prioritas."
+
+        st.markdown(
+            f"""
+            <div class="news-card">
+                <div style="display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:flex-start;">
+                    <div style="flex:1; min-width:260px;">
+                        <div class="news-title">{i + 1}. {title_html}</div>
+                        <div class="news-meta">{media} • {waktu}</div>
+                    </div>
+                    <div>{badge}</div>
+                </div>
+
+                <div style="margin:8px 0 10px 0;">
+                    {''.join(chips)}
+                </div>
+
+                <div class="news-body" style="margin-bottom:10px;">
+                    {body_text}
+                </div>
+
+                {f"<div class='news-link'><a href='{escape(link, quote=True)}' target='_blank'>Buka berita sumber</a></div>" if link else ""}
+            </div>
+            """,
+            unsafe_allow_html=True
         )
-
-        st.markdown(card_html, unsafe_allow_html=True)
 
     st.markdown(
         f"""
-        <div style='text-align:center; margin-top:10px; color:#667085;'>
-        Menampilkan {min(start_idx+1, total_rows)} - {min(end_idx, total_rows)} dari {total_rows} berita
+        <div style='text-align:center; margin-top:10px; color:#64748b; font-size:12px;'>
+            Menampilkan <b>{min(start_idx + 1, total_rows)}</b>–<b>{min(end_idx, total_rows)}</b> dari <b>{total_rows}</b> berita
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col1:
-        if st.button("⬅ Sebelumnya", disabled=(st.session_state.page <= 1)):
+    nav1, nav2, nav3 = st.columns([1, 2, 1])
+
+    with nav1:
+        if st.button("⬅ Sebelumnya", disabled=(st.session_state.page <= 1), use_container_width=True):
             st.session_state.page -= 1
             st.rerun()
-    with col3:
-        if st.button("Berikutnya ➡", disabled=(st.session_state.page >= total_pages)):
+
+    with nav3:
+        if st.button("Berikutnya ➡", disabled=(st.session_state.page >= total_pages), use_container_width=True):
             st.session_state.page += 1
             st.rerun()
-    with col2:
+
+    with nav2:
         st.markdown(
-            f"<div style='text-align:center; color:#667085;'>Halaman {st.session_state.page} dari {total_pages}</div>",
+            f"""
+            <div style='text-align:center; color:#64748b; font-size:12px; padding-top:10px;'>
+                Halaman <b>{st.session_state.page}</b> dari <b>{total_pages}</b>
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
-    st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="section-title">Indeks Eskalasi Isu</div>', unsafe_allow_html=True)
+    st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+    section_header(
+        "Indeks Eskalasi Isu",
+        "Perbandingan intensitas pemberitaan 24 jam terakhir terhadap periode 24–48 jam sebelumnya."
+    )
 
     df_ews = filtered_display.copy()
 
@@ -1322,6 +1415,8 @@ with tab_data:
         esk_show["Headline"] = esk_show["Headline"].astype(str).fillna("")
         esk_show["Buka Berita"] = esk_show["Headline_URL"].astype(str).fillna("")
 
+        st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+
         st.data_editor(
             esk_show[
                 ["Topik", "Trend", "Media 24 Jam", "Berita 24 Jam",
@@ -1342,19 +1437,34 @@ with tab_data:
                 "Buka Berita": st.column_config.LinkColumn("Buka Berita", width="small", display_text="Buka link"),
             },
         )
+
+        st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.info("Belum ada data eskalasi isu.")
 
 # ===============================
-# TAB: ANALISIS DAERAH
+# TAB: ANALISIS WILAYAH
 # ===============================
 with tab_region:
-    st.markdown('<div class="section-title">Analisis Daerah</div>', unsafe_allow_html=True)
+    section_header(
+        "Analisis Daerah",
+        "Pemantauan isu berdasarkan wilayah untuk melihat konsentrasi topik dan tingkat prioritas secara lebih spesifik."
+    )
 
     if filtered_display.empty:
-        st.info("Belum ada data analisis daerah.")
+        st.info("Belum ada data analisis daerah pada periode dan filter yang dipilih.")
     else:
         df_region_all = filtered_display.copy()
+
+        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:8px;">
+                Filter Wilayah
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
         provinsi_options = ["SEMUA"]
         if "Provinsi" in df_region_all.columns:
@@ -1387,23 +1497,41 @@ with tab_region:
         if selected_kab != "SEMUA" and "Kabupaten_Kota" in df_region.columns:
             df_region = df_region[df_region["Kabupaten_Kota"].astype(str) == selected_kab].copy()
 
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+
         total_region = len(df_region)
         tinggi_region = int((df_region["Prioritas"] == "PRIORITAS TINGGI").sum()) if "Prioritas" in df_region.columns else 0
         sedang_region = int((df_region["Prioritas"] == "PRIORITAS SEDANG").sum()) if "Prioritas" in df_region.columns else 0
         rendah_region = int((df_region["Prioritas"] == "PRIORITAS RENDAH").sum()) if "Prioritas" in df_region.columns else 0
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Total Berita", total_region)
-        c2.metric("Prioritas Tinggi", tinggi_region)
-        c3.metric("Prioritas Sedang", sedang_region)
-        c4.metric("Prioritas Rendah", rendah_region)
+        section_header(
+            "Ringkasan Wilayah",
+            "Gambaran cepat jumlah isu dan komposisi prioritas pada wilayah terpilih."
+        )
+
+        c1, c2, c3, c4 = st.columns(4, gap="medium")
+
+        with c1:
+            kpi_card("Total Berita", f"{total_region:,}", "Pada wilayah terpilih")
+        with c2:
+            kpi_card("Prioritas Tinggi", f"{tinggi_region:,}", "Perlu perhatian segera", "high")
+        with c3:
+            kpi_card("Prioritas Sedang", f"{sedang_region:,}", "Perlu pemantauan", "mid")
+        with c4:
+            kpi_card("Prioritas Rendah", f"{rendah_region:,}", "Informasi umum", "low")
 
         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
 
-        lcol, rcol = st.columns([1, 1], gap="large")
+        lcol, rcol = st.columns([1, 1], gap="medium")
 
         with lcol:
-            st.markdown('<div class="section-title">Topik Dominan Wilayah</div>', unsafe_allow_html=True)
+            section_header(
+                "Topik Dominan Wilayah",
+                "Topik yang paling sering muncul pada wilayah yang dipilih."
+            )
+            st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+
             if not df_region.empty:
                 topik_region = df_region["Topik"].value_counts().head(5)
                 if not topik_region.empty:
@@ -1415,7 +1543,7 @@ with tab_region:
                             orientation="h",
                             text=[f"{v:,}" for v in topik_region.values.tolist()],
                             textposition="outside",
-                            marker=dict(color="#06b6d4")
+                            marker=dict(color="#1d4ed8")
                         )
                     )
                     fig_reg.update_layout(
@@ -1433,8 +1561,15 @@ with tab_region:
             else:
                 st.info("Tidak ada data pada wilayah terpilih.")
 
+            st.markdown('</div>', unsafe_allow_html=True)
+
         with rcol:
-            st.markdown('<div class="section-title">Prioritas Wilayah</div>', unsafe_allow_html=True)
+            section_header(
+                "Prioritas Wilayah",
+                "Distribusi level prioritas isu pada wilayah terpilih."
+            )
+            st.markdown('<div class="panel-card">', unsafe_allow_html=True)
+
             if not df_region.empty:
                 prio_region = df_region["Prioritas"].value_counts().reindex(
                     ["PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
@@ -1456,29 +1591,73 @@ with tab_region:
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
                     showlegend=False,
+                    xaxis=dict(title=""),
                     yaxis=dict(title="Jumlah Berita", showgrid=True, gridcolor="rgba(148,163,184,0.20)")
                 )
                 st.plotly_chart(fig_pr, use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Tidak ada data prioritas wilayah.")
 
+            st.markdown('</div>', unsafe_allow_html=True)
+
         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
-        st.markdown('<div class="section-title">Daftar Berita Wilayah</div>', unsafe_allow_html=True)
+
+        section_header(
+            "Ringkasan Wilayah",
+            "Interpretasi singkat kondisi isu pada wilayah yang sedang ditinjau."
+        )
+
+        if total_region == 0:
+            st.info("Belum ada data isu pada wilayah yang dipilih.")
+        else:
+            if tinggi_region >= 3:
+                status_region = "🔴 Wilayah perlu perhatian tinggi."
+                rekom_region = "Perlu pemantauan lebih intensif dan penelusuran isu utama di wilayah ini."
+            elif tinggi_region > 0:
+                status_region = "🟡 Wilayah dalam status waspada."
+                rekom_region = "Perlu pemantauan berkala terhadap isu prioritas yang berkembang."
+            else:
+                status_region = "🟢 Wilayah relatif stabil."
+                rekom_region = "Pemantauan rutin tetap diperlukan sebagai langkah antisipatif."
+
+            topik_narasi = "Belum ada topik dominan."
+            if not df_region.empty and "Topik" in df_region.columns:
+                vc = df_region["Topik"].value_counts()
+                if not vc.empty:
+                    topik_narasi = ", ".join([f"{clean_label(k)} ({v})" for k, v in vc.head(3).items()])
+
+            selected_label = selected_kab if selected_kab != "SEMUA" else selected_prov
+            if selected_label == "SEMUA":
+                selected_label = "seluruh wilayah"
+
+            st.markdown(
+                f"""
+                <div class="panel-card">
+                    <div class="news-body">
+                        <p><b>Wilayah terpilih:</b> {escape(str(selected_label))}</p>
+                        <p><b>Status:</b> {status_region}</p>
+                        <p><b>Topik dominan:</b> {escape(topik_narasi)}</p>
+                        <p><b>Rekomendasi:</b> {escape(rekom_region)}</p>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+        section_header(
+            "Berita Wilayah Terbaru",
+            "Daftar berita teratas pada wilayah yang dipilih."
+        )
 
         if not df_region.empty:
-            df_region = df_region.copy()
-            if "Score" in df_region.columns:
-                df_region["Score_num"] = pd.to_numeric(df_region["Score"], errors="coerce").fillna(0)
-                if "Waktu_Publish_WIB" in df_region.columns:
-                    df_region["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_region, "Waktu_Publish_WIB")
-                    df_region = df_region.sort_values(["Score_num", "Waktu_Publish_WIB_dt"], ascending=[False, False])
-                else:
-                    df_region = df_region.sort_values(["Score_num"], ascending=[False])
-            elif "Waktu_Publish_WIB" in df_region.columns:
-                df_region["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_region, "Waktu_Publish_WIB")
-                df_region = df_region.sort_values("Waktu_Publish_WIB_dt", ascending=False)
+            df_region_show = df_region.copy()
 
-            for _, row in df_region.head(20).iterrows():
+            if "Waktu_Publish_WIB" in df_region_show.columns:
+                df_region_show["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_region_show, "Waktu_Publish_WIB")
+                df_region_show = df_region_show.sort_values("Waktu_Publish_WIB_dt", ascending=False)
+
+            for _, row in df_region_show.head(20).iterrows():
                 judul = escape(clean_label(row.get("Judul", "-")))
                 media = escape(clean_label(row.get("Media", "-")))
                 waktu = escape(clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal", "-"))))
@@ -1488,21 +1667,26 @@ with tab_region:
                 lokasi = escape(clean_label(
                     str(row.get("Kabupaten_Kota", "") or "").strip() or str(row.get("Provinsi", "") or "").strip() or "-"
                 ))
+                link = str(row.get("Link", "")).strip()
+
+                title_html = judul
+                if link:
+                    title_html = f"<a href='{escape(link, quote=True)}' target='_blank'>{judul}</a>"
 
                 st.markdown(
                     f"""
                     <div class="news-card">
                         <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
                             <div style="flex:1; min-width:250px;">
-                                <div class="news-title">{judul}</div>
+                                <div class="news-title">{title_html}</div>
                                 <div class="news-meta">{media} • {waktu} • {lokasi}</div>
                             </div>
                             <div>{badge_html(prioritas)}</div>
                         </div>
                         <div style='margin:8px 0 10px 0;'>
-                            <span class='news-chip'>Topik: {topik}</span>
+                            <span class='pill pill-soft'>Topik: {topik}</span>
                         </div>
-                        <div style="font-size:.95rem; line-height:1.65;">{alasan}</div>
+                        <div class="news-body">{alasan if alasan else "Belum ada analisis prioritas."}</div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -1514,138 +1698,104 @@ with tab_region:
 # TAB: PANDUAN
 # ===============================
 with tab_info:
-    st.markdown('<div class="section-title">Panduan Sistem Early Warning System</div>', unsafe_allow_html=True)
-
-    st.markdown(
-        """
-Sistem **Early Warning System (EWS) Isu Ketenagakerjaan** digunakan untuk memantau perkembangan isu ketenagakerjaan di media online serta menganalisis potensi dampaknya terhadap program jaminan sosial ketenagakerjaan.
-"""
+    section_header(
+        "Panduan Penggunaan",
+        "Penjelasan ringkas mengenai fungsi dashboard, data berita, analisis wilayah, dan cara membaca prioritas isu."
     )
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    guide_card(
+        "1. Gambaran Umum Dashboard",
+        """
+        SIAGA JAMSOS merupakan dashboard pemantauan isu ketenagakerjaan dan jaminan sosial yang bersumber dari media online.
+        Sistem ini digunakan untuk mendukung deteksi dini, pemantauan perkembangan isu, dan penyediaan informasi awal bagi pengambilan keputusan.
+        """
+    )
 
-    # ===============================
-    # DASHBOARD
-    # ===============================
-    with st.expander("📊 Tab Dashboard", expanded=True):
-        st.markdown(
-            """
-Dashboard menampilkan gambaran umum kondisi isu ketenagakerjaan.
+    guide_card(
+        "2. Sumber dan Alur Data",
+        """
+        Data berasal dari proses pengambilan berita (scraping), kemudian disaring berdasarkan keterkaitan dengan isu ketenagakerjaan
+        dan jaminan sosial. Setelah itu, berita dianalisis untuk menentukan topik, kategori, dampak, serta tingkat prioritasnya
+        sebelum ditampilkan ke dalam dashboard.
+        """
+    )
 
-**Komponen utama:**
-- Total Berita RAW  
-- Berita Teranalisis  
-- Prioritas Tinggi / Sedang / Rendah  
-- Isu Paling Kritis Hari Ini  
-- Distribusi Prioritas  
-- Topik Dominan  
-- Top 5 Berita Prioritas Tinggi  
-- Analisis Situasi  
-"""
-        )
+    guide_card(
+        "3. Kontrol Data",
+        """
+        Bagian Kontrol Data digunakan untuk memperbarui data, mengatur rentang tanggal, memilih level prioritas,
+        dan membatasi kategori berita. Pengguna dapat menyesuaikan filter agar tampilan dashboard lebih fokus pada isu tertentu.
+        """
+    )
 
-    # ===============================
-    # DATA BERITA
-    # ===============================
-    with st.expander("📰 Tab Data Berita"):
-        st.markdown(
-            """
-Menampilkan seluruh berita hasil analisis dalam bentuk tabel.
+    guide_card(
+        "4. Ringkasan Utama",
+        """
+        Ringkasan Utama menampilkan jumlah total berita raw, jumlah berita teranalisis, serta komposisi prioritas tinggi,
+        sedang, dan rendah. Bagian ini berguna untuk membaca gambaran cepat kondisi isu pada periode yang dipilih.
+        """
+    )
 
-**Fungsi utama:**
-- Melihat detail berita  
-- Filter berdasarkan prioritas  
-- Filter kategori berita  
-- Menelusuri sumber dan waktu berita  
-"""
-        )
+    guide_card(
+        "5. Isu Paling Kritis Hari Ini",
+        """
+        Bagian ini menampilkan satu isu yang dinilai paling kritis pada periode berjalan. Penentuan dilakukan dengan melihat
+        skor analisis, waktu publikasi, dan konteks pemberitaan. Tujuannya adalah membantu pengguna segera mengenali isu utama
+        yang paling perlu diperhatikan.
+        """
+    )
 
-    # ===============================
-    # ANALISIS DAERAH
-    # ===============================
-    with st.expander("📍 Tab Analisis Daerah"):
-        st.markdown(
-            """
-Menampilkan distribusi isu berdasarkan wilayah.
+    guide_card(
+        "6. Distribusi Prioritas dan Topik Dominan",
+        """
+        Distribusi Prioritas menunjukkan sebaran berita berdasarkan tingkat urgensi. Sementara itu, Topik Dominan menampilkan
+        jenis isu yang paling sering muncul. Kombinasi keduanya membantu pengguna memahami apakah kondisi relatif stabil,
+        waspada, atau memerlukan perhatian tinggi.
+        """
+    )
 
-**Manfaat:**
-- Mengidentifikasi wilayah dengan isu tertinggi  
-- Melihat persebaran isu secara geografis  
-- Menentukan fokus pengawasan wilayah  
-"""
-        )
+    guide_card(
+        "7. Data Berita",
+        """
+        Tab Data Berita berisi daftar berita hasil analisis yang dapat ditelusuri menggunakan kata kunci. Setiap berita menampilkan
+        informasi penting seperti media, waktu publikasi, topik, lokasi, dampak program, dampak kepesertaan, potensi klaim,
+        dan alasan prioritas. Fitur ini berguna untuk penelusuran lebih rinci atas isu tertentu.
+        """
+    )
 
-    # ===============================
-    # CARA KERJA SISTEM
-    # ===============================
-    with st.expander("⚙️ Cara Kerja Sistem"):
-        st.markdown(
-            """
-**1. Scraping (RAW)**  
-Mengambil berita dari berbagai media online.
+    guide_card(
+        "8. Indeks Eskalasi Isu",
+        """
+        Indeks Eskalasi Isu membandingkan intensitas pemberitaan 24 jam terakhir dengan periode 24–48 jam sebelumnya.
+        Jika jumlah media dan berita meningkat, maka isu dapat dipandang sedang mengalami eskalasi. Bagian ini membantu
+        mendeteksi kenaikan perhatian publik atau media terhadap topik tertentu.
+        """
+    )
 
-**2. Filtering (FILTERED)**  
-Menyaring berita berdasarkan kata kunci ketenagakerjaan.
+    guide_card(
+        "9. Analisis Daerah",
+        """
+        Tab Analisis Daerah digunakan untuk melihat kondisi isu berdasarkan wilayah, baik provinsi maupun kabupaten/kota.
+        Melalui tab ini, pengguna dapat mengetahui wilayah yang memiliki konsentrasi isu lebih tinggi, topik dominan wilayah,
+        serta komposisi prioritas pada area tertentu.
+        """
+    )
 
-**3. Analisis (ANALYZED)**  
-Menentukan:
-- Topik utama  
-- Lokasi  
-- Dampak program  
-- Skor  
-- Prioritas  
+    guide_card(
+        "10. Cara Membaca Prioritas",
+        """
+        Prioritas Tinggi menunjukkan isu yang memerlukan perhatian cepat karena potensi dampaknya besar atau eskalasinya tinggi.
+        Prioritas Sedang menunjukkan isu yang perlu dipantau lebih dekat. Prioritas Rendah menunjukkan isu informatif yang
+        tetap relevan, namun belum memerlukan perhatian segera. Prioritas digunakan sebagai alat bantu pemantauan, bukan
+        sebagai keputusan akhir.
+        """
+    )
 
-**4. Visualisasi Dashboard**  
-Menampilkan hasil analisis dalam bentuk grafik dan ringkasan.
-"""
-        )
-
-    # ===============================
-    # PRIORITAS
-    # ===============================
-    with st.expander("🚨 Penentuan Prioritas"):
-        st.markdown(
-            """
-**Prioritas Tinggi**
-- PHK massal  
-- Kecelakaan kerja fatal  
-- Konflik besar  
-
-**Prioritas Sedang**
-- Isu berkembang  
-- Dampak terbatas  
-
-**Prioritas Rendah**
-- Edukasi layanan  
-- Informasi umum  
-- Berita global  
-"""
-        )
-
-    # ===============================
-    # ESKALASI
-    # ===============================
-    with st.expander("📈 Indeks Eskalasi Isu"):
-        st.markdown(
-            """
-Membandingkan kondisi 24 jam terakhir dengan periode sebelumnya:
-
-- 📈 Naik → isu meningkat  
-- 📉 Turun → isu menurun  
-- ➖ Stabil → tidak ada perubahan signifikan  
-
-Semakin tinggi eskalasi, semakin perlu perhatian lebih lanjut.
-"""
-        )
-
-    # ===============================
-    # CATATAN
-    # ===============================
-    with st.expander("📌 Catatan Penting"):
-        st.markdown(
-            """
-- Jika **RAW ada tetapi ANALYZED kosong**, berarti tidak ada berita yang lolos analisis  
-- Gunakan tombol **Update Data** untuk memperbarui data  
-- Sistem ini bersifat **early warning**, bukan keputusan final  
-"""
-        )
+    guide_card(
+        "11. Catatan Penggunaan",
+        """
+        Dashboard ini berfungsi sebagai alat pemantauan awal (early warning system). Informasi yang ditampilkan membantu
+        mengidentifikasi sinyal awal, namun tetap perlu dilengkapi dengan verifikasi, klarifikasi lapangan, dan analisis lanjutan
+        apabila isu berkembang menjadi perhatian yang lebih serius.
+        """
+    )

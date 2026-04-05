@@ -122,15 +122,15 @@ html, body, [class*="css"] {
     margin: 0;
     color: inherit;
 }
+
 .ews-sub {
     color: #667085;
     font-size: 1rem;
     margin-top: .35rem;
 }
+
 @media (prefers-color-scheme: dark) {
-    .ews-sub {
-        color: #94a3b8;
-    }
+    .ews-sub { color: #94a3b8; }
 }
 
 /* Cards */
@@ -145,10 +145,22 @@ html, body, [class*="css"] {
     box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
 }
 
+.info-card {
+    background: var(--card-light);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line-light);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+}
+
 @media (prefers-color-scheme: dark) {
     .kpi-card,
     .glass-card,
-    .news-card {
+    .news-card,
+    .info-card {
         background: var(--card-dark);
         border: 1px solid var(--line-dark);
         box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
@@ -156,6 +168,7 @@ html, body, [class*="css"] {
 }
 
 .kpi-card { padding: 16px 18px; }
+
 .kpi-title {
     font-size: 12px;
     color: #667085;
@@ -163,17 +176,20 @@ html, body, [class*="css"] {
     text-transform: uppercase;
     letter-spacing: .04em;
 }
+
 .kpi-value {
     font-size: 28px;
     font-weight: 800;
     color: inherit;
     line-height: 1.1;
 }
+
 .kpi-sub {
     font-size: 12px;
     color: #667085;
     margin-top: 8px;
 }
+
 @media (prefers-color-scheme: dark) {
     .kpi-title, .kpi-sub { color: #94a3b8; }
 }
@@ -192,6 +208,10 @@ html, body, [class*="css"] {
     margin-bottom: 8px;
 }
 
+@media (prefers-color-scheme: dark) {
+    .chart-caption { color: #94a3b8; }
+}
+
 .analysis-body {
     font-size: .97rem;
     line-height: 1.75;
@@ -202,16 +222,13 @@ html, body, [class*="css"] {
     color: inherit;
 }
 
-@media (prefers-color-scheme: dark) {
-    .chart-caption { color: #94a3b8; }
-}
-
 .top5-link a {
     color: #4338ca;
     text-decoration: none;
     font-weight: 700;
     line-height: 1.5;
 }
+
 .top5-link a:hover { text-decoration: underline; }
 
 .top5-meta {
@@ -236,9 +253,10 @@ html, body, [class*="css"] {
     font-weight: 700;
     color: #fff;
 }
+
 .badge-high { background: linear-gradient(135deg, #ef4444, #dc2626); }
-.badge-mid { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.badge-low { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.badge-mid  { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.badge-low  { background: linear-gradient(135deg, #22c55e, #16a34a); }
 
 .badge-cat {
     background: rgba(79,70,229,.12);
@@ -252,6 +270,7 @@ html, body, [class*="css"] {
     margin-right: 6px;
     margin-bottom: 6px;
 }
+
 @media (prefers-color-scheme: dark) {
     .badge-cat {
         background: rgba(129,140,248,.18);
@@ -266,10 +285,16 @@ button[data-baseweb="tab"] {
 }
 
 table { -webkit-tap-highlight-color: transparent; }
+
 tbody tr:hover,
 tbody tr:active,
-tbody tr:focus { background-color: transparent !important; }
-tbody tr { transition: none !important; }
+tbody tr:focus {
+    background-color: transparent !important;
+}
+
+tbody tr {
+    transition: none !important;
+}
 
 thead tr th {
     text-align: center !important;
@@ -281,17 +306,20 @@ thead tr th {
     padding: 18px 18px 16px 18px;
     margin-bottom: 14px;
 }
+
 .news-title {
     font-size: 1rem;
     font-weight: 700;
     line-height: 1.5;
     margin-bottom: 8px;
 }
+
 .news-meta {
     font-size: .86rem;
     color: #667085;
     margin-bottom: 10px;
 }
+
 .news-chip {
     display: inline-block;
     font-size: .76rem;
@@ -303,11 +331,13 @@ thead tr th {
     margin-right: 6px;
     margin-bottom: 6px;
 }
+
 .news-link a {
     color: #4338ca;
     text-decoration: none;
     font-weight: 700;
 }
+
 .news-link a:hover { text-decoration: underline; }
 
 @media (prefers-color-scheme: dark) {
@@ -317,87 +347,6 @@ thead tr th {
         color: #c7d2fe;
     }
     .news-link a { color: #a5b4fc; }
-}
-
-.info-card {
-    background: var(--card-light);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 1px solid var(--line-light);
-    border-radius: 20px;
-    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
-    padding: 18px 20px;
-    margin-bottom: 14px;
-}
-
-@media (max-width: 768px) {
-    .hero-wrap {
-        padding: 20px 20px !important;
-        border-radius: 20px !important;
-        margin-bottom: 14px !important;
-    }
-
-    .hero-title {
-        font-size: 2rem !important;
-        line-height: 1.15 !important;
-        margin-bottom: 8px !important;
-    }
-
-    .hero-subtitle {
-        font-size: 0.95rem !important;
-        line-height: 1.5 !important;
-        color: rgba(255,255,255,0.82) !important;
-    }
-}
-
-@media (prefers-color-scheme: dark) {
-    .info-card {
-        background: var(--card-dark);
-        border: 1px solid var(--line-dark);
-        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
-    }
-}
-
-@media (max-width: 768px) {
-    .stButton > button {
-        width: 100% !important;
-        min-height: 48px !important;
-        border-radius: 14px !important;
-        font-size: 1rem !important;
-        font-weight: 700 !important;
-    }
-
-    button[data-baseweb="tab"] {
-        flex: 1 1 auto !important;
-        min-width: 120px !important;
-        padding: 12px 14px !important;
-        font-size: 0.95rem !important;
-        border-radius: 14px !important;
-        white-space: nowrap !important;
-    }
-
-    [data-testid="stHorizontalBlock"] {
-        gap: 0.6rem !important;
-    }
-
-    .kpi-card {
-        padding: 14px 16px !important;
-        border-radius: 18px !important;
-    }
-
-    .kpi-title {
-        font-size: 11px !important;
-        margin-bottom: 6px !important;
-    }
-
-    .kpi-value {
-        font-size: 20px !important;
-    }
-
-    .kpi-sub {
-        font-size: 12px !important;
-        margin-top: 6px !important;
-    }
 }
 
 .info-title {
@@ -417,16 +366,107 @@ thead tr th {
     margin-top: 8px;
     margin-bottom: 0;
 }
-.info-text li { margin-bottom: 6px; }
 
+.info-text li {
+    margin-bottom: 6px;
+}
+
+/* ===============================
+   MOBILE
+=============================== */
 @media (max-width: 768px) {
     .block-container {
         padding-top: 1.2rem;
         padding-left: 1rem;
         padding-right: 1rem;
     }
-    .kpi-value { font-size: 22px; }
-    .news-card { padding: 14px; }
+
+    .hero-wrap {
+        padding: 20px 20px !important;
+        border-radius: 20px !important;
+        margin-bottom: 14px !important;
+    }
+
+    .hero-title {
+        font-size: 2rem !important;
+        line-height: 1.15 !important;
+        margin-bottom: 8px !important;
+    }
+
+    .hero-subtitle {
+        font-size: 0.95rem !important;
+        line-height: 1.5 !important;
+        color: rgba(255,255,255,0.82) !important;
+    }
+
+    .stButton > button {
+        width: 100% !important;
+        min-height: 48px !important;
+        border-radius: 14px !important;
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+    }
+
+    button[data-baseweb="tab"] {
+        flex: 1 1 auto !important;
+        min-width: 120px !important;
+        padding: 12px 14px !important;
+        font-size: 0.95rem !important;
+        border-radius: 14px !important;
+        white-space: nowrap !important;
+    }
+
+    .section-title {
+        margin-bottom: 8px !important;
+    }
+
+    .news-card {
+        padding: 14px !important;
+    }
+
+    .badge {
+        padding: 4px 10px !important;
+        font-size: 11px !important;
+    }
+
+    .kpi-card {
+        padding: 12px 14px !important;
+        border-radius: 16px !important;
+    }
+
+    .kpi-title {
+        font-size: 11px !important;
+        margin-bottom: 6px !important;
+    }
+
+    .kpi-value {
+        font-size: 22px !important;
+    }
+
+    .kpi-sub {
+        font-size: 12px !important;
+        margin-top: 6px !important;
+    }
+
+    /* KPI only: desktop tetap, mobile jadi grid */
+    .kpi-mobile-wrap [data-testid="stHorizontalBlock"] {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+    }
+
+    .kpi-mobile-wrap [data-testid="column"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .kpi-mobile-wrap [data-testid="column"]:nth-child(5) {
+        grid-column: 1 / -1;
+    }
+
+    .kpi-mobile-wrap .kpi-card {
+        margin-bottom: 0 !important;
+    }
 }
 </style>
 """,
@@ -779,6 +819,8 @@ with tab_dash:
     kategori_global = int((safe_series(filtered_display, "Kategori_Berita").str.upper() == "GLOBAL").sum())
     kategori_edukasi = int((safe_series(filtered_display, "Kategori_Berita").str.upper() == "EDUKASI").sum())
 
+    st.markdown('<div class="kpi-mobile-wrap">', unsafe_allow_html=True)
+
     c1, c2, c3, c4, c5 = st.columns([1.2, 1.2, 1, 1, 1], gap="large")
 
     with c1:
@@ -840,6 +882,8 @@ with tab_dash:
             """,
             unsafe_allow_html=True
         )
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
 

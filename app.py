@@ -1,4 +1,5 @@
 import re
+import requests
 import streamlit as st
 import pandas as pd
 from html import escape
@@ -524,6 +525,115 @@ def normalize_datetime_col(df: pd.DataFrame, col: str) -> pd.Series:
     except Exception:
         pass
     return s
+
+# ===============================
+# CHOROPLETH HELPERS
+# ===============================
+@st.cache_data(ttl=86400, show_spinner=False)
+def load_indonesia_geojson():
+    """Load GeoJSON provinsi Indonesia (di-cache 24 jam)."""
+    url = (
+        "https://raw.githubusercontent.com/ans-4175/peta-indonesia-geojson"
+        "/master/indonesia-province.geojson"
+    )
+    try:
+        r = requests.get(url, timeout=15)
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        return None
+
+
+PROV_TO_MAP = {
+    "Aceh":                       "ACEH",
+    "Sumatera Utara":             "SUMATERA UTARA",
+    "Sumatera Barat":             "SUMATERA BARAT",
+    "Riau":                       "RIAU",
+    "Kepulauan Riau":             "KEPULAUAN RIAU",
+    "Jambi":                      "JAMBI",
+    "Sumatera Selatan":           "SUMATERA SELATAN",
+    "Kepulauan Bangka Belitung":  "BANGKA BELITUNG",
+    "Bengkulu":                   "BENGKULU",
+    "Lampung":                    "LAMPUNG",
+    "Banten":                     "BANTEN",
+    "DKI Jakarta":                "DKI JAKARTA",
+    "Jawa Barat":                 "JAWA BARAT",
+    "Jawa Tengah":                "JAWA TENGAH",
+    "DI Yogyakarta":              "DI YOGYAKARTA",
+    "Jawa Timur":                 "JAWA TIMUR",
+    "Bali":                       "BALI",
+    "Nusa Tenggara Barat":        "NUSA TENGGARA BARAT",
+    "Nusa Tenggara Timur":        "NUSA TENGGARA TIMUR",
+    "Kalimantan Barat":           "KALIMANTAN BARAT",
+    "Kalimantan Tengah":          "KALIMANTAN TENGAH",
+    "Kalimantan Selatan":         "KALIMANTAN SELATAN",
+    "Kalimantan Timur":           "KALIMANTAN TIMUR",
+    "Kalimantan Utara":           "KALIMANTAN UTARA",
+    "Sulawesi Utara":             "SULAWESI UTARA",
+    "Gorontalo":                  "GORONTALO",
+    "Sulawesi Tengah":            "SULAWESI TENGAH",
+    "Sulawesi Barat":             "SULAWESI BARAT",
+    "Sulawesi Selatan":           "SULAWESI SELATAN",
+    "Sulawesi Tenggara":          "SULAWESI TENGGARA",
+    "Maluku":                     "MALUKU",
+    "Maluku Utara":               "MALUKU UTARA",
+    "Papua Barat":                "PAPUA BARAT",
+    "Papua":                      "PAPUA",
+}
+
+
+def build_prov_stats(df: pd.DataFrame) -> pd.DataFrame:
+    """Agregasi berita per provinsi untuk choropleth."""
+    if "Provinsi" not in df.columns or "Prioritas" not in df.columns:
+        return pd.DataFrame()
+
+    df_prov = df[
+        ~df["Provinsi"].astype(str).isin(["", "Nasional", "Tidak Diketahui"])
+    ].copy()
+
+    if df_prov.empty:
+        return pd.DataFrame()
+
+    df_prov["Prov_Map"] = df_prov["Provinsi"].map(PROV_TO_MAP).fillna(
+        df_prov["Provinsi"].str.upper()
+    )
+
+    agg = df_prov.groupby("Prov_Map").agg(
+        Total=("Judul", "count"),
+        Tinggi=("Prioritas", lambda x: (x == "PRIORITAS TINGGI").sum()),
+        Sedang=("Prioritas", lambda x: (x == "PRIORITAS SEDANG").sum()),
+        Rendah=("Prioritas", lambda x: (x == "PRIORITAS RENDAH").sum()),
+    ).reset_index()
+
+    # Topik dominan per provinsi
+    if "Topik" in df_prov.columns:
+        topik_dom = (
+            df_prov.groupby("Prov_Map")["Topik"]
+            .agg(lambda x: x.value_counts().index[0] if len(x) else "-")
+            .reset_index()
+            .rename(columns={"Topik": "Topik_Dominan"})
+        )
+        agg = agg.merge(topik_dom, on="Prov_Map", how="left")
+        agg["Topik_Dominan"] = agg["Topik_Dominan"].fillna("-")
+    else:
+        agg["Topik_Dominan"] = "-"
+
+    # Risk score: Tinggi×3 + Sedang×2 + Rendah×1
+    agg["Risk_Score"] = agg["Tinggi"] * 3 + agg["Sedang"] * 2 + agg["Rendah"] * 1
+
+    agg["Hover"] = agg.apply(
+        lambda r: (
+            f"<b>{r['Prov_Map']}</b><br>"
+            f"Total berita: {r['Total']}<br>"
+            f"🔴 Prioritas Tinggi: {r['Tinggi']}<br>"
+            f"🟡 Prioritas Sedang: {r['Sedang']}<br>"
+            f"🟢 Prioritas Rendah: {r['Rendah']}<br>"
+            f"Topik dominan: {r['Topik_Dominan']}"
+        ),
+        axis=1,
+    )
+    return agg
+
 
 def build_alerts(df: pd.DataFrame) -> list[str]:
     alerts = []
@@ -1455,6 +1565,146 @@ with tab_region:
     else:
         df_region_all = filtered_display.copy()
 
+        # ── PETA CHOROPLETH ─────────────────────────────────────────────
+        geojson = load_indonesia_geojson()
+        prov_stats = build_prov_stats(df_region_all)
+
+        if geojson and not prov_stats.empty:
+            st.markdown(
+                '<div class="section-title">🗺️ Peta Hotspot Isu Ketenagakerjaan</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                '<div class="chart-caption">'
+                'Warna semakin merah = semakin banyak isu prioritas tinggi. '
+                'Arahkan kursor ke provinsi untuk melihat detail. '
+                'Gunakan filter di bawah untuk drill-down per wilayah.'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+            z_max = max(int(prov_stats["Risk_Score"].max()), 1)
+
+            fig_map = go.Figure(
+                go.Choropleth(
+                    geojson=geojson,
+                    locations=prov_stats["Prov_Map"],
+                    z=prov_stats["Risk_Score"],
+                    featureidkey="properties.Propinsi",
+                    colorscale=[
+                        [0.00, "#e8f5e9"],
+                        [0.25, "#fff9c4"],
+                        [0.55, "#ffe0b2"],
+                        [0.80, "#ef9a9a"],
+                        [1.00, "#b71c1c"],
+                    ],
+                    zmin=0,
+                    zmax=z_max,
+                    text=prov_stats["Hover"],
+                    hovertemplate="%{text}<extra></extra>",
+                    marker_line_color="white",
+                    marker_line_width=0.8,
+                    showscale=True,
+                    colorbar=dict(
+                        title=dict(text="Risk<br>Score", font=dict(size=11)),
+                        thickness=14,
+                        len=0.65,
+                        tickfont=dict(size=10),
+                        x=1.01,
+                    ),
+                )
+            )
+            fig_map.update_geos(
+                fitbounds="locations",
+                visible=False,
+                bgcolor="rgba(0,0,0,0)",
+            )
+            fig_map.update_layout(
+                height=460,
+                margin=dict(l=0, r=60, t=10, b=0),
+                paper_bgcolor="rgba(0,0,0,0)",
+                geo=dict(showframe=False, showcoastlines=False),
+            )
+            st.plotly_chart(
+                fig_map,
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
+
+            # ── RANKING PROVINSI ────────────────────────────────────────
+            st.markdown(
+                '<div class="section-title">🔥 Ranking Provinsi Rawan</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                '<div class="chart-caption">'
+                'Top 10 provinsi berdasarkan risk score (Tinggi×3 + Sedang×2 + Rendah×1).'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            df_rank = (
+                prov_stats
+                .sort_values("Risk_Score", ascending=False)
+                .head(10)
+                .reset_index(drop=True)
+            )
+            df_rank.index = df_rank.index + 1
+            df_rank = df_rank.rename(columns={
+                "Prov_Map":      "Provinsi",
+                "Total":         "Total",
+                "Tinggi":        "🔴 Tinggi",
+                "Sedang":        "🟡 Sedang",
+                "Rendah":        "🟢 Rendah",
+                "Topik_Dominan": "Topik Dominan",
+                "Risk_Score":    "Risk Score",
+            })[["Provinsi", "Total", "🔴 Tinggi", "🟡 Sedang", "🟢 Rendah",
+                "Topik Dominan", "Risk Score"]]
+
+            st.dataframe(
+                df_rank,
+                use_container_width=True,
+                hide_index=False,
+                column_config={
+                    "Risk Score": st.column_config.ProgressColumn(
+                        "Risk Score",
+                        min_value=0,
+                        max_value=int(df_rank["Risk Score"].max()),
+                        format="%d",
+                    ),
+                },
+            )
+            st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
+
+        elif not prov_stats.empty:
+            # Fallback: GeoJSON gagal load → bar chart horizontal
+            st.warning("Peta tidak dapat dimuat. Menampilkan chart alternatif.")
+            top_prov = prov_stats.sort_values("Risk_Score", ascending=False).head(15)
+            fig_fallback = go.Figure(go.Bar(
+                x=top_prov["Risk_Score"].tolist(),
+                y=top_prov["Prov_Map"].tolist(),
+                orientation="h",
+                marker=dict(
+                    color=top_prov["Risk_Score"].tolist(),
+                    colorscale=[[0, "#22c55e"], [0.5, "#f59e0b"], [1, "#ef4444"]],
+                    showscale=False,
+                ),
+                text=[str(v) for v in top_prov["Risk_Score"].tolist()],
+                textposition="outside",
+            ))
+            fig_fallback.update_layout(
+                height=420,
+                margin=dict(l=10, r=40, t=6, b=20),
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                yaxis=dict(autorange="reversed", title=""),
+                xaxis=dict(title="Risk Score", showgrid=True,
+                           gridcolor="rgba(148,163,184,0.20)"),
+            )
+            st.plotly_chart(fig_fallback, use_container_width=True,
+                            config={"displayModeBar": False})
+            st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
+
+        # ── FILTER DRILL-DOWN ───────────────────────────────────────────
         provinsi_options = ["SEMUA"]
         if "Provinsi" in df_region_all.columns:
             provinsi_values = sorted([
@@ -1466,7 +1716,7 @@ with tab_region:
         r1, r2 = st.columns([1.2, 1.2])
 
         with r1:
-            selected_prov = st.selectbox("Provinsi", provinsi_options, key="prov_filter")
+            selected_prov = st.selectbox("Filter Provinsi", provinsi_options, key="prov_filter")
 
         df_region = df_region_all.copy()
         if selected_prov != "SEMUA" and "Provinsi" in df_region.columns:
@@ -1486,13 +1736,13 @@ with tab_region:
         if selected_kab != "SEMUA" and "Kabupaten_Kota" in df_region.columns:
             df_region = df_region[df_region["Kabupaten_Kota"].astype(str) == selected_kab].copy()
 
-        total_region = len(df_region)
+        total_region  = len(df_region)
         tinggi_region = int((df_region["Prioritas"] == "PRIORITAS TINGGI").sum()) if "Prioritas" in df_region.columns else 0
         sedang_region = int((df_region["Prioritas"] == "PRIORITAS SEDANG").sum()) if "Prioritas" in df_region.columns else 0
         rendah_region = int((df_region["Prioritas"] == "PRIORITAS RENDAH").sum()) if "Prioritas" in df_region.columns else 0
 
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Total Berita", total_region)
+        c1.metric("Total Berita",     total_region)
         c2.metric("Prioritas Tinggi", tinggi_region)
         c3.metric("Prioritas Sedang", sedang_region)
         c4.metric("Prioritas Rendah", rendah_region)
@@ -1503,20 +1753,18 @@ with tab_region:
 
         with lcol:
             st.markdown('<div class="section-title">Topik Dominan Wilayah</div>', unsafe_allow_html=True)
-            if not df_region.empty:
+            if not df_region.empty and "Topik" in df_region.columns:
                 topik_region = df_region["Topik"].value_counts().head(5)
                 if not topik_region.empty:
                     fig_reg = go.Figure()
-                    fig_reg.add_trace(
-                        go.Bar(
-                            x=topik_region.values.tolist(),
-                            y=[clean_label(x) for x in topik_region.index.tolist()],
-                            orientation="h",
-                            text=[f"{v:,}" for v in topik_region.values.tolist()],
-                            textposition="outside",
-                            marker=dict(color="#06b6d4")
-                        )
-                    )
+                    fig_reg.add_trace(go.Bar(
+                        x=topik_region.values.tolist(),
+                        y=[clean_label(x) for x in topik_region.index.tolist()],
+                        orientation="h",
+                        text=[f"{v:,}" for v in topik_region.values.tolist()],
+                        textposition="outside",
+                        marker=dict(color="#06b6d4"),
+                    ))
                     fig_reg.update_layout(
                         height=320,
                         margin=dict(l=10, r=45, t=6, b=20),
@@ -1524,9 +1772,11 @@ with tab_region:
                         plot_bgcolor="rgba(0,0,0,0)",
                         showlegend=False,
                         yaxis=dict(autorange="reversed", title=""),
-                        xaxis=dict(title="Jumlah Berita", showgrid=True, gridcolor="rgba(148,163,184,0.20)")
+                        xaxis=dict(title="Jumlah Berita", showgrid=True,
+                                   gridcolor="rgba(148,163,184,0.20)"),
                     )
-                    st.plotly_chart(fig_reg, use_container_width=True, config={"displayModeBar": False})
+                    st.plotly_chart(fig_reg, use_container_width=True,
+                                    config={"displayModeBar": False})
                 else:
                     st.info("Belum ada topik wilayah.")
             else:
@@ -1534,30 +1784,30 @@ with tab_region:
 
         with rcol:
             st.markdown('<div class="section-title">Prioritas Wilayah</div>', unsafe_allow_html=True)
-            if not df_region.empty:
+            if not df_region.empty and "Prioritas" in df_region.columns:
                 prio_region = df_region["Prioritas"].value_counts().reindex(
                     ["PRIORITAS TINGGI", "PRIORITAS SEDANG", "PRIORITAS RENDAH"]
                 ).fillna(0).astype(int)
 
                 fig_pr = go.Figure()
-                fig_pr.add_trace(
-                    go.Bar(
-                        x=["Tinggi", "Sedang", "Rendah"],
-                        y=prio_region.values.tolist(),
-                        marker=dict(color=["#ef4444", "#f59e0b", "#22c55e"]),
-                        text=[f"{v:,}" for v in prio_region.values.tolist()],
-                        textposition="outside"
-                    )
-                )
+                fig_pr.add_trace(go.Bar(
+                    x=["Tinggi", "Sedang", "Rendah"],
+                    y=prio_region.values.tolist(),
+                    marker=dict(color=["#ef4444", "#f59e0b", "#22c55e"]),
+                    text=[f"{v:,}" for v in prio_region.values.tolist()],
+                    textposition="outside",
+                ))
                 fig_pr.update_layout(
                     height=320,
                     margin=dict(l=10, r=20, t=6, b=20),
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
                     showlegend=False,
-                    yaxis=dict(title="Jumlah Berita", showgrid=True, gridcolor="rgba(148,163,184,0.20)")
+                    yaxis=dict(title="Jumlah Berita", showgrid=True,
+                               gridcolor="rgba(148,163,184,0.20)"),
                 )
-                st.plotly_chart(fig_pr, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(fig_pr, use_container_width=True,
+                                config={"displayModeBar": False})
             else:
                 st.info("Tidak ada data prioritas wilayah.")
 
@@ -1570,7 +1820,8 @@ with tab_region:
                 df_region["Score_num"] = pd.to_numeric(df_region["Score"], errors="coerce").fillna(0)
                 if "Waktu_Publish_WIB" in df_region.columns:
                     df_region["Waktu_Publish_WIB_dt"] = normalize_datetime_col(df_region, "Waktu_Publish_WIB")
-                    df_region = df_region.sort_values(["Score_num", "Waktu_Publish_WIB_dt"], ascending=[False, False])
+                    df_region = df_region.sort_values(
+                        ["Score_num", "Waktu_Publish_WIB_dt"], ascending=[False, False])
                 else:
                     df_region = df_region.sort_values(["Score_num"], ascending=[False])
             elif "Waktu_Publish_WIB" in df_region.columns:
@@ -1578,20 +1829,28 @@ with tab_region:
                 df_region = df_region.sort_values("Waktu_Publish_WIB_dt", ascending=False)
 
             for _, row in df_region.head(20).iterrows():
-                judul = escape(clean_label(row.get("Judul", "-")))
-                media = escape(clean_label(row.get("Media", "-")))
-                waktu = escape(clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal", "-"))))
+                judul    = escape(clean_label(row.get("Judul", "-")))
+                media    = escape(clean_label(row.get("Media", "-")))
+                waktu    = escape(clean_label(row.get("Waktu_Publish_WIB", row.get("Tanggal", "-"))))
                 prioritas = str(row.get("Prioritas", "PRIORITAS RENDAH")).strip()
-                topik = escape(clean_label(row.get("Topik_Utama", row.get("Topik", ""))))
-                alasan = escape(clean_label(row.get("Alasan_Prioritas", "")))
-                lokasi = escape(clean_label(
-                    str(row.get("Kabupaten_Kota", "") or "").strip() or str(row.get("Provinsi", "") or "").strip() or "-"
+                topik    = escape(clean_label(row.get("Topik_Utama", row.get("Topik", ""))))
+                alasan   = escape(clean_label(row.get("Alasan_Prioritas", "")))
+                link     = str(row.get("Link", "")).strip()
+                lokasi   = escape(clean_label(
+                    str(row.get("Kabupaten_Kota", "") or "").strip()
+                    or str(row.get("Provinsi", "") or "").strip()
+                    or "-"
                 ))
-
+                link_html = (
+                    f"<div class='news-link'><a href='{escape(link, quote=True)}' "
+                    f"target='_blank'>Baca berita</a></div>"
+                    if link else ""
+                )
                 st.markdown(
                     f"""
                     <div class="news-card">
-                        <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+                        <div style="display:flex; justify-content:space-between;
+                                    gap:12px; flex-wrap:wrap; align-items:flex-start;">
                             <div style="flex:1; min-width:250px;">
                                 <div class="news-title">{judul}</div>
                                 <div class="news-meta">{media} • {waktu} • {lokasi}</div>
@@ -1601,10 +1860,11 @@ with tab_region:
                         <div style='margin:8px 0 10px 0;'>
                             <span class='news-chip'>Topik: {topik}</span>
                         </div>
-                        <div style="font-size:.95rem; line-height:1.65;">{alasan}</div>
+                        <div style="font-size:.95rem; line-height:1.65; margin-bottom:8px;">{alasan}</div>
+                        {link_html}
                     </div>
                     """,
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
         else:
             st.info("Tidak ada berita pada wilayah terpilih.")

@@ -531,8 +531,16 @@ def normalize_datetime_col(df: pd.DataFrame, col: str) -> pd.Series:
 # ===============================
 @st.cache_data(ttl=86400, show_spinner=False)
 def load_indonesia_geojson():
-    """Try multiple CDN sources. Returns (geojson, featureidkey) or (None, None)."""
-    CANDIDATE_KEYS = ["Propinsi", "PROPINSI", "name", "NAME_1", "provinsi", "PROVINSI"]
+    """
+    Load GeoJSON dari beberapa CDN.
+    Normalisasi nilai properti ke UPPERCASE lalu tambahkan key PROV_NORM
+    sehingga matching selalu case-insensitive.
+    Returns (geojson, "properties.PROV_NORM") atau (None, None).
+    """
+    CANDIDATE_KEYS = [
+        "Propinsi", "PROPINSI", "name", "NAME_1",
+        "provinsi", "PROVINSI", "state", "State",
+    ]
     sources = [
         "https://cdn.jsdelivr.net/gh/ans-4175/peta-indonesia-geojson@master/indonesia-province.geojson",
         "https://cdn.jsdelivr.net/gh/superpikar/indonesia-geojson@master/indonesia-en.geojson",
@@ -547,12 +555,20 @@ def load_indonesia_geojson():
             if not gj.get("features"):
                 continue
             props = gj["features"][0].get("properties", {})
+            found_key = None
             for key in CANDIDATE_KEYS:
                 if key in props:
-                    return gj, f"properties.{key}"
-            first_key = next(iter(props), None)
-            if first_key:
-                return gj, f"properties.{first_key}"
+                    found_key = key
+                    break
+            if not found_key:
+                found_key = next(iter(props), None)
+            if not found_key:
+                continue
+            # Tambahkan PROV_NORM (uppercase) ke setiap feature
+            for feat in gj["features"]:
+                raw = feat.get("properties", {}).get(found_key, "")
+                feat["properties"]["PROV_NORM"] = str(raw).upper().strip()
+            return gj, "properties.PROV_NORM"
         except Exception:
             continue
     return None, None
@@ -618,12 +634,9 @@ def build_prov_stats(df: pd.DataFrame, featureidkey: str = "properties.Propinsi"
     if df_prov.empty:
         return pd.DataFrame()
 
-    # Pilih mapping sesuai format nilai GeoJSON
-    use_title = featureidkey.endswith("name") or featureidkey.endswith("NAME_1")
-    prov_map = PROV_TO_MAP_TITLE if use_title else PROV_TO_MAP
-    fallback = lambda x: x.title() if use_title else x.upper()
-    df_prov["Prov_Map"] = df_prov["Provinsi"].map(prov_map).fillna(
-        df_prov["Provinsi"].apply(fallback)
+    # Selalu uppercase — GeoJSON sudah dinormalisasi ke PROV_NORM uppercase
+    df_prov["Prov_Map"] = df_prov["Provinsi"].map(PROV_TO_MAP).fillna(
+        df_prov["Provinsi"].str.upper().str.strip()
     )
 
     agg = df_prov.groupby("Prov_Map").agg(

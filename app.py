@@ -531,17 +531,31 @@ def normalize_datetime_col(df: pd.DataFrame, col: str) -> pd.Series:
 # ===============================
 @st.cache_data(ttl=86400, show_spinner=False)
 def load_indonesia_geojson():
-    """Load GeoJSON provinsi Indonesia (di-cache 24 jam)."""
-    url = (
-        "https://raw.githubusercontent.com/ans-4175/peta-indonesia-geojson"
-        "/master/indonesia-province.geojson"
-    )
-    try:
-        r = requests.get(url, timeout=15)
-        r.raise_for_status()
-        return r.json()
-    except Exception:
-        return None
+    """Try multiple CDN sources. Returns (geojson, featureidkey) or (None, None)."""
+    CANDIDATE_KEYS = ["Propinsi", "PROPINSI", "name", "NAME_1", "provinsi", "PROVINSI"]
+    sources = [
+        "https://cdn.jsdelivr.net/gh/ans-4175/peta-indonesia-geojson@master/indonesia-province.geojson",
+        "https://cdn.jsdelivr.net/gh/superpikar/indonesia-geojson@master/indonesia-en.geojson",
+        "https://raw.githubusercontent.com/ans-4175/peta-indonesia-geojson/master/indonesia-province.geojson",
+        "https://raw.githubusercontent.com/superpikar/indonesia-geojson/master/indonesia-en.geojson",
+    ]
+    for url in sources:
+        try:
+            r = requests.get(url, timeout=12)
+            r.raise_for_status()
+            gj = r.json()
+            if not gj.get("features"):
+                continue
+            props = gj["features"][0].get("properties", {})
+            for key in CANDIDATE_KEYS:
+                if key in props:
+                    return gj, f"properties.{key}"
+            first_key = next(iter(props), None)
+            if first_key:
+                return gj, f"properties.{first_key}"
+        except Exception:
+            continue
+    return None, None
 
 
 PROV_TO_MAP = {
@@ -581,8 +595,18 @@ PROV_TO_MAP = {
     "Papua":                      "PAPUA",
 }
 
+# Title-case mapping untuk GeoJSON yang pakai property "name" (superpikar repo)
+PROV_TO_MAP_TITLE = {k: v.title() for k, v in PROV_TO_MAP.items()}
+# Override beberapa yang title()-nya salah
+PROV_TO_MAP_TITLE.update({
+    "DKI Jakarta": "Dki Jakarta",
+    "DI Yogyakarta": "Di Yogyakarta",
+    "Kepulauan Bangka Belitung": "Bangka Belitung",
+    "Kepulauan Riau": "Kepulauan Riau",
+})
 
-def build_prov_stats(df: pd.DataFrame) -> pd.DataFrame:
+
+def build_prov_stats(df: pd.DataFrame, featureidkey: str = "properties.Propinsi") -> pd.DataFrame:
     """Agregasi berita per provinsi untuk choropleth."""
     if "Provinsi" not in df.columns or "Prioritas" not in df.columns:
         return pd.DataFrame()
@@ -594,8 +618,12 @@ def build_prov_stats(df: pd.DataFrame) -> pd.DataFrame:
     if df_prov.empty:
         return pd.DataFrame()
 
-    df_prov["Prov_Map"] = df_prov["Provinsi"].map(PROV_TO_MAP).fillna(
-        df_prov["Provinsi"].str.upper()
+    # Pilih mapping sesuai format nilai GeoJSON
+    use_title = featureidkey.endswith("name") or featureidkey.endswith("NAME_1")
+    prov_map = PROV_TO_MAP_TITLE if use_title else PROV_TO_MAP
+    fallback = lambda x: x.title() if use_title else x.upper()
+    df_prov["Prov_Map"] = df_prov["Provinsi"].map(prov_map).fillna(
+        df_prov["Provinsi"].apply(fallback)
     )
 
     agg = df_prov.groupby("Prov_Map").agg(
@@ -1566,10 +1594,10 @@ with tab_region:
         df_region_all = filtered_display.copy()
 
         # ── PETA CHOROPLETH ─────────────────────────────────────────────
-        geojson = load_indonesia_geojson()
-        prov_stats = build_prov_stats(df_region_all)
+        geojson, featureidkey = load_indonesia_geojson()
+        prov_stats = build_prov_stats(df_region_all, featureidkey or "properties.Propinsi")
 
-        if geojson and not prov_stats.empty:
+        if geojson and featureidkey and not prov_stats.empty:
             st.markdown(
                 '<div class="section-title">🗺️ Peta Hotspot Isu Ketenagakerjaan</div>',
                 unsafe_allow_html=True,
@@ -1590,7 +1618,7 @@ with tab_region:
                     geojson=geojson,
                     locations=prov_stats["Prov_Map"],
                     z=prov_stats["Risk_Score"],
-                    featureidkey="properties.Propinsi",
+                    featureidkey=featureidkey,
                     colorscale=[
                         [0.00, "#e8f5e9"],
                         [0.25, "#fff9c4"],
@@ -1676,7 +1704,7 @@ with tab_region:
             st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
 
         elif not prov_stats.empty:
-            # Fallback: GeoJSON gagal load → bar chart horizontal
+            # Fallback: GeoJSON gagal load atau tidak tersedia → bar chart horizontal
             st.warning("Peta tidak dapat dimuat. Menampilkan chart alternatif.")
             top_prov = prov_stats.sort_values("Risk_Score", ascending=False).head(15)
             fig_fallback = go.Figure(go.Bar(

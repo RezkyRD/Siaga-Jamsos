@@ -1624,7 +1624,8 @@ with tab_region:
                 unsafe_allow_html=True,
             )
 
-            z_max = max(int(prov_stats["Risk_Score"].max()), 1)
+            # Cap zmax di percentile 85 agar outlier tidak mendominasi warna
+            z_max = max(float(prov_stats["Risk_Score"].quantile(0.85)), 1.0)
 
             fig_map = go.Figure(
                 go.Choropleth(
@@ -1633,25 +1634,28 @@ with tab_region:
                     z=prov_stats["Risk_Score"],
                     featureidkey=featureidkey,
                     colorscale=[
-                        [0.00, "#e8f5e9"],
-                        [0.25, "#fff9c4"],
-                        [0.55, "#ffe0b2"],
-                        [0.80, "#ef9a9a"],
-                        [1.00, "#b71c1c"],
+                        [0.00, "#ffffb2"],
+                        [0.20, "#fed976"],
+                        [0.40, "#feb24c"],
+                        [0.60, "#fd8d3c"],
+                        [0.80, "#e31a1c"],
+                        [1.00, "#800026"],
                     ],
                     zmin=0,
                     zmax=z_max,
                     text=prov_stats["Hover"],
                     hovertemplate="%{text}<extra></extra>",
-                    marker_line_color="white",
-                    marker_line_width=0.8,
+                    marker_line_color="rgba(255,255,255,0.6)",
+                    marker_line_width=0.5,
                     showscale=True,
                     colorbar=dict(
                         title=dict(text="Risk<br>Score", font=dict(size=11)),
                         thickness=14,
-                        len=0.65,
+                        len=0.55,
                         tickfont=dict(size=10),
                         x=1.01,
+                        tickmode="array",
+                        tickvals=[0, round(z_max * 0.25), round(z_max * 0.5), round(z_max * 0.75), round(z_max)],
                     ),
                 )
             )
@@ -1659,9 +1663,13 @@ with tab_region:
                 fitbounds="locations",
                 visible=False,
                 bgcolor="rgba(0,0,0,0)",
+                showocean=True,
+                oceancolor="rgba(214,234,248,0.4)",
+                showland=True,
+                landcolor="rgba(240,240,240,0.3)",
             )
             fig_map.update_layout(
-                height=460,
+                height=500,
                 margin=dict(l=0, r=60, t=10, b=0),
                 paper_bgcolor="rgba(0,0,0,0)",
                 geo=dict(showframe=False, showcoastlines=False),

@@ -834,66 +834,159 @@ with c_ctrl4:
 # TOPIC FALLBACK
 # ===============================
 TOPIC_RULES = {
-    "PHK": [
-        r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b",
-        r"gelombang phk", r"phk massal", r"pengurangan karyawan", r"efisiensi tenaga kerja"
-    ],
-    "THR / Kesejahteraan Pekerja": [
-        r"\bthr\b", r"tunjangan hari raya", r"pengaduan thr", r"posko thr",
-        r"thr tidak dibayar", r"thr terlambat", r"thr dicicil", r"thr dipotong"
-    ],
-    "Upah / Gaji": [
-        r"\bupah\b", r"\bgaji\b", r"tunggakan upah", r"gaji tidak dibayar",
-        r"ump", r"umk", r"upah minimum"
-    ],
-    "Aksi / Demo Buruh": [
-        r"\bdemo\b", r"unjuk rasa", r"aksi buruh", r"mogok", r"mogok kerja"
-    ],
-    "Konflik Hubungan Industrial": [
-        r"perselisihan", r"konflik buruh", r"sengketa", r"tripartit", r"mediasi hubungan industrial"
-    ],
+    # ── Program BPJS Ketenagakerjaan ──
     "Kepesertaan BPJS": [
         r"bpjs ketenagakerjaan", r"bpjamsostek", r"jamsostek",
-        r"kepesertaan bpjs", r"terdaftar bpjs", r"peserta bpjs"
+        r"kepesertaan bpjs", r"terdaftar bpjs", r"peserta bpjs",
+        r"pendaftaran bpjs", r"perluasan kepesertaan", r"nonaktif bpjs",
+        r"iuran bpjs", r"tunggakan iuran", r"menunggak iuran",
+        r"telat bayar iuran", r"denda bpjs", r"kepatuhan perusahaan",
     ],
     "Klaim JHT": [
-        r"\bjht\b", r"jaminan hari tua", r"klaim jht", r"pencairan jht", r"saldo jht"
+        r"\bjht\b", r"jaminan hari tua", r"klaim jht",
+        r"pencairan jht", r"saldo jht", r"cairkan jht",
     ],
     "Manfaat JKP": [
-        r"\bjkp\b", r"jaminan kehilangan pekerjaan", r"manfaat jkp", r"klaim jkp"
+        r"\bjkp\b", r"jaminan kehilangan pekerjaan",
+        r"manfaat jkp", r"klaim jkp", r"subsidi gaji",
     ],
     "Jaminan Pensiun (JP)": [
-        r"\bjp\b", r"jaminan pensiun", r"manfaat pensiun", r"iuran pensiun", r"usia pensiun"
+        r"jaminan pensiun", r"manfaat pensiun",
+        r"iuran pensiun", r"usia pensiun", r"dana pensiun",
     ],
     "Kecelakaan Kerja (JKK)": [
         r"\bjkk\b", r"jaminan kecelakaan kerja", r"kecelakaan kerja",
-        r"santunan jkk", r"ledakan pabrik", r"buruh tewas", r"pekerja tewas"
+        r"santunan jkk", r"ledakan pabrik", r"kebakaran pabrik",
+        r"buruh tewas", r"pekerja tewas", r"korban jiwa",
+        r"pekerja jatuh", r"tertimpa", r"tertimbun",
     ],
     "Santunan Kematian (JKM)": [
-        r"\bjkm\b", r"jaminan kematian", r"santunan kematian", r"ahli waris", r"meninggal dunia"
+        r"\bjkm\b", r"jaminan kematian", r"santunan kematian",
+        r"ahli waris", r"meninggal dunia", r"santunan kematian",
     ],
-    "Tunggakan Iuran": [
-        r"tunggakan iuran", r"menunggak iuran", r"telat bayar iuran", r"denda bpjs"
+    # ── Hubungan Kerja ──
+    "PHK": [
+        r"\bphk\b", r"pemutusan hubungan kerja", r"\bdirumahkan\b",
+        r"gelombang phk", r"phk massal", r"pengurangan karyawan",
+        r"efisiensi tenaga kerja", r"pabrik tutup", r"perusahaan tutup",
+        r"pesangon", r"layoff",
     ],
+    "THR / Kesejahteraan Pekerja": [
+        r"\bthr\b", r"tunjangan hari raya", r"pengaduan thr",
+        r"posko thr", r"thr tidak dibayar", r"thr terlambat",
+        r"thr dicicil", r"thr dipotong",
+    ],
+    "Upah / Gaji": [
+        r"\bupah\b", r"\bgaji\b", r"tunggakan upah",
+        r"gaji tidak dibayar", r"\bump\b", r"\bumk\b",
+        r"upah minimum", r"kenaikan upah", r"struktur upah",
+        r"upah layak", r"gaji pokok",
+    ],
+    "Aksi / Demo Buruh": [
+        r"demo buruh", r"aksi buruh", r"unjuk rasa",
+        r"mogok kerja", r"\bmogok\b", r"aksi massa",
+        r"demonstrasi buruh", r"pawai buruh",
+    ],
+    "Konflik Hubungan Industrial": [
+        r"perselisihan hubungan industrial", r"konflik buruh",
+        r"sengketa industrial", r"tripartit", r"mediasi hubungan industrial",
+        r"bipartit", r"pengadilan hubungan industrial",
+        r"\bphi\b", r"arbiter",
+    ],
+    "Serikat Pekerja": [
+        r"serikat pekerja", r"serikat buruh", r"\bspsi\b",
+        r"\bfsptsi\b", r"\bkspsi\b", r"federasi serikat",
+        r"organisasi buruh", r"union", r"serikat karyawan",
+    ],
+    # ── Sektor Khusus ──
     "Pekerja Migran Indonesia (PMI)": [
-        r"\bpmi\b", r"pekerja migran", r"tki", r"buruh migran"
+        r"\bpmi\b", r"pekerja migran", r"\btki\b",
+        r"buruh migran", r"tenaga kerja indonesia",
+        r"deportasi tki", r"pmi bermasalah", r"bp2mi",
+        r"overstay", r"tki ilegal",
     ],
     "Jasa Konstruksi": [
-        r"konstruksi", r"proyek", r"pembangunan", r"jasa konstruksi"
+        r"jasa konstruksi", r"pekerja konstruksi",
+        r"buruh konstruksi", r"kecelakaan konstruksi",
+        r"k3 konstruksi", r"iuran jasa konstruksi",
+    ],
+    "Pekerja Informal & BPU": [
+        r"pekerja informal", r"\bbpu\b", r"bukan penerima upah",
+        r"\bumkm\b", r"usaha mikro", r"wirausaha",
+        r"\bnelayan\b", r"\bpetani\b", r"\bdriver\b",
+        r"ojek online", r"gig economy", r"pekerja lepas",
+        r"freelance", r"pekerja mandiri",
+    ],
+    "Keselamatan & Kesehatan Kerja (K3)": [
+        r"keselamatan kerja", r"kesehatan kerja", r"\bk3\b",
+        r"keselamatan dan kesehatan", r"alat pelindung diri",
+        r"\bapd\b", r"standar keselamatan", r"audit k3",
+        r"lingkungan kerja",
+    ],
+    # ── Kebijakan & Regulasi ──
+    "Regulasi & Kebijakan Ketenagakerjaan": [
+        r"undang.undang", r"\buu\b.*kerja", r"peraturan menteri",
+        r"\bpermen\b", r"peraturan pemerintah", r"\bpp\b.*tenaga kerja",
+        r"omnibus law", r"cipta kerja", r"kemnaker",
+        r"kementerian ketenagakerjaan", r"\bdisnaker\b",
+        r"kebijakan ketenagakerjaan", r"reformasi ketenagakerjaan",
+    ],
+    "Ekonomi & Pasar Kerja": [
+        r"pengangguran", r"tingkat pengangguran", r"\btpr\b",
+        r"penyerapan tenaga kerja", r"lowongan kerja",
+        r"rekrutmen", r"pasar kerja", r"angkatan kerja",
+        r"\bakk\b", r"lapangan kerja", r"pencari kerja",
+        r"kesempatan kerja", r"job fair", r"bursa kerja",
+        r"produktivitas kerja", r"kualitas sdm",
+    ],
+    "Edukasi & Layanan BPJS": [
+        r"cara klaim", r"syarat klaim", r"\bpanduan\b",
+        r"tutorial", r"cara mencairkan", r"cara cairkan",
+        r"alur klaim", r"prosedur klaim", r"tips klaim",
+        r"\bjmo\b", r"aplikasi jmo", r"simulasi",
     ],
 }
 
+# Urutan prioritas deteksi (lebih spesifik duluan)
+TOPIC_PRIORITY = [
+    "Kecelakaan Kerja (JKK)", "Santunan Kematian (JKM)",
+    "PHK", "THR / Kesejahteraan Pekerja",
+    "Aksi / Demo Buruh", "Konflik Hubungan Industrial",
+    "Klaim JHT", "Manfaat JKP", "Jaminan Pensiun (JP)",
+    "Kepesertaan BPJS",
+    "Upah / Gaji", "Serikat Pekerja",
+    "Pekerja Migran Indonesia (PMI)",
+    "Jasa Konstruksi", "Pekerja Informal & BPU",
+    "Keselamatan & Kesehatan Kerja (K3)",
+    "Regulasi & Kebijakan Ketenagakerjaan",
+    "Ekonomi & Pasar Kerja",
+    "Edukasi & Layanan BPJS",
+]
+
+
 def detect_topic(text: str) -> str:
     t = (text or "").lower()
-    for topic, patterns in TOPIC_RULES.items():
+    for topic in TOPIC_PRIORITY:
+        patterns = TOPIC_RULES.get(topic, [])
         for p in patterns:
             if re.search(p, t):
                 return topic
-    if re.search(r"bpjs|bpjamsostek|jamsostek|klaim|iuran", t):
+    # Fallback bertingkat — tidak ada "Lainnya"
+    if re.search(r"bpjs|bpjamsostek|jamsostek|klaim|iuran|manfaat", t):
         return "Kepesertaan BPJS"
-    if re.search(r"buruh|pekerja|ketenagakerjaan|tenaga kerja", t):
-        return "Konflik Hubungan Industrial"
-    return "Kebijakan Ketenagakerjaan"
+    if re.search(r"upah|gaji|ump|umk|penghasilan", t):
+        return "Upah / Gaji"
+    if re.search(r"phk|pesangon|dirumahkan|kontrak|outsourcing", t):
+        return "PHK"
+    if re.search(r"buruh|pekerja|karyawan|tenaga kerja|disnaker", t):
+        return "Regulasi & Kebijakan Ketenagakerjaan"
+    if re.search(r"pengangguran|lowongan|rekrut|lapangan kerja", t):
+        return "Ekonomi & Pasar Kerja"
+    if re.search(r"konstruksi|proyek|pembangunan", t):
+        return "Jasa Konstruksi"
+    if re.search(r"migran|tki|pmi|luar negeri|bp2mi", t):
+        return "Pekerja Migran Indonesia (PMI)"
+    return "Regulasi & Kebijakan Ketenagakerjaan"
 
 # ===============================
 # APPLY DATE FILTER
@@ -920,9 +1013,16 @@ if not filtered_display.empty and kategori_option != "SEMUA" and "Kategori_Berit
 
 if not filtered_display.empty:
     if "Topik_Utama" in filtered_display.columns:
-        filtered_display["Topik"] = (
-            filtered_display["Topik_Utama"].astype(str).fillna("").replace("", "Lainnya")
-        )
+        combo = safe_series(filtered_display, "Judul") + " " + safe_series(filtered_display, "Ringkasan")
+        def resolve_topic(row_topik, row_combo):
+            t = str(row_topik).strip()
+            if t and t not in ("", "nan", "None", "Lainnya"):
+                return t
+            return detect_topic(row_combo)
+        filtered_display["Topik"] = [
+            resolve_topic(t, c)
+            for t, c in zip(filtered_display["Topik_Utama"], combo)
+        ]
     else:
         combo = safe_series(filtered_display, "Judul") + " " + safe_series(filtered_display, "Ringkasan")
         filtered_display["Topik"] = combo.apply(detect_topic)

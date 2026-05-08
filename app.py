@@ -1330,57 +1330,23 @@ with tab_dash:
 
         total = len(filtered_display)
 
+        # Status dasar
         if tinggi > 3:
             status_txt = "🔴 RISIKO TINGGI"
-            kondisi = "Isu ketenagakerjaan meningkat dan perlu perhatian segera."
-            rekomendasi = "Perlu pemantauan intensif dan koordinasi lintas unit terhadap isu prioritas."
         elif tinggi > 0:
             status_txt = "🟡 WASPADA"
-            kondisi = "Terdapat isu prioritas yang perlu dipantau lebih dekat."
-            rekomendasi = "Perlu klarifikasi lapangan dan pemantauan berkala terhadap isu yang berkembang."
         else:
             status_txt = "🟢 STABIL"
-            kondisi = "Belum terlihat eskalasi signifikan pada periode ini."
-            rekomendasi = "Pemantauan rutin tetap diperlukan sebagai langkah preventif."
 
         if "Topik" in filtered_display.columns and not filtered_display.empty:
             topik_counts = filtered_display["Topik"].value_counts()
             top3 = topik_counts.head(3)
             topik_list = [f"- **{clean_label(topic)}** ({count} berita)" for topic, count in top3.items()]
             topik_text = "\n".join(topik_list)
-            topik_utama = top3.index.tolist()
         else:
             topik_text = "- **Belum ada topik dominan**"
-            topik_utama = []
 
-        ringkasan_utama = []
-        dampak_utama = []
-
-        if "PHK" in topik_utama:
-            ringkasan_utama.append("PHK menjadi isu utama dan berpotensi meningkatkan klaim **JKP** serta pencairan **JHT**.")
-            dampak_utama.append("Kondisi ini juga dapat mempengaruhi kepesertaan aktif pekerja penerima upah (**PU**).")
-
-        if "THR / Kesejahteraan Pekerja" in topik_utama:
-            ringkasan_utama.append("Permasalahan **THR** menunjukkan potensi persoalan kepatuhan perusahaan terhadap hak normatif pekerja.")
-            dampak_utama.append("Isu ini dapat memicu pengaduan dan perselisihan hubungan industrial.")
-
-        if "Kepesertaan BPJS" in topik_utama:
-            ringkasan_utama.append("Isu **kepesertaan BPJS Ketenagakerjaan** berkaitan langsung dengan cakupan perlindungan tenaga kerja.")
-            dampak_utama.append("Hal ini perlu dicermati dari sisi perluasan kepesertaan dan kepatuhan pemberi kerja.")
-
-        if "Kecelakaan Kerja (JKK)" in topik_utama:
-            ringkasan_utama.append("Isu **kecelakaan kerja** berpotensi meningkatkan klaim **JKK**.")
-            dampak_utama.append("Pada kasus fatal, isu ini juga dapat berkembang menjadi klaim **JKM**.")
-
-        if "Konflik Hubungan Industrial" in topik_utama or "Aksi / Demo Buruh" in topik_utama:
-            ringkasan_utama.append("Konflik hubungan industrial dan aksi buruh perlu dipantau karena dapat berkembang menjadi gangguan yang lebih besar.")
-            dampak_utama.append("Jika berlanjut, kondisi ini dapat mempengaruhi stabilitas hubungan kerja dan kepatuhan perlindungan sosial.")
-
-        if not ringkasan_utama:
-            ringkasan_utama.append("Perkembangan isu masih bersifat campuran dan tetap perlu dipantau.")
-        if not dampak_utama:
-            dampak_utama.append("Secara umum, isu media dapat mempengaruhi kepesertaan, kepatuhan, dan potensi klaim manfaat.")
-
+        # Statistik dasar selalu tampil
         st.markdown(
             f"""
 <div class="news-card analysis-body">
@@ -1389,8 +1355,8 @@ with tab_dash:
 
 Total isu teranalisis: **{total:,} berita**
 
-Prioritas tinggi: **{tinggi:,}**  
-Prioritas sedang: **{sedang:,}**  
+Prioritas tinggi: **{tinggi:,}**
+Prioritas sedang: **{sedang:,}**
 Prioritas rendah: **{rendah:,}**
 
 Komposisi kategori:
@@ -1402,17 +1368,124 @@ Topik dominan pada periode ini:
 
 {topik_text}
 
-**Kesimpulan:** {kondisi}
-
-{" ".join(ringkasan_utama[:2])}
-
-{" ".join(dampak_utama[:2])}
-
-**Rekomendasi:** {rekomendasi}
 </div>
 """,
             unsafe_allow_html=True
         )
+
+        # AI Analysis block
+        st.markdown('<div class="section-title">✨ Analisis AI</div>', unsafe_allow_html=True)
+
+        ANTHROPIC_KEY = st.secrets.get("ANTHROPIC_API_KEY", "")
+
+        def _build_news_context(df: pd.DataFrame, n: int = 15) -> str:
+            """Siapkan ringkasan berita untuk prompt."""
+            rows = []
+            df_sorted = df.copy()
+            if "Score" in df_sorted.columns:
+                df_sorted["_s"] = pd.to_numeric(df_sorted["Score"], errors="coerce").fillna(0)
+                df_sorted = df_sorted.sort_values("_s", ascending=False)
+            for i, (_, r) in enumerate(df_sorted.head(n).iterrows(), 1):
+                judul  = str(r.get("Judul", "")).strip()
+                topik  = str(r.get("Topik", r.get("Topik_Utama", ""))).strip()
+                prio   = str(r.get("Prioritas", "")).strip()
+                prov   = str(r.get("Provinsi", "")).strip()
+                alasan = str(r.get("Alasan_Prioritas", "")).strip()
+                rows.append(
+                    f"{i}. [{prio}] {judul}"
+                    + (f" | Topik: {topik}" if topik else "")
+                    + (f" | Wilayah: {prov}" if prov and prov not in ("", "Nasional") else "")
+                    + (f"\n   Analisis: {alasan}" if alasan else "")
+                )
+            return "\n".join(rows)
+
+        @st.cache_data(ttl=1800, show_spinner=False)
+        def generate_ai_analysis(news_context: str, tinggi: int, sedang: int,
+                                  rendah: int, total: int, topik_top3: str,
+                                  api_key: str) -> str:
+            """Panggil Claude API untuk analisis naratif. Di-cache 30 menit."""
+            if not api_key:
+                return ""
+            prompt = f"""Kamu adalah analis kebijakan senior di Kementerian Ketenagakerjaan Indonesia.
+Tugasmu adalah menulis analisis situasi ketenagakerjaan berdasarkan data berita terkini dari sistem Early Warning System (EWS).
+
+DATA PERIODE INI:
+- Total berita teranalisis: {total}
+- Prioritas Tinggi: {tinggi} | Sedang: {sedang} | Rendah: {rendah}
+- Topik paling dominan: {topik_top3}
+
+BERITA UTAMA (diurutkan dari prioritas tertinggi):
+{news_context}
+
+INSTRUKSI PENULISAN:
+Tulis analisis situasi dalam bahasa Indonesia yang profesional namun mudah dipahami oleh pimpinan kementerian.
+Analisis harus:
+1. Mencerminkan ISI BERITA yang sebenarnya — bukan template umum
+2. Menyebut isu spesifik, nama daerah, atau topik yang benar-benar muncul di data
+3. Mengaitkan isu dengan dampak ke program BPJS Ketenagakerjaan (JHT, JKP, JKK, JKM, JP, Kepesertaan)
+4. Memberikan rekomendasi tindak lanjut yang konkret dan actionable
+5. Ditulis dalam 4 paragraf pendek (maks 3 kalimat per paragraf):
+   - Paragraf 1: Gambaran umum situasi periode ini
+   - Paragraf 2: Isu paling menonjol dan dampaknya ke program jamsostek
+   - Paragraf 3: Perkembangan wilayah/daerah yang perlu diperhatikan (jika ada)
+   - Paragraf 4: Rekomendasi konkret untuk pengambil kebijakan
+
+Jangan gunakan template atau kalimat generik. Tulis berdasarkan data di atas."""
+
+            try:
+                import urllib.request, json as _json
+                payload = _json.dumps({
+                    "model": "claude-haiku-4-5-20251001",
+                    "max_tokens": 800,
+                    "messages": [{"role": "user", "content": prompt}]
+                }).encode()
+                req = urllib.request.Request(
+                    "https://api.anthropic.com/v1/messages",
+                    data=payload,
+                    headers={
+                        "x-api-key": api_key,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json",
+                    },
+                    method="POST"
+                )
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    result = _json.loads(resp.read())
+                    return result["content"][0]["text"].strip()
+            except Exception:
+                return ""
+
+        if ANTHROPIC_KEY:
+            news_ctx = _build_news_context(filtered_display)
+            topik_top3_str = topik_text.replace("\n", ", ").replace("- **", "").replace("**", "")
+
+            # Cache key berubah tiap 30 menit atau saat data berubah
+            cache_key = f"{start_date}_{end_date}_{tinggi}_{sedang}_{total}"
+
+            with st.spinner("Menganalisis situasi dengan AI..."):
+                ai_text = generate_ai_analysis(
+                    news_ctx, tinggi, sedang, rendah, total,
+                    topik_top3_str, ANTHROPIC_KEY
+                )
+
+            if ai_text:
+                st.markdown(
+                    f'''<div class="news-card analysis-body" style="border-left: 3px solid #6366f1; padding-left: 18px;">
+{ai_text}
+</div>''',
+                    unsafe_allow_html=True
+                )
+                st.caption("✨ Dianalisis oleh Claude AI · diperbarui tiap 30 menit")
+            else:
+                st.info("Analisis AI tidak tersedia saat ini.")
+        else:
+            st.markdown(
+                '''<div class="news-card analysis-body" style="opacity:0.7; font-size:0.9rem;">
+💡 <b>Aktifkan Analisis AI:</b> Tambahkan <code>ANTHROPIC_API_KEY</code> ke Streamlit Secrets
+untuk mendapatkan analisis naratif otomatis berdasarkan isi berita aktual.
+</div>''',
+                unsafe_allow_html=True
+            )
 
         st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
         st.markdown('<div class="section-title">🔥 Alert Eskalasi</div>', unsafe_allow_html=True)
